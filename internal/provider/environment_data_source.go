@@ -1,8 +1,11 @@
 package provider
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -21,12 +24,13 @@ type EnvironmentDataSource struct {
 }
 
 type EnvironmentDataSourceModel struct {
-	Id          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Description types.String `tfsdk:"description"`
-	IsDefault   types.Bool   `tfsdk:"is_default"`
-	CreatedAt   types.String `tfsdk:"created_at"`
-	UpdatedAt   types.String `tfsdk:"updated_at"`
+	Id                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	CloudAccountLocator types.String `tfsdk:"cloud_account_locator"`
+	IsDefault           types.Bool   `tfsdk:"is_default"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	UpdatedAt           types.String `tfsdk:"updated_at"`
+	OnlineStoreKind     types.String `tfsdk:"online_store_kind"`
 }
 
 func (d *EnvironmentDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -46,9 +50,13 @@ func (d *EnvironmentDataSource) Schema(ctx context.Context, req datasource.Schem
 				MarkdownDescription: "Environment name",
 				Required:            true,
 			},
-			"description": schema.StringAttribute{
-				MarkdownDescription: "Environment description",
+			"cloud_account_locator": schema.StringAttribute{
+				MarkdownDescription: "Cloud Account Locator",
 				Computed:            true,
+			},
+			"online_store_kind": schema.StringAttribute{
+				MarkdownDescription: "Online store kind for the environment",
+				Optional:            true,
 			},
 			"is_default": schema.BoolAttribute{
 				MarkdownDescription: "Whether this is the default environment",
@@ -98,19 +106,40 @@ func (d *EnvironmentDataSource) Read(ctx context.Context, req datasource.ReadReq
 		"name": data.Name.ValueString(),
 	})
 
-	// TODO: Implement actual API call to fetch environment details
-	// This is a placeholder implementation
-	// In a real implementation, you would:
-	// 1. Use the chalk-go client library
-	// 2. Call the appropriate gRPC method from the builder.proto or team.proto
-	// 3. Map the response to the data model
+	// Create auth client first
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         d.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
+	// Create team client with token injection interceptor
+	tc := NewTeamClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       d.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Name.ValueString()),
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, d.client.ClientID, d.client.ClientSecret),
+		},
+	})
+
+	env, err := tc.GetEnv(ctx, connect.NewRequest(&serverv1.GetEnvRequest{}))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading Chalk Environment",
+			fmt.Sprintf("Could not read environment %s: %v", data.Name.ValueString(), err),
+		)
+		return
+	}
 
 	// Placeholder data for now
 	data.Id = types.StringValue("env-" + data.Name.ValueString())
-	data.Description = types.StringValue("Environment for " + data.Name.ValueString())
-	data.IsDefault = types.BoolValue(false)
-	data.CreatedAt = types.StringValue("2024-01-01T00:00:00Z")
-	data.UpdatedAt = types.StringValue("2024-01-01T00:00:00Z")
+	data.OnlineStoreKind = types.StringValue(*env.Msg.Environment.OnlineStoreKind)
+	data.CloudAccountLocator = types.StringValue(env.Msg.Environment.GetCloudAccountLocator())
 
 	tflog.Trace(ctx, "read chalk_environment data source complete", map[string]interface{}{
 		"id": data.Id.ValueString(),
