@@ -29,14 +29,14 @@ type ServiceTokenResource struct {
 }
 
 type ServiceTokenResourceModel struct {
-	Id                      types.String `tfsdk:"id"`
-	Name                    types.String `tfsdk:"name"`
-	ClientId                types.String `tfsdk:"client_id"`
-	ClientSecret            types.String `tfsdk:"client_secret"`
-	Permissions             types.List   `tfsdk:"permissions"`
-	CustomClaims            types.Map    `tfsdk:"custom_claims"`
-	FeatureTagToPermission  types.Map    `tfsdk:"feature_tag_to_permission"`
-	DefaultPermission       types.String `tfsdk:"default_permission"`
+	Id                     types.String `tfsdk:"id"`
+	Name                   types.String `tfsdk:"name"`
+	ClientId               types.String `tfsdk:"client_id"`
+	ClientSecret           types.String `tfsdk:"client_secret"`
+	Permissions            types.List   `tfsdk:"permissions"`
+	CustomClaims           types.Map    `tfsdk:"custom_claims"`
+	FeatureTagToPermission types.Map    `tfsdk:"feature_tag_to_permission"`
+	DefaultPermission      types.String `tfsdk:"default_permission"`
 }
 
 func (r *ServiceTokenResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -157,7 +157,7 @@ func (r *ServiceTokenResource) Create(ctx context.Context, req resource.CreateRe
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		
+
 		for _, perm := range permissions {
 			// Convert string to Permission enum
 			if permValue, ok := authv1.Permission_value[perm]; ok {
@@ -180,7 +180,7 @@ func (r *ServiceTokenResource) Create(ctx context.Context, req resource.CreateRe
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		
+
 		for key, valuesStr := range claims {
 			// Split comma-separated values
 			values := []string{valuesStr}
@@ -203,7 +203,7 @@ func (r *ServiceTokenResource) Create(ctx context.Context, req resource.CreateRe
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		
+
 		createReq.FeatureTagToPermission = make(map[string]authv1.FeaturePermission)
 		for tag, perm := range featurePerms {
 			if permValue, ok := authv1.FeaturePermission_value[perm]; ok {
@@ -391,7 +391,7 @@ func (r *ServiceTokenResource) Update(ctx context.Context, req resource.UpdateRe
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		
+
 		for _, perm := range permissions {
 			if permValue, ok := authv1.Permission_value[perm]; ok {
 				updateReq.Permissions = append(updateReq.Permissions, authv1.Permission(permValue))
@@ -413,7 +413,7 @@ func (r *ServiceTokenResource) Update(ctx context.Context, req resource.UpdateRe
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		
+
 		for key, valuesStr := range claims {
 			values := []string{valuesStr}
 			updateReq.CustomerClaims = append(updateReq.CustomerClaims, &authv1.CustomClaim{
@@ -431,7 +431,7 @@ func (r *ServiceTokenResource) Update(ctx context.Context, req resource.UpdateRe
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		
+
 		updateReq.FeatureTagToPermission = make(map[string]authv1.FeaturePermission)
 		for tag, perm := range featurePerms {
 			if permValue, ok := authv1.FeaturePermission_value[perm]; ok {

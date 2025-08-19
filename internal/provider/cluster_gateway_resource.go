@@ -43,31 +43,31 @@ type TLSCertificateConfigModel struct {
 }
 
 type GatewayProviderConfigModel struct {
-	Type                       types.String `tfsdk:"type"`
-	TimeoutDuration           types.String `tfsdk:"timeout_duration"`
-	DNSHostname               types.String `tfsdk:"dns_hostname"`
-	Replicas                  types.Int64  `tfsdk:"replicas"`
-	MinAvailable              types.Int64  `tfsdk:"min_available"`
-	LetsencryptClusterIssuer  types.String `tfsdk:"letsencrypt_cluster_issuer"`
-	AdditionalDNSNames        types.List   `tfsdk:"additional_dns_names"`
+	Type                     types.String `tfsdk:"type"`
+	TimeoutDuration          types.String `tfsdk:"timeout_duration"`
+	DNSHostname              types.String `tfsdk:"dns_hostname"`
+	Replicas                 types.Int64  `tfsdk:"replicas"`
+	MinAvailable             types.Int64  `tfsdk:"min_available"`
+	LetsencryptClusterIssuer types.String `tfsdk:"letsencrypt_cluster_issuer"`
+	AdditionalDNSNames       types.List   `tfsdk:"additional_dns_names"`
 }
 
 type ClusterGatewayResourceModel struct {
-	Id                       types.String               `tfsdk:"id"`
-	EnvironmentIds           types.List                 `tfsdk:"environment_ids"`
-	Namespace                types.String               `tfsdk:"namespace"`
-	GatewayName              types.String               `tfsdk:"gateway_name"`
-	GatewayClassName         types.String               `tfsdk:"gateway_class_name"`
-	Listeners                types.List                 `tfsdk:"listeners"`
+	Id                       types.String                `tfsdk:"id"`
+	EnvironmentIds           types.List                  `tfsdk:"environment_ids"`
+	Namespace                types.String                `tfsdk:"namespace"`
+	GatewayName              types.String                `tfsdk:"gateway_name"`
+	GatewayClassName         types.String                `tfsdk:"gateway_class_name"`
+	Listeners                types.List                  `tfsdk:"listeners"`
 	Config                   *GatewayProviderConfigModel `tfsdk:"config"`
-	IncludeChalkNodeSelector types.Bool                 `tfsdk:"include_chalk_node_selector"`
-	IPAllowlist              types.List                 `tfsdk:"ip_allowlist"`
-	TLSCertificate           *TLSCertificateConfigModel `tfsdk:"tls_certificate"`
-	ServiceAnnotations       types.Map                  `tfsdk:"service_annotations"`
-	LoadBalancerClass        types.String               `tfsdk:"load_balancer_class"`
-	ClusterGatewayId         types.String               `tfsdk:"cluster_gateway_id"`
-	CreatedAt                types.String               `tfsdk:"created_at"`
-	UpdatedAt                types.String               `tfsdk:"updated_at"`
+	IncludeChalkNodeSelector types.Bool                  `tfsdk:"include_chalk_node_selector"`
+	IPAllowlist              types.List                  `tfsdk:"ip_allowlist"`
+	TLSCertificate           *TLSCertificateConfigModel  `tfsdk:"tls_certificate"`
+	ServiceAnnotations       types.Map                   `tfsdk:"service_annotations"`
+	LoadBalancerClass        types.String                `tfsdk:"load_balancer_class"`
+	ClusterGatewayId         types.String                `tfsdk:"cluster_gateway_id"`
+	CreatedAt                types.String                `tfsdk:"created_at"`
+	UpdatedAt                types.String                `tfsdk:"updated_at"`
 }
 
 func (r *ClusterGatewayResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {

@@ -30,10 +30,10 @@ type ClusterBackgroundPersistenceResource struct {
 }
 
 type KubeResourceConfigModel struct {
-	CPU             types.String `tfsdk:"cpu"`
-	Memory          types.String `tfsdk:"memory"`
+	CPU              types.String `tfsdk:"cpu"`
+	Memory           types.String `tfsdk:"memory"`
 	EphemeralStorage types.String `tfsdk:"ephemeral_storage"`
-	Storage         types.String `tfsdk:"storage"`
+	Storage          types.String `tfsdk:"storage"`
 }
 
 type BackgroundPersistenceWriterHpaModel struct {
@@ -44,74 +44,74 @@ type BackgroundPersistenceWriterHpaModel struct {
 }
 
 type BackgroundPersistenceWriterModel struct {
-	Name                                       types.String                         `tfsdk:"name"`
-	ImageOverride                             types.String                         `tfsdk:"image_override"`
-	HpaSpecs                                  *BackgroundPersistenceWriterHpaModel `tfsdk:"hpa_specs"`
-	GkeSpot                                   types.Bool                           `tfsdk:"gke_spot"`
-	LoadWriterConfigmap                       types.Bool                           `tfsdk:"load_writer_configmap"`
-	Version                                   types.String                         `tfsdk:"version"`
-	Request                                   *KubeResourceConfigModel             `tfsdk:"request"`
-	Limit                                     *KubeResourceConfigModel             `tfsdk:"limit"`
-	BusSubscriberType                         types.String                         `tfsdk:"bus_subscriber_type"`
-	DefaultReplicaCount                       types.Int64                          `tfsdk:"default_replica_count"`
-	KafkaConsumerGroupOverride                types.String                         `tfsdk:"kafka_consumer_group_override"`
-	MaxBatchSize                              types.Int64                          `tfsdk:"max_batch_size"`
-	MessageProcessingConcurrency              types.Int64                          `tfsdk:"message_processing_concurrency"`
-	MetadataSqlSslCaCertSecret                types.String                         `tfsdk:"metadata_sql_ssl_ca_cert_secret"`
-	MetadataSqlSslClientCertSecret            types.String                         `tfsdk:"metadata_sql_ssl_client_cert_secret"`
-	MetadataSqlSslClientKeySecret             types.String                         `tfsdk:"metadata_sql_ssl_client_key_secret"`
-	MetadataSqlUriSecret                      types.String                         `tfsdk:"metadata_sql_uri_secret"`
-	OfflineStoreInserterDbType                types.String                         `tfsdk:"offline_store_inserter_db_type"`
-	StorageCachePrefix                        types.String                         `tfsdk:"storage_cache_prefix"`
-	UsageStoreUri                             types.String                         `tfsdk:"usage_store_uri"`
-	ResultsWriterSkipProducingFeatureMetrics  types.Bool                           `tfsdk:"results_writer_skip_producing_feature_metrics"`
-	QueryTableWriteDropRatio                  types.String                         `tfsdk:"query_table_write_drop_ratio"`
+	Name                                     types.String                         `tfsdk:"name"`
+	ImageOverride                            types.String                         `tfsdk:"image_override"`
+	HpaSpecs                                 *BackgroundPersistenceWriterHpaModel `tfsdk:"hpa_specs"`
+	GkeSpot                                  types.Bool                           `tfsdk:"gke_spot"`
+	LoadWriterConfigmap                      types.Bool                           `tfsdk:"load_writer_configmap"`
+	Version                                  types.String                         `tfsdk:"version"`
+	Request                                  *KubeResourceConfigModel             `tfsdk:"request"`
+	Limit                                    *KubeResourceConfigModel             `tfsdk:"limit"`
+	BusSubscriberType                        types.String                         `tfsdk:"bus_subscriber_type"`
+	DefaultReplicaCount                      types.Int64                          `tfsdk:"default_replica_count"`
+	KafkaConsumerGroupOverride               types.String                         `tfsdk:"kafka_consumer_group_override"`
+	MaxBatchSize                             types.Int64                          `tfsdk:"max_batch_size"`
+	MessageProcessingConcurrency             types.Int64                          `tfsdk:"message_processing_concurrency"`
+	MetadataSqlSslCaCertSecret               types.String                         `tfsdk:"metadata_sql_ssl_ca_cert_secret"`
+	MetadataSqlSslClientCertSecret           types.String                         `tfsdk:"metadata_sql_ssl_client_cert_secret"`
+	MetadataSqlSslClientKeySecret            types.String                         `tfsdk:"metadata_sql_ssl_client_key_secret"`
+	MetadataSqlUriSecret                     types.String                         `tfsdk:"metadata_sql_uri_secret"`
+	OfflineStoreInserterDbType               types.String                         `tfsdk:"offline_store_inserter_db_type"`
+	StorageCachePrefix                       types.String                         `tfsdk:"storage_cache_prefix"`
+	UsageStoreUri                            types.String                         `tfsdk:"usage_store_uri"`
+	ResultsWriterSkipProducingFeatureMetrics types.Bool                           `tfsdk:"results_writer_skip_producing_feature_metrics"`
+	QueryTableWriteDropRatio                 types.String                         `tfsdk:"query_table_write_drop_ratio"`
 }
 
 type ClusterBackgroundPersistenceResourceModel struct {
-	Id                                      types.String                           `tfsdk:"id"`
-	EnvironmentIds                          types.List                             `tfsdk:"environment_ids"`
-	Kind                                    types.String                           `tfsdk:"kind"`
-	Namespace                               types.String                           `tfsdk:"namespace"`
-	BusWriterImageGo                        types.String                           `tfsdk:"bus_writer_image_go"`
-	BusWriterImagePython                    types.String                           `tfsdk:"bus_writer_image_python"`
-	BusWriterImageBswl                      types.String                           `tfsdk:"bus_writer_image_bswl"`
-	BusWriterImageRust                      types.String                           `tfsdk:"bus_writer_image_rust"`
-	ServiceAccountName                      types.String                           `tfsdk:"service_account_name"`
-	BusBackend                              types.String                           `tfsdk:"bus_backend"`
-	SecretClient                            types.String                           `tfsdk:"secret_client"`
-	BigqueryParquetUploadSubscriptionId     types.String                           `tfsdk:"bigquery_parquet_upload_subscription_id"`
-	BigqueryStreamingWriteSubscriptionId    types.String                           `tfsdk:"bigquery_streaming_write_subscription_id"`
-	BigqueryStreamingWriteTopic             types.String                           `tfsdk:"bigquery_streaming_write_topic"`
-	BqUploadBucket                          types.String                           `tfsdk:"bq_upload_bucket"`
-	BqUploadTopic                           types.String                           `tfsdk:"bq_upload_topic"`
-	GoogleCloudProject                      types.String                           `tfsdk:"google_cloud_project"`
-	KafkaDlqTopic                           types.String                           `tfsdk:"kafka_dlq_topic"`
-	MetricsBusSubscriptionId                types.String                           `tfsdk:"metrics_bus_subscription_id"`
-	MetricsBusTopicId                       types.String                           `tfsdk:"metrics_bus_topic_id"`
-	OperationSubscriptionId                 types.String                           `tfsdk:"operation_subscription_id"`
-	QueryLogResultTopic                     types.String                           `tfsdk:"query_log_result_topic"`
-	QueryLogSubscriptionId                  types.String                           `tfsdk:"query_log_subscription_id"`
-	ResultBusMetricsSubscriptionId          types.String                           `tfsdk:"result_bus_metrics_subscription_id"`
-	ResultBusOfflineStoreSubscriptionId     types.String                           `tfsdk:"result_bus_offline_store_subscription_id"`
-	ResultBusOnlineStoreSubscriptionId      types.String                           `tfsdk:"result_bus_online_store_subscription_id"`
-	ResultBusTopicId                        types.String                           `tfsdk:"result_bus_topic_id"`
-	UsageBusTopicId                         types.String                           `tfsdk:"usage_bus_topic_id"`
-	UsageEventsSubscriptionId               types.String                           `tfsdk:"usage_events_subscription_id"`
-	IncludeChalkNodeSelector                types.Bool                             `tfsdk:"include_chalk_node_selector"`
-	ApiServerHost                           types.String                           `tfsdk:"api_server_host"`
-	KafkaSaslSecret                         types.String                           `tfsdk:"kafka_sasl_secret"`
-	MetadataProvider                        types.String                           `tfsdk:"metadata_provider"`
-	KafkaBootstrapServers                   types.String                           `tfsdk:"kafka_bootstrap_servers"`
-	KafkaSecurityProtocol                   types.String                           `tfsdk:"kafka_security_protocol"`
-	KafkaSaslMechanism                      types.String                           `tfsdk:"kafka_sasl_mechanism"`
-	RedisIsClustered                        types.String                           `tfsdk:"redis_is_clustered"`
-	SnowflakeStorageIntegrationName         types.String                           `tfsdk:"snowflake_storage_integration_name"`
-	RedisLightningSupportsHasMany           types.Bool                             `tfsdk:"redis_lightning_supports_has_many"`
-	Insecure                                types.Bool                             `tfsdk:"insecure"`
-	Writers                                 types.List                             `tfsdk:"writers"`
-	CreatedAt                               types.String                           `tfsdk:"created_at"`
-	UpdatedAt                               types.String                           `tfsdk:"updated_at"`
+	Id                                   types.String `tfsdk:"id"`
+	EnvironmentIds                       types.List   `tfsdk:"environment_ids"`
+	Kind                                 types.String `tfsdk:"kind"`
+	Namespace                            types.String `tfsdk:"namespace"`
+	BusWriterImageGo                     types.String `tfsdk:"bus_writer_image_go"`
+	BusWriterImagePython                 types.String `tfsdk:"bus_writer_image_python"`
+	BusWriterImageBswl                   types.String `tfsdk:"bus_writer_image_bswl"`
+	BusWriterImageRust                   types.String `tfsdk:"bus_writer_image_rust"`
+	ServiceAccountName                   types.String `tfsdk:"service_account_name"`
+	BusBackend                           types.String `tfsdk:"bus_backend"`
+	SecretClient                         types.String `tfsdk:"secret_client"`
+	BigqueryParquetUploadSubscriptionId  types.String `tfsdk:"bigquery_parquet_upload_subscription_id"`
+	BigqueryStreamingWriteSubscriptionId types.String `tfsdk:"bigquery_streaming_write_subscription_id"`
+	BigqueryStreamingWriteTopic          types.String `tfsdk:"bigquery_streaming_write_topic"`
+	BqUploadBucket                       types.String `tfsdk:"bq_upload_bucket"`
+	BqUploadTopic                        types.String `tfsdk:"bq_upload_topic"`
+	GoogleCloudProject                   types.String `tfsdk:"google_cloud_project"`
+	KafkaDlqTopic                        types.String `tfsdk:"kafka_dlq_topic"`
+	MetricsBusSubscriptionId             types.String `tfsdk:"metrics_bus_subscription_id"`
+	MetricsBusTopicId                    types.String `tfsdk:"metrics_bus_topic_id"`
+	OperationSubscriptionId              types.String `tfsdk:"operation_subscription_id"`
+	QueryLogResultTopic                  types.String `tfsdk:"query_log_result_topic"`
+	QueryLogSubscriptionId               types.String `tfsdk:"query_log_subscription_id"`
+	ResultBusMetricsSubscriptionId       types.String `tfsdk:"result_bus_metrics_subscription_id"`
+	ResultBusOfflineStoreSubscriptionId  types.String `tfsdk:"result_bus_offline_store_subscription_id"`
+	ResultBusOnlineStoreSubscriptionId   types.String `tfsdk:"result_bus_online_store_subscription_id"`
+	ResultBusTopicId                     types.String `tfsdk:"result_bus_topic_id"`
+	UsageBusTopicId                      types.String `tfsdk:"usage_bus_topic_id"`
+	UsageEventsSubscriptionId            types.String `tfsdk:"usage_events_subscription_id"`
+	IncludeChalkNodeSelector             types.Bool   `tfsdk:"include_chalk_node_selector"`
+	ApiServerHost                        types.String `tfsdk:"api_server_host"`
+	KafkaSaslSecret                      types.String `tfsdk:"kafka_sasl_secret"`
+	MetadataProvider                     types.String `tfsdk:"metadata_provider"`
+	KafkaBootstrapServers                types.String `tfsdk:"kafka_bootstrap_servers"`
+	KafkaSecurityProtocol                types.String `tfsdk:"kafka_security_protocol"`
+	KafkaSaslMechanism                   types.String `tfsdk:"kafka_sasl_mechanism"`
+	RedisIsClustered                     types.String `tfsdk:"redis_is_clustered"`
+	SnowflakeStorageIntegrationName      types.String `tfsdk:"snowflake_storage_integration_name"`
+	RedisLightningSupportsHasMany        types.Bool   `tfsdk:"redis_lightning_supports_has_many"`
+	Insecure                             types.Bool   `tfsdk:"insecure"`
+	Writers                              types.List   `tfsdk:"writers"`
+	CreatedAt                            types.String `tfsdk:"created_at"`
+	UpdatedAt                            types.String `tfsdk:"updated_at"`
 }
 
 func (r *ClusterBackgroundPersistenceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -528,12 +528,12 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 	var protoWriters []*serverv1.BackgroundPersistenceWriterSpecs
 	for _, writer := range writers {
 		protoWriter := &serverv1.BackgroundPersistenceWriterSpecs{
-			Name:                       writer.Name.ValueString(),
-			ImageOverride:              writer.ImageOverride.ValueString(),
-			Version:                    writer.Version.ValueString(),
-			BusSubscriberType:          writer.BusSubscriberType.ValueString(),
-			DefaultReplicaCount:        int32(writer.DefaultReplicaCount.ValueInt64()),
-			MetadataSqlSslCaCertSecret: writer.MetadataSqlSslCaCertSecret.ValueString(),
+			Name:                           writer.Name.ValueString(),
+			ImageOverride:                  writer.ImageOverride.ValueString(),
+			Version:                        writer.Version.ValueString(),
+			BusSubscriberType:              writer.BusSubscriberType.ValueString(),
+			DefaultReplicaCount:            int32(writer.DefaultReplicaCount.ValueInt64()),
+			MetadataSqlSslCaCertSecret:     writer.MetadataSqlSslCaCertSecret.ValueString(),
 			MetadataSqlSslClientCertSecret: writer.MetadataSqlSslClientCertSecret.ValueString(),
 			MetadataSqlSslClientKeySecret:  writer.MetadataSqlSslClientKeySecret.ValueString(),
 			MetadataSqlUriSecret:           writer.MetadataSqlUriSecret.ValueString(),
@@ -613,44 +613,44 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		EnvironmentIds: envIds,
 		Specs: &serverv1.BackgroundPersistenceDeploymentSpecs{
 			CommonPersistenceSpecs: &serverv1.BackgroundPersistenceCommonSpecs{
-				Namespace:                             data.Namespace.ValueString(),
-				BusWriterImageGo:                      data.BusWriterImageGo.ValueString(),
-				BusWriterImagePython:                  data.BusWriterImagePython.ValueString(),
-				BusWriterImageBswl:                    data.BusWriterImageBswl.ValueString(),
-				ServiceAccountName:                    data.ServiceAccountName.ValueString(),
-				BusBackend:                            data.BusBackend.ValueString(),
-				SecretClient:                          data.SecretClient.ValueString(),
-				BigqueryParquetUploadSubscriptionId:   data.BigqueryParquetUploadSubscriptionId.ValueString(),
-				BigqueryStreamingWriteSubscriptionId:  data.BigqueryStreamingWriteSubscriptionId.ValueString(),
-				BigqueryStreamingWriteTopic:           data.BigqueryStreamingWriteTopic.ValueString(),
-				BqUploadBucket:                        data.BqUploadBucket.ValueString(),
-				BqUploadTopic:                         data.BqUploadTopic.ValueString(),
-				GoogleCloudProject:                    data.GoogleCloudProject.ValueString(),
-				KafkaDlqTopic:                         data.KafkaDlqTopic.ValueString(),
-				MetricsBusSubscriptionId:              data.MetricsBusSubscriptionId.ValueString(),
-				MetricsBusTopicId:                     data.MetricsBusTopicId.ValueString(),
-				OperationSubscriptionId:               data.OperationSubscriptionId.ValueString(),
-				QueryLogResultTopic:                   data.QueryLogResultTopic.ValueString(),
-				QueryLogSubscriptionId:                data.QueryLogSubscriptionId.ValueString(),
-				ResultBusMetricsSubscriptionId:        data.ResultBusMetricsSubscriptionId.ValueString(),
-				ResultBusOfflineStoreSubscriptionId:   data.ResultBusOfflineStoreSubscriptionId.ValueString(),
-				ResultBusOnlineStoreSubscriptionId:    data.ResultBusOnlineStoreSubscriptionId.ValueString(),
-				ResultBusTopicId:                      data.ResultBusTopicId.ValueString(),
-				UsageBusTopicId:                       data.UsageBusTopicId.ValueString(),
-				UsageEventsSubscriptionId:             data.UsageEventsSubscriptionId.ValueString(),
-				IncludeChalkNodeSelector:              data.IncludeChalkNodeSelector.ValueBool(),
+				Namespace:                            data.Namespace.ValueString(),
+				BusWriterImageGo:                     data.BusWriterImageGo.ValueString(),
+				BusWriterImagePython:                 data.BusWriterImagePython.ValueString(),
+				BusWriterImageBswl:                   data.BusWriterImageBswl.ValueString(),
+				ServiceAccountName:                   data.ServiceAccountName.ValueString(),
+				BusBackend:                           data.BusBackend.ValueString(),
+				SecretClient:                         data.SecretClient.ValueString(),
+				BigqueryParquetUploadSubscriptionId:  data.BigqueryParquetUploadSubscriptionId.ValueString(),
+				BigqueryStreamingWriteSubscriptionId: data.BigqueryStreamingWriteSubscriptionId.ValueString(),
+				BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
+				BqUploadBucket:                       data.BqUploadBucket.ValueString(),
+				BqUploadTopic:                        data.BqUploadTopic.ValueString(),
+				GoogleCloudProject:                   data.GoogleCloudProject.ValueString(),
+				KafkaDlqTopic:                        data.KafkaDlqTopic.ValueString(),
+				MetricsBusSubscriptionId:             data.MetricsBusSubscriptionId.ValueString(),
+				MetricsBusTopicId:                    data.MetricsBusTopicId.ValueString(),
+				OperationSubscriptionId:              data.OperationSubscriptionId.ValueString(),
+				QueryLogResultTopic:                  data.QueryLogResultTopic.ValueString(),
+				QueryLogSubscriptionId:               data.QueryLogSubscriptionId.ValueString(),
+				ResultBusMetricsSubscriptionId:       data.ResultBusMetricsSubscriptionId.ValueString(),
+				ResultBusOfflineStoreSubscriptionId:  data.ResultBusOfflineStoreSubscriptionId.ValueString(),
+				ResultBusOnlineStoreSubscriptionId:   data.ResultBusOnlineStoreSubscriptionId.ValueString(),
+				ResultBusTopicId:                     data.ResultBusTopicId.ValueString(),
+				UsageBusTopicId:                      data.UsageBusTopicId.ValueString(),
+				UsageEventsSubscriptionId:            data.UsageEventsSubscriptionId.ValueString(),
+				IncludeChalkNodeSelector:             data.IncludeChalkNodeSelector.ValueBool(),
 			},
-			ApiServerHost:                     data.ApiServerHost.ValueString(),
-			KafkaSaslSecret:                   data.KafkaSaslSecret.ValueString(),
-			MetadataProvider:                  data.MetadataProvider.ValueString(),
-			KafkaBootstrapServers:             data.KafkaBootstrapServers.ValueString(),
-			KafkaSecurityProtocol:             data.KafkaSecurityProtocol.ValueString(),
-			KafkaSaslMechanism:                data.KafkaSaslMechanism.ValueString(),
-			RedisIsClustered:                  data.RedisIsClustered.ValueString(),
-			SnowflakeStorageIntegrationName:   data.SnowflakeStorageIntegrationName.ValueString(),
-			RedisLightningSupportsHasMany:     data.RedisLightningSupportsHasMany.ValueBool(),
-			Insecure:                          data.Insecure.ValueBool(),
-			Writers:                           protoWriters,
+			ApiServerHost:                   data.ApiServerHost.ValueString(),
+			KafkaSaslSecret:                 data.KafkaSaslSecret.ValueString(),
+			MetadataProvider:                data.MetadataProvider.ValueString(),
+			KafkaBootstrapServers:           data.KafkaBootstrapServers.ValueString(),
+			KafkaSecurityProtocol:           data.KafkaSecurityProtocol.ValueString(),
+			KafkaSaslMechanism:              data.KafkaSaslMechanism.ValueString(),
+			RedisIsClustered:                data.RedisIsClustered.ValueString(),
+			SnowflakeStorageIntegrationName: data.SnowflakeStorageIntegrationName.ValueString(),
+			RedisLightningSupportsHasMany:   data.RedisLightningSupportsHasMany.ValueBool(),
+			Insecure:                        data.Insecure.ValueBool(),
+			Writers:                         protoWriters,
 		},
 	}
 
