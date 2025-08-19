@@ -49,3 +49,8 @@ func NewAuthClient(ctx context.Context, options *GrpcClientOptions) serverv1conn
 	return serverv1connect.NewAuthServiceClient(
 		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
 }
+
+func NewBuilderClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.BuilderServiceClient {
+	return serverv1connect.NewBuilderServiceClient(
+		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+}
