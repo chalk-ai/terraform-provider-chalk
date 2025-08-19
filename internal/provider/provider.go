@@ -149,6 +149,9 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 func (p *ChalkProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewEnvironmentDataSource,
+		NewClusterGatewayDataSource,
+		NewClusterBackgroundPersistenceDataSource,
+		NewClusterTimescaleDataSource,
 	}
 }
 
