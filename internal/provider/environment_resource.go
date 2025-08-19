@@ -1,0 +1,482 @@
+package provider
+
+import (
+	"connectrpc.com/connect"
+	"context"
+	"fmt"
+	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
+	"net/http"
+)
+
+var _ resource.Resource = &EnvironmentResource{}
+var _ resource.ResourceWithImportState = &EnvironmentResource{}
+
+func NewEnvironmentResource() resource.Resource {
+	return &EnvironmentResource{}
+}
+
+type EnvironmentResource struct {
+	client *ChalkClient
+}
+
+type EnvironmentResourceModel struct {
+	Id                     types.String `tfsdk:"id"`
+	Name                   types.String `tfsdk:"name"`
+	ProjectId              types.String `tfsdk:"project_id"`
+	SourceBundleBucket     types.String `tfsdk:"source_bundle_bucket"`
+	OnlineStoreSecret      types.String `tfsdk:"online_store_secret"`
+	FeatureStoreSecret     types.String `tfsdk:"feature_store_secret"`
+	PrivatePipRepositories types.String `tfsdk:"private_pip_repositories"`
+	AdditionalEnvVars      types.Map    `tfsdk:"additional_env_vars"`
+	SpecsConfigJson        types.String `tfsdk:"specs_config_json"`
+}
+
+func (r *EnvironmentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_environment"
+}
+
+func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Chalk environment resource",
+
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: "Environment identifier",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"name": schema.StringAttribute{
+				MarkdownDescription: "Environment name",
+				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				MarkdownDescription: "Project ID",
+				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"source_bundle_bucket": schema.StringAttribute{
+				MarkdownDescription: "Source bundle bucket",
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"online_store_secret": schema.StringAttribute{
+				MarkdownDescription: "Online store secret",
+				Optional:            true,
+				Sensitive:           true,
+			},
+			"feature_store_secret": schema.StringAttribute{
+				MarkdownDescription: "Feature store secret",
+				Optional:            true,
+				Sensitive:           true,
+			},
+			"private_pip_repositories": schema.StringAttribute{
+				MarkdownDescription: "Private pip repositories",
+				Optional:            true,
+			},
+			"additional_env_vars": schema.MapAttribute{
+				MarkdownDescription: "Additional environment variables",
+				Optional:            true,
+				ElementType:         types.StringType,
+			},
+			"specs_config_json": schema.StringAttribute{
+				MarkdownDescription: "Specs config JSON",
+				Optional:            true,
+			},
+		},
+	}
+}
+
+func (r *EnvironmentResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok := req.ProviderData.(*ChalkClient)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	r.client = client
+}
+
+func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data EnvironmentResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create auth client first
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
+	// Create team client with token injection interceptor
+	tc := NewTeamClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       r.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
+	})
+
+	createReq := &serverv1.CreateEnvironmentRequest{
+		ProjectId: data.ProjectId.ValueString(),
+		Name:      data.Name.ValueString(),
+	}
+
+	if !data.SourceBundleBucket.IsNull() {
+		createReq.SourceBundleBucket = data.SourceBundleBucket.ValueString()
+	}
+
+	env, err := tc.CreateEnvironment(ctx, connect.NewRequest(createReq))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Creating Chalk Environment",
+			fmt.Sprintf("Could not create environment: %v", err),
+		)
+		return
+	}
+
+	// Update with created values
+	data.Id = types.StringValue(env.Msg.Environment.Id)
+
+	// If update fields were provided, update the environment
+	if !data.OnlineStoreSecret.IsNull() || !data.FeatureStoreSecret.IsNull() ||
+		!data.PrivatePipRepositories.IsNull() || !data.AdditionalEnvVars.IsNull() ||
+		!data.SpecsConfigJson.IsNull() {
+		updateReq := &serverv1.UpdateEnvironmentRequest{
+			Id:     data.Id.ValueString(),
+			Update: &serverv1.UpdateEnvironmentOperation{},
+		}
+
+		var updateMaskPaths []string
+
+		if !data.OnlineStoreSecret.IsNull() {
+			val := data.OnlineStoreSecret.ValueString()
+			updateReq.Update.OnlineStoreSecret = &val
+			updateMaskPaths = append(updateMaskPaths, "online_store_secret")
+		}
+
+		if !data.FeatureStoreSecret.IsNull() {
+			val := data.FeatureStoreSecret.ValueString()
+			updateReq.Update.FeatureStoreSecret = &val
+			updateMaskPaths = append(updateMaskPaths, "feature_store_secret")
+		}
+
+		if !data.PrivatePipRepositories.IsNull() {
+			val := data.PrivatePipRepositories.ValueString()
+			updateReq.Update.PrivatePipRepositories = &val
+			updateMaskPaths = append(updateMaskPaths, "private_pip_repositories")
+		}
+
+		if !data.AdditionalEnvVars.IsNull() {
+			envVars := make(map[string]string)
+			diags := data.AdditionalEnvVars.ElementsAs(ctx, &envVars, false)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			updateReq.Update.AdditionalEnvVars = envVars
+			updateMaskPaths = append(updateMaskPaths, "additional_env_vars")
+		}
+
+		if !data.SpecsConfigJson.IsNull() {
+			val := data.SpecsConfigJson.ValueString()
+			updateReq.Update.SpecsConfigJson = &val
+			updateMaskPaths = append(updateMaskPaths, "specs_config_json")
+		}
+
+		updateReq.UpdateMask = &fieldmaskpb.FieldMask{
+			Paths: updateMaskPaths,
+		}
+
+		// Use the environment ID for the header
+		tcUpdate := NewTeamClient(ctx, &GrpcClientOptions{
+			httpClient: &http.Client{},
+			host:       r.client.ApiServer,
+			interceptors: []connect.Interceptor{
+				MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Id.ValueString()),
+				MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+				MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+			},
+		})
+
+		_, err = tcUpdate.UpdateEnvironment(ctx, connect.NewRequest(updateReq))
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Updating Chalk Environment",
+				fmt.Sprintf("Environment was created but could not be updated: %v", err),
+			)
+			return
+		}
+	}
+
+	tflog.Trace(ctx, "created a chalk_environment resource")
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data EnvironmentResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create auth client first
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
+	// Create team client with token injection interceptor
+	tc := NewTeamClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       r.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Id.ValueString()),
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
+	})
+
+	env, err := tc.GetEnv(ctx, connect.NewRequest(&serverv1.GetEnvRequest{}))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading Chalk Environment",
+			fmt.Sprintf("Could not read environment %s: %v", data.Id.ValueString(), err),
+		)
+		return
+	}
+
+	// Update the model with the fetched data
+	e := env.Msg.Environment
+	data.Name = types.StringValue(e.Name)
+	data.ProjectId = types.StringValue(e.ProjectId)
+
+	if e.OnlineStoreSecret != nil {
+		data.OnlineStoreSecret = types.StringValue(*e.OnlineStoreSecret)
+	}
+
+	if e.FeatureStoreSecret != nil {
+		data.FeatureStoreSecret = types.StringValue(*e.FeatureStoreSecret)
+	}
+
+	if e.PrivatePipRepositories != nil {
+		data.PrivatePipRepositories = types.StringValue(*e.PrivatePipRepositories)
+	}
+
+	if e.SourceBundleBucket != nil {
+		data.SourceBundleBucket = types.StringValue(*e.SourceBundleBucket)
+	}
+
+	if e.AdditionalEnvVars != nil && len(e.AdditionalEnvVars) > 0 {
+		elements := make(map[string]attr.Value)
+		for k, v := range e.AdditionalEnvVars {
+			elements[k] = types.StringValue(v)
+		}
+		data.AdditionalEnvVars = types.MapValueMust(types.StringType, elements)
+	}
+
+	// Note: specs_config_json is not directly available in the Environment message
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data EnvironmentResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create auth client first
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
+	// Create team client with token injection interceptor
+	tc := NewTeamClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       r.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Id.ValueString()),
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
+	})
+
+	updateReq := &serverv1.UpdateEnvironmentRequest{
+		Id:     data.Id.ValueString(),
+		Update: &serverv1.UpdateEnvironmentOperation{},
+	}
+
+	var updateMaskPaths []string
+
+	// Check what fields have changed
+	var state EnvironmentResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !data.OnlineStoreSecret.Equal(state.OnlineStoreSecret) {
+		if !data.OnlineStoreSecret.IsNull() {
+			val := data.OnlineStoreSecret.ValueString()
+			updateReq.Update.OnlineStoreSecret = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "online_store_secret")
+	}
+
+	if !data.FeatureStoreSecret.Equal(state.FeatureStoreSecret) {
+		if !data.FeatureStoreSecret.IsNull() {
+			val := data.FeatureStoreSecret.ValueString()
+			updateReq.Update.FeatureStoreSecret = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "feature_store_secret")
+	}
+
+	if !data.PrivatePipRepositories.Equal(state.PrivatePipRepositories) {
+		if !data.PrivatePipRepositories.IsNull() {
+			val := data.PrivatePipRepositories.ValueString()
+			updateReq.Update.PrivatePipRepositories = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "private_pip_repositories")
+	}
+
+	if !data.AdditionalEnvVars.Equal(state.AdditionalEnvVars) {
+		if !data.AdditionalEnvVars.IsNull() {
+			envVars := make(map[string]string)
+			diags := data.AdditionalEnvVars.ElementsAs(ctx, &envVars, false)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			updateReq.Update.AdditionalEnvVars = envVars
+		}
+		updateMaskPaths = append(updateMaskPaths, "additional_env_vars")
+	}
+
+	if !data.SpecsConfigJson.Equal(state.SpecsConfigJson) {
+		if !data.SpecsConfigJson.IsNull() {
+			val := data.SpecsConfigJson.ValueString()
+			updateReq.Update.SpecsConfigJson = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "specs_config_json")
+	}
+
+	if len(updateMaskPaths) > 0 {
+		updateReq.UpdateMask = &fieldmaskpb.FieldMask{
+			Paths: updateMaskPaths,
+		}
+
+		_, err := tc.UpdateEnvironment(ctx, connect.NewRequest(updateReq))
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Updating Chalk Environment",
+				fmt.Sprintf("Could not update environment: %v", err),
+			)
+			return
+		}
+	}
+
+	tflog.Trace(ctx, "updated a chalk_environment resource")
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data EnvironmentResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create auth client first
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
+	// Create team client with token injection interceptor
+	tc := NewTeamClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       r.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Id.ValueString()),
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
+	})
+
+	archiveReq := &serverv1.ArchiveEnvironmentRequest{
+		Id: data.Id.ValueString(),
+	}
+
+	_, err := tc.ArchiveEnvironment(ctx, connect.NewRequest(archiveReq))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Archiving Chalk Environment",
+			fmt.Sprintf("Could not archive environment %s: %v", data.Id.ValueString(), err),
+		)
+		return
+	}
+
+	tflog.Trace(ctx, "archived chalk_environment resource")
+}
+
+func (r *EnvironmentResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
