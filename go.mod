@@ -4,7 +4,7 @@ go 1.24.6
 
 require (
 	connectrpc.com/connect v1.18.1
-	github.com/chalk-ai/chalk-go/gen v1.2.84
+	github.com/chalk-ai/chalk-go/gen v1.2.85
 	github.com/hashicorp/terraform-plugin-framework v1.4.2
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	google.golang.org/protobuf v1.36.7
@@ -34,7 +34,3 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
 	google.golang.org/grpc v1.74.2 // indirect
 )
-
-replace github.com/chalk-ai/chalk-go => /Users/andrew/chalk/chalk-go
-
-replace github.com/chalk-ai/chalk-go/gen => /Users/andrew/chalk/chalk-go/gen
