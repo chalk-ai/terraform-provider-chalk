@@ -54,3 +54,13 @@ func NewBuilderClient(ctx context.Context, options *GrpcClientOptions) serverv1c
 	return serverv1connect.NewBuilderServiceClient(
 		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
 }
+
+func NewCloudAccountCredentialsClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.CloudAccountCredentialsServiceClient {
+	return serverv1connect.NewCloudAccountCredentialsServiceClient(
+		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+}
+
+func NewCloudComponentsClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.CloudComponentsServiceClient {
+	return serverv1connect.NewCloudComponentsServiceClient(
+		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+}
