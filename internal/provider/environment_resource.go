@@ -33,6 +33,7 @@ type EnvironmentResourceModel struct {
 	Name                   types.String `tfsdk:"name"`
 	ProjectId              types.String `tfsdk:"project_id"`
 	SourceBundleBucket     types.String `tfsdk:"source_bundle_bucket"`
+	KubeClusterId          types.String `tfsdk:"kube_cluster_id"`
 	OnlineStoreSecret      types.String `tfsdk:"online_store_secret"`
 	FeatureStoreSecret     types.String `tfsdk:"feature_store_secret"`
 	PrivatePipRepositories types.String `tfsdk:"private_pip_repositories"`
@@ -72,6 +73,13 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 			},
 			"source_bundle_bucket": schema.StringAttribute{
 				MarkdownDescription: "Source bundle bucket",
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"kube_cluster_id": schema.StringAttribute{
+				MarkdownDescription: "Kubernetes cluster ID",
 				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -159,6 +167,11 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 
 	if !data.SourceBundleBucket.IsNull() {
 		createReq.SourceBundleBucket = data.SourceBundleBucket.ValueString()
+	}
+	
+	if !data.KubeClusterId.IsNull() {
+		clusterId := data.KubeClusterId.ValueString()
+		createReq.KubeClusterId = &clusterId
 	}
 
 	env, err := tc.CreateEnvironment(ctx, connect.NewRequest(createReq))
@@ -307,6 +320,10 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 
 	if e.SourceBundleBucket != nil {
 		data.SourceBundleBucket = types.StringValue(*e.SourceBundleBucket)
+	}
+	
+	if e.KubeClusterId != nil {
+		data.KubeClusterId = types.StringValue(*e.KubeClusterId)
 	}
 
 	if e.AdditionalEnvVars != nil && len(e.AdditionalEnvVars) > 0 {

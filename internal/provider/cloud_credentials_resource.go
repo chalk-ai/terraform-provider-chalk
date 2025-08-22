@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"net/http"
@@ -24,6 +26,21 @@ func NewCloudCredentialsResource() resource.Resource {
 
 type CloudCredentialsResource struct {
 	client *ChalkClient
+}
+
+type DockerBuildConfigModel struct {
+	Builder                    types.String `tfsdk:"builder"`
+	PushRegistryType          types.String `tfsdk:"push_registry_type"`
+	PushRegistryTagPrefix     types.String `tfsdk:"push_registry_tag_prefix"`
+	RegistryCredentialsSecret types.String `tfsdk:"registry_credentials_secret_id"`
+	NotificationTopic         types.String `tfsdk:"notification_topic"`
+}
+
+type GCPWorkloadIdentityModel struct {
+	ProjectNumber    types.String `tfsdk:"project_number"`
+	ServiceAccount   types.String `tfsdk:"service_account"`
+	PoolId           types.String `tfsdk:"pool_id"`
+	ProviderId       types.String `tfsdk:"provider_id"`
 }
 
 type CloudCredentialsResourceModel struct {
@@ -41,6 +58,10 @@ type CloudCredentialsResourceModel struct {
 	GCPProjectId                 types.String `tfsdk:"gcp_project_id"`
 	GCPRegion                    types.String `tfsdk:"gcp_region"`
 	GCPManagementServiceAccount  types.String `tfsdk:"gcp_management_service_account"`
+	
+	// Block Configuration
+	DockerBuildConfig    []DockerBuildConfigModel    `tfsdk:"docker_build_config"`
+	GCPWorkloadIdentity  []GCPWorkloadIdentityModel  `tfsdk:"gcp_workload_identity"`
 }
 
 func (r *CloudCredentialsResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -104,6 +125,66 @@ func (r *CloudCredentialsResource) Schema(ctx context.Context, req resource.Sche
 			"gcp_management_service_account": schema.StringAttribute{
 				MarkdownDescription: "GCP management service account",
 				Optional:            true,
+			},
+		},
+		
+		Blocks: map[string]schema.Block{
+			"docker_build_config": schema.ListNestedBlock{
+				MarkdownDescription: "Docker build configuration (optional, max 1)",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"builder": schema.StringAttribute{
+							MarkdownDescription: "Docker builder configuration",
+							Optional:            true,
+						},
+						"push_registry_type": schema.StringAttribute{
+							MarkdownDescription: "Docker push registry type",
+							Optional:            true,
+						},
+						"push_registry_tag_prefix": schema.StringAttribute{
+							MarkdownDescription: "Docker push registry tag prefix",
+							Optional:            true,
+						},
+						"registry_credentials_secret_id": schema.StringAttribute{
+							MarkdownDescription: "Docker registry credentials secret ID",
+							Optional:            true,
+							Sensitive:           true,
+						},
+						"notification_topic": schema.StringAttribute{
+							MarkdownDescription: "Docker build notification topic",
+							Optional:            true,
+						},
+					},
+				},
+				Validators: []validator.List{
+					listvalidator.SizeAtMost(1),
+				},
+			},
+			"gcp_workload_identity": schema.ListNestedBlock{
+				MarkdownDescription: "GCP workload identity configuration for AWS (optional, max 1)",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"project_number": schema.StringAttribute{
+							MarkdownDescription: "GCP project number for workload identity federation",
+							Optional:            true,
+						},
+						"service_account": schema.StringAttribute{
+							MarkdownDescription: "GCP service account email for workload identity",
+							Optional:            true,
+						},
+						"pool_id": schema.StringAttribute{
+							MarkdownDescription: "GCP workload identity pool ID",
+							Optional:            true,
+						},
+						"provider_id": schema.StringAttribute{
+							MarkdownDescription: "GCP workload identity provider ID",
+							Optional:            true,
+						},
+					},
+				},
+				Validators: []validator.List{
+					listvalidator.SizeAtMost(1),
+				},
 			},
 		},
 	}
@@ -180,6 +261,16 @@ func (r *CloudCredentialsResource) Create(ctx context.Context, req resource.Crea
 			externalId := data.AWSExternalId.ValueString()
 			awsConfig.ExternalId = &externalId
 		}
+		
+		// Add Docker build config if provided
+		if dockerConfig := buildDockerConfig(&data); dockerConfig != nil {
+			awsConfig.DockerBuildConfig = dockerConfig
+		}
+		
+		// Add GCP workload identity if provided
+		if workloadIdentity := buildGCPWorkloadIdentity(&data); workloadIdentity != nil {
+			awsConfig.GcpWorkloadIdentity = workloadIdentity
+		}
 
 		cloudConfig = &serverv1.CloudConfig{
 			Config: &serverv1.CloudConfig_Aws{
@@ -204,6 +295,11 @@ func (r *CloudCredentialsResource) Create(ctx context.Context, req resource.Crea
 		if !data.GCPManagementServiceAccount.IsNull() {
 			serviceAccount := data.GCPManagementServiceAccount.ValueString()
 			gcpConfig.ManagementServiceAccount = &serviceAccount
+		}
+		
+		// Add Docker build config if provided
+		if dockerConfig := buildDockerConfig(&data); dockerConfig != nil {
+			gcpConfig.DockerBuildConfig = dockerConfig
 		}
 
 		cloudConfig = &serverv1.CloudConfig{
@@ -300,12 +396,27 @@ func (r *CloudCredentialsResource) Read(ctx context.Context, req resource.ReadRe
 			if aws.ExternalId != nil {
 				data.AWSExternalId = types.StringValue(*aws.ExternalId)
 			}
+			
+			// Extract Docker build config if present
+			if aws.DockerBuildConfig != nil {
+				extractDockerConfig(aws.DockerBuildConfig, &data)
+			}
+			
+			// Extract GCP workload identity if present
+			if aws.GcpWorkloadIdentity != nil {
+				extractGCPWorkloadIdentity(aws.GcpWorkloadIdentity, &data)
+			}
 		case *serverv1.CloudConfig_Gcp:
 			gcp := config.Gcp
 			data.GCPProjectId = types.StringValue(gcp.ProjectId)
 			data.GCPRegion = types.StringValue(gcp.Region)
 			if gcp.ManagementServiceAccount != nil {
 				data.GCPManagementServiceAccount = types.StringValue(*gcp.ManagementServiceAccount)
+			}
+			
+			// Extract Docker build config if present
+			if gcp.DockerBuildConfig != nil {
+				extractDockerConfig(gcp.DockerBuildConfig, &data)
 			}
 		}
 	}
@@ -369,4 +480,100 @@ func (r *CloudCredentialsResource) Delete(ctx context.Context, req resource.Dele
 
 func (r *CloudCredentialsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// Helper function to build Docker build config if block is provided
+func buildDockerConfig(data *CloudCredentialsResourceModel) *serverv1.DockerBuildConfig {
+	if len(data.DockerBuildConfig) == 0 {
+		return nil
+	}
+	
+	dockerBlock := data.DockerBuildConfig[0]
+	dockerConfig := &serverv1.DockerBuildConfig{}
+	
+	if !dockerBlock.Builder.IsNull() {
+		dockerConfig.Builder = dockerBlock.Builder.ValueString()
+	}
+	if !dockerBlock.PushRegistryType.IsNull() {
+		dockerConfig.PushRegistryType = dockerBlock.PushRegistryType.ValueString()
+	}
+	if !dockerBlock.PushRegistryTagPrefix.IsNull() {
+		dockerConfig.PushRegistryTagPrefix = dockerBlock.PushRegistryTagPrefix.ValueString()
+	}
+	if !dockerBlock.RegistryCredentialsSecret.IsNull() {
+		dockerConfig.RegistryCredentialsSecretId = dockerBlock.RegistryCredentialsSecret.ValueString()
+	}
+	if !dockerBlock.NotificationTopic.IsNull() {
+		dockerConfig.NotificationTopic = dockerBlock.NotificationTopic.ValueString()
+	}
+	
+	return dockerConfig
+}
+
+// Helper function to build GCP workload identity if block is provided
+func buildGCPWorkloadIdentity(data *CloudCredentialsResourceModel) *serverv1.GCPWorkloadIdentity {
+	if len(data.GCPWorkloadIdentity) == 0 {
+		return nil
+	}
+	
+	workloadBlock := data.GCPWorkloadIdentity[0]
+	workloadIdentity := &serverv1.GCPWorkloadIdentity{}
+	
+	if !workloadBlock.ProjectNumber.IsNull() {
+		workloadIdentity.GcpProjectNumber = workloadBlock.ProjectNumber.ValueString()
+	}
+	if !workloadBlock.ServiceAccount.IsNull() {
+		workloadIdentity.GcpServiceAccount = workloadBlock.ServiceAccount.ValueString()
+	}
+	if !workloadBlock.PoolId.IsNull() {
+		workloadIdentity.PoolId = workloadBlock.PoolId.ValueString()
+	}
+	if !workloadBlock.ProviderId.IsNull() {
+		workloadIdentity.ProviderId = workloadBlock.ProviderId.ValueString()
+	}
+	
+	return workloadIdentity
+}
+
+// Helper function to extract Docker build config from proto to model
+func extractDockerConfig(dockerConfig *serverv1.DockerBuildConfig, data *CloudCredentialsResourceModel) {
+	dockerBlock := DockerBuildConfigModel{}
+	
+	if dockerConfig.Builder != "" {
+		dockerBlock.Builder = types.StringValue(dockerConfig.Builder)
+	}
+	if dockerConfig.PushRegistryType != "" {
+		dockerBlock.PushRegistryType = types.StringValue(dockerConfig.PushRegistryType)
+	}
+	if dockerConfig.PushRegistryTagPrefix != "" {
+		dockerBlock.PushRegistryTagPrefix = types.StringValue(dockerConfig.PushRegistryTagPrefix)
+	}
+	if dockerConfig.RegistryCredentialsSecretId != "" {
+		dockerBlock.RegistryCredentialsSecret = types.StringValue(dockerConfig.RegistryCredentialsSecretId)
+	}
+	if dockerConfig.NotificationTopic != "" {
+		dockerBlock.NotificationTopic = types.StringValue(dockerConfig.NotificationTopic)
+	}
+	
+	data.DockerBuildConfig = []DockerBuildConfigModel{dockerBlock}
+}
+
+// Helper function to extract GCP workload identity from proto to model
+func extractGCPWorkloadIdentity(workloadIdentity *serverv1.GCPWorkloadIdentity, data *CloudCredentialsResourceModel) {
+	workloadBlock := GCPWorkloadIdentityModel{}
+	
+	if workloadIdentity.GcpProjectNumber != "" {
+		workloadBlock.ProjectNumber = types.StringValue(workloadIdentity.GcpProjectNumber)
+	}
+	if workloadIdentity.GcpServiceAccount != "" {
+		workloadBlock.ServiceAccount = types.StringValue(workloadIdentity.GcpServiceAccount)
+	}
+	if workloadIdentity.PoolId != "" {
+		workloadBlock.PoolId = types.StringValue(workloadIdentity.PoolId)
+	}
+	if workloadIdentity.ProviderId != "" {
+		workloadBlock.ProviderId = types.StringValue(workloadIdentity.ProviderId)
+	}
+	
+	data.GCPWorkloadIdentity = []GCPWorkloadIdentityModel{workloadBlock}
 }
