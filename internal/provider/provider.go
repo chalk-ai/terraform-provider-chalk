@@ -143,6 +143,7 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewClusterGatewayResource,
 		NewClusterBackgroundPersistenceResource,
 		NewClusterTimescaleResource,
+		NewKubernetesClusterResource,
 	}
 }
 
