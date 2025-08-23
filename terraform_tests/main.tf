@@ -103,6 +103,11 @@ resource "chalk_cluster_timescale" "timescale" {
   backup_iam_role_arn             = "arn:aws:iam::009160067517:role/chalk-timescale-backup-role"
   include_chalk_node_selector     = true
   instance_type                   = "c5.large"
+  request = {
+    cpu    = "500m"
+    memory = "1Gi"
+  }
+  service_type = "load-balancer"
 
   postgres_parameters = {
     max_connections = "200"
@@ -113,8 +118,8 @@ resource "chalk_cluster_background_persistence" "persistence" {
   environment_ids = [chalk_environment.test.id]
   namespace                                = "ns-${local.sanitized_email}"
   service_account_name                     = "${local.sanitized_email}-persistence-workload-identity"
-  bus_backend                              = "kafka"
-  secret_client                            = "aws"
+  bus_backend                              = "KAFKA"
+  secret_client                            = "AWS"
   bigquery_parquet_upload_subscription_id  = "${local.sanitized_email}-offline-store-bulk-insert-bus-1"
   bigquery_streaming_write_subscription_id = "${local.sanitized_email}-offline-store-streaming-insert-bus-1"
   bigquery_streaming_write_topic           = "${local.sanitized_email}-offline-store-streaming-insert-bus-1"
@@ -147,10 +152,19 @@ resource "chalk_cluster_background_persistence" "persistence" {
       name                  = "go-metrics-bus-writer"
       bus_subscriber_type   = "GO_METRICS_BUS_WRITER"
       default_replica_count = 1
+      request = {
+        cpu    = "500m"
+        memory = "1Gi"
+      }
+
     }, {
       name                  = "cluster-manager"
       bus_subscriber_type   = "CLUSTER_MANAGER"
       default_replica_count = 1
+      request = {
+        cpu    = "500m"
+        memory = "1Gi"
+      }
     }
   ]
 }
