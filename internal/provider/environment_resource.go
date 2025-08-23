@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"net/http"
@@ -28,16 +29,29 @@ type EnvironmentResource struct {
 	client *ChalkClient
 }
 
+type EnvironmentBucketsModel struct {
+	DatasetBucket      types.String `tfsdk:"dataset_bucket"`
+	PlanStagesBucket   types.String `tfsdk:"plan_stages_bucket"`
+	SourceBundleBucket types.String `tfsdk:"source_bundle_bucket"`
+}
+
 type EnvironmentResourceModel struct {
-	Id                     types.String `tfsdk:"id"`
-	Name                   types.String `tfsdk:"name"`
-	ProjectId              types.String `tfsdk:"project_id"`
-	SourceBundleBucket     types.String `tfsdk:"source_bundle_bucket"`
-	OnlineStoreSecret      types.String `tfsdk:"online_store_secret"`
-	FeatureStoreSecret     types.String `tfsdk:"feature_store_secret"`
-	PrivatePipRepositories types.String `tfsdk:"private_pip_repositories"`
-	AdditionalEnvVars      types.Map    `tfsdk:"additional_env_vars"`
-	SpecsConfigJson        types.String `tfsdk:"specs_config_json"`
+	Id                         types.String `tfsdk:"id"`
+	Name                       types.String `tfsdk:"name"`
+	ProjectId                  types.String `tfsdk:"project_id"`
+	SourceBundleBucket         types.String `tfsdk:"source_bundle_bucket"`
+	KubeClusterId              types.String `tfsdk:"kube_cluster_id"`
+	EngineDockerRegistryPath   types.String `tfsdk:"engine_docker_registry_path"`
+	OnlineStoreSecret          types.String `tfsdk:"online_store_secret"`
+	FeatureStoreSecret         types.String `tfsdk:"feature_store_secret"`
+	PrivatePipRepositories     types.String `tfsdk:"private_pip_repositories"`
+	AdditionalEnvVars          types.Map    `tfsdk:"additional_env_vars"`
+	SpecsConfigJson            types.String `tfsdk:"specs_config_json"`
+	ServiceUrl                 types.String `tfsdk:"service_url"`
+	WorkerUrl                  types.String `tfsdk:"worker_url"`
+	KubeJobNamespace           types.String `tfsdk:"kube_job_namespace"`
+	KubeServiceAccountName     types.String `tfsdk:"kube_service_account_name"`
+	EnvironmentBuckets         types.Object `tfsdk:"environment_buckets"`
 }
 
 func (r *EnvironmentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -77,6 +91,13 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"kube_cluster_id": schema.StringAttribute{
+				MarkdownDescription: "Kubernetes cluster ID",
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 			"online_store_secret": schema.StringAttribute{
 				MarkdownDescription: "Online store secret",
 				Optional:            true,
@@ -99,6 +120,47 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 			"specs_config_json": schema.StringAttribute{
 				MarkdownDescription: "Specs config JSON",
 				Optional:            true,
+			},
+			"service_url": schema.StringAttribute{
+				MarkdownDescription: "Service URL",
+				Optional:            true,
+			},
+			"worker_url": schema.StringAttribute{
+				MarkdownDescription: "Worker URL",
+				Optional:            true,
+			},
+			"kube_job_namespace": schema.StringAttribute{
+				MarkdownDescription: "Kubernetes job namespace",
+				Optional:            true,
+			},
+			"kube_service_account_name": schema.StringAttribute{
+				MarkdownDescription: "Kubernetes service account name",
+				Optional:            true,
+			},
+			"engine_docker_registry_path": schema.StringAttribute{
+				MarkdownDescription: "Engine Docker registry path",
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"environment_buckets": schema.SingleNestedAttribute{
+				MarkdownDescription: "Environment object storage configuration",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"dataset_bucket": schema.StringAttribute{
+						MarkdownDescription: "Dataset bucket",
+						Optional:            true,
+					},
+					"plan_stages_bucket": schema.StringAttribute{
+						MarkdownDescription: "Plan stages bucket",
+						Optional:            true,
+					},
+					"source_bundle_bucket": schema.StringAttribute{
+						MarkdownDescription: "Source bundle bucket",
+						Optional:            true,
+					},
+				},
 			},
 		},
 	}
@@ -161,6 +223,16 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		createReq.SourceBundleBucket = data.SourceBundleBucket.ValueString()
 	}
 
+	if !data.KubeClusterId.IsNull() {
+		clusterId := data.KubeClusterId.ValueString()
+		createReq.KubeClusterId = &clusterId
+	}
+
+	if !data.EngineDockerRegistryPath.IsNull() {
+		val := data.EngineDockerRegistryPath.ValueString()
+		createReq.EngineDockerRegistryPath = &val
+	}
+
 	env, err := tc.CreateEnvironment(ctx, connect.NewRequest(createReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -176,8 +248,10 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	// If update fields were provided, update the environment
 	if !data.OnlineStoreSecret.IsNull() || !data.FeatureStoreSecret.IsNull() ||
 		!data.PrivatePipRepositories.IsNull() || !data.AdditionalEnvVars.IsNull() ||
-		!data.SpecsConfigJson.IsNull() {
-		updateReq := &serverv1.UpdateEnvironmentRequest{
+		!data.SpecsConfigJson.IsNull() || !data.ServiceUrl.IsNull() ||
+		!data.WorkerUrl.IsNull() || !data.KubeJobNamespace.IsNull() ||
+		!data.KubeServiceAccountName.IsNull() || !data.EnvironmentBuckets.IsNull() {
+		updateReq := &serverv1.UpdateEnvironmentTeamRequest{
 			Id:     data.Id.ValueString(),
 			Update: &serverv1.UpdateEnvironmentOperation{},
 		}
@@ -219,6 +293,45 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			updateMaskPaths = append(updateMaskPaths, "specs_config_json")
 		}
 
+		if !data.ServiceUrl.IsNull() {
+			val := data.ServiceUrl.ValueString()
+			updateReq.Update.ServiceUrl = &val
+			updateMaskPaths = append(updateMaskPaths, "service_url")
+		}
+
+		if !data.WorkerUrl.IsNull() {
+			val := data.WorkerUrl.ValueString()
+			updateReq.Update.WorkerUrl = &val
+			updateMaskPaths = append(updateMaskPaths, "worker_url")
+		}
+
+		if !data.KubeJobNamespace.IsNull() {
+			val := data.KubeJobNamespace.ValueString()
+			updateReq.Update.KubeJobNamespace = &val
+			updateMaskPaths = append(updateMaskPaths, "kube_job_namespace")
+		}
+
+		if !data.KubeServiceAccountName.IsNull() {
+			val := data.KubeServiceAccountName.ValueString()
+			updateReq.Update.KubeServiceAccountName = &val
+			updateMaskPaths = append(updateMaskPaths, "kube_service_account_name")
+		}
+
+		if !data.EnvironmentBuckets.IsNull() {
+			var buckets EnvironmentBucketsModel
+			diags := data.EnvironmentBuckets.As(ctx, &buckets, basetypes.ObjectAsOptions{})
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			updateReq.Update.EnvironmentBuckets = &serverv1.EnvironmentObjectStorageConfig{
+				DatasetBucket:      buckets.DatasetBucket.ValueString(),
+				PlanStagesBucket:   buckets.PlanStagesBucket.ValueString(),
+				SourceBundleBucket: buckets.SourceBundleBucket.ValueString(),
+			}
+			updateMaskPaths = append(updateMaskPaths, "environment_buckets")
+		}
+
 		updateReq.UpdateMask = &fieldmaskpb.FieldMask{
 			Paths: updateMaskPaths,
 		}
@@ -234,7 +347,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			},
 		})
 
-		_, err = tcUpdate.UpdateEnvironment(ctx, connect.NewRequest(updateReq))
+		_, err = tcUpdate.UpdateEnvironmentTeam(ctx, connect.NewRequest(updateReq))
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error Updating Chalk Environment",
@@ -309,12 +422,52 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		data.SourceBundleBucket = types.StringValue(*e.SourceBundleBucket)
 	}
 
+	if e.KubeClusterId != nil {
+		data.KubeClusterId = types.StringValue(*e.KubeClusterId)
+	}
+
 	if e.AdditionalEnvVars != nil && len(e.AdditionalEnvVars) > 0 {
 		elements := make(map[string]attr.Value)
 		for k, v := range e.AdditionalEnvVars {
 			elements[k] = types.StringValue(v)
 		}
 		data.AdditionalEnvVars = types.MapValueMust(types.StringType, elements)
+	}
+
+	if e.ServiceUrl != nil {
+		data.ServiceUrl = types.StringValue(*e.ServiceUrl)
+	}
+
+	if e.WorkerUrl != nil {
+		data.WorkerUrl = types.StringValue(*e.WorkerUrl)
+	}
+
+	if e.KubeJobNamespace != nil {
+		data.KubeJobNamespace = types.StringValue(*e.KubeJobNamespace)
+	}
+
+	if e.KubeServiceAccountName != nil {
+		data.KubeServiceAccountName = types.StringValue(*e.KubeServiceAccountName)
+	}
+
+	if e.EngineDockerRegistryPath != nil {
+		data.EngineDockerRegistryPath = types.StringValue(*e.EngineDockerRegistryPath)
+	}
+
+	if e.EnvironmentBuckets != nil {
+		bucketsAttrs := map[string]attr.Value{
+			"dataset_bucket":       types.StringValue(e.EnvironmentBuckets.DatasetBucket),
+			"plan_stages_bucket":   types.StringValue(e.EnvironmentBuckets.PlanStagesBucket),
+			"source_bundle_bucket": types.StringValue(e.EnvironmentBuckets.SourceBundleBucket),
+		}
+		bucketsType := types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"dataset_bucket":       types.StringType,
+				"plan_stages_bucket":   types.StringType,
+				"source_bundle_bucket": types.StringType,
+			},
+		}
+		data.EnvironmentBuckets = types.ObjectValueMust(bucketsType.AttrTypes, bucketsAttrs)
 	}
 
 	// Note: specs_config_json is not directly available in the Environment message
@@ -352,7 +505,7 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 		},
 	})
 
-	updateReq := &serverv1.UpdateEnvironmentRequest{
+	updateReq := &serverv1.UpdateEnvironmentTeamRequest{
 		Id:     data.Id.ValueString(),
 		Update: &serverv1.UpdateEnvironmentOperation{},
 	}
@@ -411,12 +564,61 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 		updateMaskPaths = append(updateMaskPaths, "specs_config_json")
 	}
 
+	if !data.ServiceUrl.Equal(state.ServiceUrl) {
+		if !data.ServiceUrl.IsNull() {
+			val := data.ServiceUrl.ValueString()
+			updateReq.Update.ServiceUrl = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "service_url")
+	}
+
+	if !data.WorkerUrl.Equal(state.WorkerUrl) {
+		if !data.WorkerUrl.IsNull() {
+			val := data.WorkerUrl.ValueString()
+			updateReq.Update.WorkerUrl = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "worker_url")
+	}
+
+	if !data.KubeJobNamespace.Equal(state.KubeJobNamespace) {
+		if !data.KubeJobNamespace.IsNull() {
+			val := data.KubeJobNamespace.ValueString()
+			updateReq.Update.KubeJobNamespace = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "kube_job_namespace")
+	}
+
+	if !data.KubeServiceAccountName.Equal(state.KubeServiceAccountName) {
+		if !data.KubeServiceAccountName.IsNull() {
+			val := data.KubeServiceAccountName.ValueString()
+			updateReq.Update.KubeServiceAccountName = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "kube_service_account_name")
+	}
+
+	if !data.EnvironmentBuckets.Equal(state.EnvironmentBuckets) {
+		if !data.EnvironmentBuckets.IsNull() {
+			var buckets EnvironmentBucketsModel
+			diags := data.EnvironmentBuckets.As(ctx, &buckets, basetypes.ObjectAsOptions{})
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			updateReq.Update.EnvironmentBuckets = &serverv1.EnvironmentObjectStorageConfig{
+				DatasetBucket:      buckets.DatasetBucket.ValueString(),
+				PlanStagesBucket:   buckets.PlanStagesBucket.ValueString(),
+				SourceBundleBucket: buckets.SourceBundleBucket.ValueString(),
+			}
+		}
+		updateMaskPaths = append(updateMaskPaths, "environment_buckets")
+	}
+
 	if len(updateMaskPaths) > 0 {
 		updateReq.UpdateMask = &fieldmaskpb.FieldMask{
 			Paths: updateMaskPaths,
 		}
 
-		_, err := tc.UpdateEnvironment(ctx, connect.NewRequest(updateReq))
+		_, err := tc.UpdateEnvironmentTeam(ctx, connect.NewRequest(updateReq))
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error Updating Chalk Environment",
