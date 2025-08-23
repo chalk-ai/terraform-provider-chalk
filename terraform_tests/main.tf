@@ -29,7 +29,7 @@ provider "chalk" {
 }
 
 resource "chalk_project" "test" {
-  name = "project-${random_pet.pet.id}"
+  name = "remote-dev"
 }
 
 resource "random_pet" "pet" {}
@@ -74,6 +74,12 @@ resource "chalk_environment" "test" {
   additional_env_vars = {
     "CHALK_INITIALIZE_NATIVE_BUS_PUBLISHER" : "1", "CHALK_PERSIST_TO_OFFLINE_STORE_QUERY_LOG" : "1", "CHALK_PLANNER_ENABLE_NATIVE_RESULT_BUS_PERSISTENCE" : "1", "CHALK_PLANNER_PERSIST_VALUES_OFFLINE_STORE" : "0", "CHALK_PLANNER_PERSIST_VALUES_PARQUET" : "0", "CHALK_PLANNER_SKIP_RELATIONSHIP_DISTINCT" : "1", "CHALK_PLANNER_USE_FILTERED_JOINS" : "0", "CHALK_PLANNER_USE_NATIVE_SQL_OPERATORS" : "1", "CHALK_PLANNER_USE_NATIVE_STATISTICS_OPERATOR" : "0", "CHALK_PLANNER_VELOX_USE_ZERO_COPY_HASH_JOIN" : "1", "CHALK_SKIP_USAGE_PERSISTENCE" : "1", "CHALK_STATIC_UNDERSCORE_EXPRESSIONS" : "1", "CHECK_DUPLICATE_ROWS" : "0", "DD_TRACE_ENABLED" : "1", "GRPC_QUERY_SERVER_NO_TLS" : "1", "PYTHONOPTIMIZE" : "1"
   }
+  engine_docker_registry_path = "engines/engine-${local.sanitized_email}"
+  environment_buckets = {
+    "plan_stages_bucket"   = "s3://chalk-cicd-test-stages-bucket"
+    "source_bundle_bucket" = "s3://chalk-cicd-test-source-bucket"
+    "dataset_bucket"       = "s3://chalk-cicd-test-dataset-bucket"
+  }
 }
 
 output "env_info" {
@@ -99,9 +105,6 @@ resource "chalk_cluster_timescale" "timescale" {
   connection_pool_max_connections = "500"
   connection_pool_size            = "50"
   connection_pool_mode            = "transaction"
-  backup_bucket                   = "s3://chalk-cicd-test-timescale-backups"
-  backup_iam_role_arn             = "arn:aws:iam::009160067517:role/chalk-timescale-backup-role"
-  include_chalk_node_selector     = true
   instance_type                   = "c5.large"
   request = {
     cpu    = "500m"
