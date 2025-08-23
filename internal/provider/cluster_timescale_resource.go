@@ -179,7 +179,7 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			},
 			"secret_name": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes secret name for database credentials",
-				Required:            true,
+				Optional:            true,
 			},
 			"internal": schema.BoolAttribute{
 				MarkdownDescription: "Whether the database is internal",
@@ -308,9 +308,13 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 			ConnectionPoolMode:           data.ConnectionPoolMode.ValueString(),
 			BackupBucket:                 data.BackupBucket.ValueString(),
 			BackupIamRoleArn:             data.BackupIamRoleArn.ValueString(),
-			SecretName:                   data.SecretName.ValueString(),
 			IncludeChalkNodeSelector:     data.IncludeChalkNodeSelector.ValueBool(),
 		},
+	}
+
+	// Handle optional secret_name field
+	if !data.SecretName.IsNull() {
+		createReq.Specs.SecretName = data.SecretName.ValueString()
 	}
 
 	// Set optional fields
@@ -500,8 +504,14 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		data.ConnectionPoolMode = types.StringValue(specs.ConnectionPoolMode)
 		data.BackupBucket = types.StringValue(specs.BackupBucket)
 		data.BackupIamRoleArn = types.StringValue(specs.BackupIamRoleArn)
-		data.SecretName = types.StringValue(specs.SecretName)
 		data.IncludeChalkNodeSelector = types.BoolValue(specs.IncludeChalkNodeSelector)
+
+		// Handle optional secret_name field
+		if specs.SecretName != "" {
+			data.SecretName = types.StringValue(specs.SecretName)
+		} else {
+			data.SecretName = types.StringNull()
+		}
 		data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
 		data.InstanceType = types.StringValue(specs.InstanceType)
 		data.Nodepool = types.StringValue(specs.Nodepool)

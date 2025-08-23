@@ -88,6 +88,87 @@ output "cluster_info" {
   value = chalk_kubernetes_cluster.cluster.name
 }
 
+resource "chalk_cluster_timescale" "timescale" {
+  environment_ids = [chalk_environment.test.id]
+  timescale_image                 = "ghcr.io/imusmanmalik/timescaledb-postgis:16-3.4-54"
+  database_name                   = "${local.sanitized_email}-chalk-metrics"
+  database_replicas               = 1
+  storage                         = "30Gi"
+  namespace                       = "ns-${local.sanitized_email}"
+  connection_pool_replicas        = 1
+  connection_pool_max_connections = "500"
+  connection_pool_size            = "50"
+  connection_pool_mode            = "transaction"
+  backup_bucket                   = "s3://chalk-cicd-test-timescale-backups"
+  backup_iam_role_arn             = "arn:aws:iam::009160067517:role/chalk-timescale-backup-role"
+  include_chalk_node_selector     = true
+  instance_type                   = "c5.large"
+
+  postgres_parameters = {
+    max_connections = "200"
+  }
+}
+
+resource "chalk_cluster_background_persistence" "persistence" {
+  environment_ids = [chalk_environment.test.id]
+  namespace                                = "ns-${local.sanitized_email}"
+  service_account_name                     = "${local.sanitized_email}-persistence-workload-identity"
+  bus_backend                              = "kafka"
+  secret_client                            = "aws"
+  bigquery_parquet_upload_subscription_id  = "${local.sanitized_email}-offline-store-bulk-insert-bus-1"
+  bigquery_streaming_write_subscription_id = "${local.sanitized_email}-offline-store-streaming-insert-bus-1"
+  bigquery_streaming_write_topic           = "${local.sanitized_email}-offline-store-streaming-insert-bus-1"
+  bq_upload_bucket                         = "s3://chalk-cicd-test-data-bucket"
+  bq_upload_topic                          = "${local.sanitized_email}-offline-store-bulk-insert-bus-1"
+  kafka_dlq_topic                          = "${local.sanitized_email}-dlq-1"
+  metrics_bus_subscription_id              = "${local.sanitized_email}-metrics-bus-1"
+  metrics_bus_topic_id                     = "${local.sanitized_email}-metrics-bus-1"
+  operation_subscription_id                = "${local.sanitized_email}-operation-bus-1"
+  query_log_result_topic                   = "${local.sanitized_email}-query-log"
+  query_log_subscription_id                = "${local.sanitized_email}-query-log"
+  result_bus_metrics_subscription_id       = "${local.sanitized_email}-result-bus-1"
+  result_bus_offline_store_subscription_id = "${local.sanitized_email}-result-bus-1"
+  result_bus_online_store_subscription_id  = "${local.sanitized_email}-result-bus-1"
+  result_bus_topic_id                      = "${local.sanitized_email}-result-bus-1"
+  usage_bus_topic_id                       = "${local.sanitized_email}-usage-bus"
+  usage_events_subscription_id             = "${local.sanitized_email}-usage-events"
+  api_server_host                          = "http://${local.sanitized_email}-api-proxy-service.ns-${local.sanitized_email}.svc.cluster.local"
+  kafka_sasl_secret                        = "AmazonMSK_chalk-cicd-test_chalk"
+  metadata_provider                        = "grpc_server"
+  kafka_bootstrap_servers                  = "b-2.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-1.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-3.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096"
+  kafka_security_protocol                  = "SASL_SSL"
+  kafka_sasl_mechanism                     = "SCRAM-SHA-512"
+  redis_is_clustered                       = "1"
+  redis_lightning_supports_has_many        = false
+  insecure                                 = true
+
+  writers = [
+    {
+      name                  = "go-metrics-bus-writer"
+      bus_subscriber_type   = "GO_METRICS_BUS_WRITER"
+      default_replica_count = 1
+    }, {
+      name                  = "cluster-manager"
+      bus_subscriber_type   = "CLUSTER_MANAGER"
+      default_replica_count = 1
+    }
+  ]
+}
+
 output "creds_info" {
   value = chalk_cloud_credentials.creds.name
+}
+
+output "timescale_info" {
+  value = {
+    id         = chalk_cluster_timescale.timescale.id
+    created_at = chalk_cluster_timescale.timescale.created_at
+  }
+}
+
+output "persistence_info" {
+  value = {
+    id         = chalk_cluster_background_persistence.persistence.id
+    created_at = chalk_cluster_background_persistence.persistence.created_at
+  }
 }
