@@ -32,11 +32,9 @@ resource "chalk_project" "test" {
   name = "remote-dev"
 }
 
-resource "random_pet" "pet" {}
-
 resource "chalk_cloud_credentials" "creds" {
   kind                    = "aws"
-  name                    = "creds-${random_pet.pet.id}"
+  name                    = "creds-remote-dev-${local.sanitized_email}"
   aws_account_id          = "009160067517"
   aws_management_role_arn = "arn:aws:iam::009160067517:role/chalk-cicd-test-Chalk-Api-Management"
   aws_region              = "us-east-1"
@@ -63,7 +61,7 @@ resource "chalk_kubernetes_cluster" "cluster" {
 }
 
 resource "chalk_environment" "test" {
-  name                      = "env-${random_pet.pet.id}"
+  name                      = local.sanitized_email
   project_id                = chalk_project.test.id
   kube_cluster_id           = chalk_kubernetes_cluster.cluster.id
   kube_job_namespace        = "ns-${local.sanitized_email}"
@@ -115,6 +113,7 @@ resource "chalk_cluster_timescale" "timescale" {
   postgres_parameters = {
     max_connections = "200"
   }
+  dns_hostname = "${local.sanitized_email}.metrics.cicd.chalk.dev"
 }
 
 resource "chalk_cluster_background_persistence" "persistence" {
@@ -176,12 +175,12 @@ output "creds_info" {
   value = chalk_cloud_credentials.creds.name
 }
 
-output "timescale_info" {
-  value = {
-    id         = chalk_cluster_timescale.timescale.id
-    created_at = chalk_cluster_timescale.timescale.created_at
-  }
-}
+# output "timescale_info" {
+#   value = {
+#     id         = chalk_cluster_timescale.timescale.id
+#     created_at = chalk_cluster_timescale.timescale.created_at
+#   }
+# }
 
 output "persistence_info" {
   value = {

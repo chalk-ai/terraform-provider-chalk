@@ -581,7 +581,37 @@ func (r *ClusterTimescaleResource) Delete(ctx context.Context, req resource.Dele
 	// Note: According to the proto definition, there's no DeleteClusterTimescaleDB method
 	// This means the TimescaleDB lifecycle might be managed differently
 	// For now, we'll just remove it from Terraform state
-	tflog.Trace(ctx, "cluster TimescaleDB deletion - removing from terraform state only (no API delete available)")
+	data := ClusterTimescaleResourceModel{}
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
+	// Create builder client with token injection interceptor
+	bc := NewBuilderClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       r.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
+	})
+
+	_, err := bc.DeleteClusterTimescaleDB(ctx, connect.NewRequest(&serverv1.DeleteClusterTimescaleDBRequest{
+		ClusterTimescaleId: data.Id.ValueString(),
+	}))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Deleting Chalk Cluster TimescaleDB",
+			fmt.Sprintf("Could not delete cluster TimescaleDB %s: %v", data.Id.ValueString(), err),
+		)
+	}
 }
 
 func (r *ClusterTimescaleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
