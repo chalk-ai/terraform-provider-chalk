@@ -110,8 +110,6 @@ type ClusterBackgroundPersistenceResourceModel struct {
 	RedisLightningSupportsHasMany        types.Bool   `tfsdk:"redis_lightning_supports_has_many"`
 	Insecure                             types.Bool   `tfsdk:"insecure"`
 	Writers                              types.List   `tfsdk:"writers"`
-	CreatedAt                            types.String `tfsdk:"created_at"`
-	UpdatedAt                            types.String `tfsdk:"updated_at"`
 }
 
 func (r *ClusterBackgroundPersistenceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -449,14 +447,6 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 					},
 				},
 			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "Creation timestamp",
-				Computed:            true,
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "Last update timestamp",
-				Computed:            true,
-			},
 		},
 	}
 }
@@ -759,12 +749,6 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		// Update with created values
 		data.Id = types.StringValue(bgPersistence.Msg.BackgroundPersistence.Id)
 		data.Kind = types.StringValue(bgPersistence.Msg.BackgroundPersistence.Kind)
-		if bgPersistence.Msg.BackgroundPersistence.CreatedAt != nil {
-			data.CreatedAt = types.StringValue(bgPersistence.Msg.BackgroundPersistence.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-		}
-		if bgPersistence.Msg.BackgroundPersistence.UpdatedAt != nil {
-			data.UpdatedAt = types.StringValue(bgPersistence.Msg.BackgroundPersistence.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-		}
 	}
 
 	tflog.Trace(ctx, "created a chalk_cluster_background_persistence resource")
@@ -834,12 +818,6 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 	bg := bgPersistence.Msg.BackgroundPersistence
 	data.Kind = types.StringValue(bg.Kind)
 
-	if bg.CreatedAt != nil {
-		data.CreatedAt = types.StringValue(bg.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-	}
-	if bg.UpdatedAt != nil {
-		data.UpdatedAt = types.StringValue(bg.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-	}
 
 	// Update specs if available
 	if bg.Specs != nil && bg.Specs.CommonPersistenceSpecs != nil {

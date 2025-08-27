@@ -5,10 +5,6 @@ terraform {
       source  = "registry.terraform.io/chalk-ai/chalk"
       version = "0.1.0"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = "3.5.1"
-    }
     google = {
       source  = "hashicorp/google"
       version = "5.0.0"
@@ -79,18 +75,7 @@ resource "chalk_environment" "test" {
     "source_bundle_bucket" = "s3://chalk-cicd-test-source-bucket"
     "dataset_bucket"       = "s3://chalk-cicd-test-dataset-bucket"
   }
-}
-
-output "env_info" {
-  value = chalk_environment.test.name
-}
-
-output "project_info" {
-  value = chalk_project.test.name
-}
-
-output "cluster_info" {
-  value = chalk_kubernetes_cluster.cluster.name
+  managed = true
 }
 
 resource "chalk_cluster_timescale" "timescale" {
@@ -120,7 +105,7 @@ resource "chalk_cluster_timescale" "timescale" {
 resource "chalk_cluster_background_persistence" "persistence" {
   environment_ids = [chalk_environment.test.id]
   namespace                                = "ns-${local.sanitized_email}"
-  service_account_name                     = "${local.sanitized_email}-persistence-workload-identity"
+  service_account_name                     = "env-${local.sanitized_email}-workload-identity"
   bus_backend                              = "KAFKA"
   secret_client                            = "AWS"
   bigquery_parquet_upload_subscription_id  = "${local.sanitized_email}-offline-store-bulk-insert-bus-1"
@@ -172,20 +157,18 @@ resource "chalk_cluster_background_persistence" "persistence" {
   ]
 }
 
-output "creds_info" {
-  value = chalk_cloud_credentials.creds.name
-}
+resource "chalk_cluster_gateway" "test" {
+  environment_ids = [chalk_environment.test.id]
+  namespace          = "chalk-envoy"
+  gateway_name       = "cicd"
+  gateway_class_name = "cicd-class"
 
-# output "timescale_info" {
-#   value = {
-#     id         = chalk_cluster_timescale.timescale.id
-#     created_at = chalk_cluster_timescale.timescale.created_at
-#   }
-# }
-
-output "persistence_info" {
-  value = {
-    id         = chalk_cluster_background_persistence.persistence.id
-    created_at = chalk_cluster_background_persistence.persistence.created_at
-  }
+  listeners = [
+    {
+      name     = "http"
+      protocol = "HTTP"
+      port     = 80
+      from     = "All"
+    }
+  ]
 }

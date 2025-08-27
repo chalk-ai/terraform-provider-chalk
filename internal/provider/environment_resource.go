@@ -369,6 +369,28 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		}
 	}
 
+	if !data.Managed.IsNull() {
+		bc := NewBuilderClient(ctx, &GrpcClientOptions{
+			httpClient: &http.Client{},
+			host:       r.client.ApiServer,
+			interceptors: []connect.Interceptor{
+				MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+				MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+			},
+		})
+
+		_, err := bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
+			EnvironmentId: data.Id.ValueString(),
+		}))
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Bootstrapping Chalk Environment Cloud Resources",
+				fmt.Sprintf("Environment was created but cloud resources could not be bootstrapped: %v", err),
+			)
+			return
+		}
+	}
+
 	tflog.Trace(ctx, "created a chalk_environment resource")
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -663,6 +685,28 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
 		},
 	)
+
+	if !data.Managed.IsNull() {
+		bc := NewBuilderClient(ctx, &GrpcClientOptions{
+			httpClient: &http.Client{},
+			host:       r.client.ApiServer,
+			interceptors: []connect.Interceptor{
+				MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+				MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+			},
+		})
+
+		_, err := bc.DeleteEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.DeleteEnvironmentCloudResourcesRequest{
+			EnvironmentId: data.Id.ValueString(),
+		}))
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Delete Chalk Environment Cloud Resources",
+				fmt.Sprintf("Environment was created but cloud resources could not be deleted: %v", err),
+			)
+			return
+		}
+	}
 
 	// Create team client with token injection interceptor
 	tc := NewTeamClient(ctx, &GrpcClientOptions{
