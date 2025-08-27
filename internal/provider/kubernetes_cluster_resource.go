@@ -75,8 +75,6 @@ type KubernetesClusterResourceModel struct {
 	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
 	VpcId             types.String `tfsdk:"vpc_id"`
 	TeamId            types.String `tfsdk:"team_id"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	UpdatedAt         types.String `tfsdk:"updated_at"`
 }
 
 func (r *KubernetesClusterResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -153,17 +151,6 @@ func (r *KubernetesClusterResource) Schema(ctx context.Context, req resource.Sch
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "Creation timestamp",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "Last update timestamp",
-				Computed:            true,
 			},
 		},
 	}
@@ -444,11 +431,4 @@ func (r *KubernetesClusterResource) updateModelFromProto(model *KubernetesCluste
 		model.VpcId = types.StringNull()
 	}
 
-	if cluster.CreatedAt != nil {
-		model.CreatedAt = types.StringValue(cluster.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-	}
-
-	if cluster.UpdatedAt != nil {
-		model.UpdatedAt = types.StringValue(cluster.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-	}
 }

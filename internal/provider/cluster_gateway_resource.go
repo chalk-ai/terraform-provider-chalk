@@ -66,8 +66,6 @@ type ClusterGatewayResourceModel struct {
 	ServiceAnnotations       types.Map                   `tfsdk:"service_annotations"`
 	LoadBalancerClass        types.String                `tfsdk:"load_balancer_class"`
 	ClusterGatewayId         types.String                `tfsdk:"cluster_gateway_id"`
-	CreatedAt                types.String                `tfsdk:"created_at"`
-	UpdatedAt                types.String                `tfsdk:"updated_at"`
 }
 
 func (r *ClusterGatewayResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -208,14 +206,6 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 			"cluster_gateway_id": schema.StringAttribute{
 				MarkdownDescription: "Cluster gateway ID",
 				Optional:            true,
-			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "Creation timestamp",
-				Computed:            true,
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "Last update timestamp",
-				Computed:            true,
 			},
 		},
 	}
@@ -432,12 +422,6 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 
 		// Update with created values
 		data.Id = types.StringValue(gateway.Msg.Id)
-		if gateway.Msg.CreatedAt != nil {
-			data.CreatedAt = types.StringValue(gateway.Msg.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-		}
-		if gateway.Msg.UpdatedAt != nil {
-			data.UpdatedAt = types.StringValue(gateway.Msg.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-		}
 	}
 
 	tflog.Trace(ctx, "created a chalk_cluster_gateway resource")
@@ -566,13 +550,6 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 		if specs.ClusterGatewayId != nil {
 			data.ClusterGatewayId = types.StringValue(*specs.ClusterGatewayId)
 		}
-	}
-
-	if gateway.Msg.CreatedAt != nil {
-		data.CreatedAt = types.StringValue(gateway.Msg.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-	}
-	if gateway.Msg.UpdatedAt != nil {
-		data.UpdatedAt = types.StringValue(gateway.Msg.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
