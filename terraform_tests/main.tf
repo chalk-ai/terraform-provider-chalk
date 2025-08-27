@@ -61,6 +61,7 @@ resource "chalk_kubernetes_cluster" "cluster" {
 }
 
 resource "chalk_environment" "test" {
+  id                        = local.sanitized_email
   name                      = local.sanitized_email
   project_id                = chalk_project.test.id
   kube_cluster_id           = chalk_kubernetes_cluster.cluster.id

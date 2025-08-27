@@ -57,6 +57,7 @@ type ClusterTimescaleResourceModel struct {
 	Nodepool                     types.String             `tfsdk:"nodepool"`
 	NodeSelector                 types.Map                `tfsdk:"node_selector"`
 	DNSHostname                  types.String             `tfsdk:"dns_hostname"`
+	BootstrapCloudResources      types.Bool               `tfsdk:"bootstrap_cloud_resources"`
 	CreatedAt                    types.String             `tfsdk:"created_at"`
 	UpdatedAt                    types.String             `tfsdk:"updated_at"`
 }
@@ -225,6 +226,12 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 				MarkdownDescription: "DNS hostname",
 				Optional:            true,
 			},
+			"bootstrap_cloud_resources": schema.BoolAttribute{
+				MarkdownDescription: "Whether to bootstrap cloud resources",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
+			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "Creation timestamp",
 				Computed:            true,
@@ -307,6 +314,7 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 			ConnectionPoolSize:           data.ConnectionPoolSize.ValueString(),
 			ConnectionPoolMode:           data.ConnectionPoolMode.ValueString(),
 			IncludeChalkNodeSelector:     data.IncludeChalkNodeSelector.ValueBool(),
+			BootstrapCloudResources:      data.BootstrapCloudResources.ValueBool(),
 		},
 	}
 
@@ -517,6 +525,7 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 			data.BackupIamRoleArn = types.StringNull()
 		}
 		data.IncludeChalkNodeSelector = types.BoolValue(specs.IncludeChalkNodeSelector)
+		data.BootstrapCloudResources = types.BoolValue(specs.BootstrapCloudResources)
 
 		// Handle optional secret_name field
 		if specs.SecretName != "" {

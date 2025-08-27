@@ -36,22 +36,23 @@ type EnvironmentBucketsModel struct {
 }
 
 type EnvironmentResourceModel struct {
-	Id                         types.String `tfsdk:"id"`
-	Name                       types.String `tfsdk:"name"`
-	ProjectId                  types.String `tfsdk:"project_id"`
-	SourceBundleBucket         types.String `tfsdk:"source_bundle_bucket"`
-	KubeClusterId              types.String `tfsdk:"kube_cluster_id"`
-	EngineDockerRegistryPath   types.String `tfsdk:"engine_docker_registry_path"`
-	OnlineStoreSecret          types.String `tfsdk:"online_store_secret"`
-	FeatureStoreSecret         types.String `tfsdk:"feature_store_secret"`
-	PrivatePipRepositories     types.String `tfsdk:"private_pip_repositories"`
-	AdditionalEnvVars          types.Map    `tfsdk:"additional_env_vars"`
-	SpecsConfigJson            types.String `tfsdk:"specs_config_json"`
-	ServiceUrl                 types.String `tfsdk:"service_url"`
-	WorkerUrl                  types.String `tfsdk:"worker_url"`
-	KubeJobNamespace           types.String `tfsdk:"kube_job_namespace"`
-	KubeServiceAccountName     types.String `tfsdk:"kube_service_account_name"`
-	EnvironmentBuckets         types.Object `tfsdk:"environment_buckets"`
+	Id                       types.String `tfsdk:"id"`
+	Name                     types.String `tfsdk:"name"`
+	ProjectId                types.String `tfsdk:"project_id"`
+	SourceBundleBucket       types.String `tfsdk:"source_bundle_bucket"`
+	KubeClusterId            types.String `tfsdk:"kube_cluster_id"`
+	EngineDockerRegistryPath types.String `tfsdk:"engine_docker_registry_path"`
+	Managed                  types.Bool   `tfsdk:"managed"`
+	OnlineStoreSecret        types.String `tfsdk:"online_store_secret"`
+	FeatureStoreSecret       types.String `tfsdk:"feature_store_secret"`
+	PrivatePipRepositories   types.String `tfsdk:"private_pip_repositories"`
+	AdditionalEnvVars        types.Map    `tfsdk:"additional_env_vars"`
+	SpecsConfigJson          types.String `tfsdk:"specs_config_json"`
+	ServiceUrl               types.String `tfsdk:"service_url"`
+	WorkerUrl                types.String `tfsdk:"worker_url"`
+	KubeJobNamespace         types.String `tfsdk:"kube_job_namespace"`
+	KubeServiceAccountName   types.String `tfsdk:"kube_service_account_name"`
+	EnvironmentBuckets       types.Object `tfsdk:"environment_buckets"`
 }
 
 func (r *EnvironmentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -65,9 +66,9 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "Environment identifier",
-				Computed:            true,
+				Required:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -143,6 +144,10 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+			},
+			"managed": schema.BoolAttribute{
+				MarkdownDescription: "Whether to bootstrap cloud infrastructure",
+				Optional:            true,
 			},
 			"environment_buckets": schema.SingleNestedAttribute{
 				MarkdownDescription: "Environment object storage configuration",
@@ -233,7 +238,17 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		createReq.EngineDockerRegistryPath = &val
 	}
 
-	env, err := tc.CreateEnvironment(ctx, connect.NewRequest(createReq))
+	// Use the id field as environment_id_override
+	if !data.Id.IsNull() {
+		val := data.Id.ValueString()
+		createReq.EnvironmentIdOverride = &val
+	}
+
+	if !data.Managed.IsNull() {
+		createReq.Managed = data.Managed.ValueBool()
+	}
+
+	_, err := tc.CreateEnvironment(ctx, connect.NewRequest(createReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Chalk Environment",
@@ -241,9 +256,6 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		)
 		return
 	}
-
-	// Update with created values
-	data.Id = types.StringValue(env.Msg.Environment.Id)
 
 	// If update fields were provided, update the environment
 	if !data.OnlineStoreSecret.IsNull() || !data.FeatureStoreSecret.IsNull() ||
