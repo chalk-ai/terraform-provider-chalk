@@ -818,7 +818,6 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 	bg := bgPersistence.Msg.BackgroundPersistence
 	data.Kind = types.StringValue(bg.Kind)
 
-
 	// Update specs if available
 	if bg.Specs != nil && bg.Specs.CommonPersistenceSpecs != nil {
 		common := bg.Specs.CommonPersistenceSpecs

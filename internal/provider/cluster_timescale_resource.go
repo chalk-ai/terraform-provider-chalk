@@ -190,6 +190,7 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -487,6 +488,7 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 	// Update specs if available
 	if timescale.Msg.Specs != nil {
 		specs := timescale.Msg.Specs
+		data.Id = types.StringValue(timescale.Msg.Id)
 		data.TimescaleImage = types.StringValue(specs.TimescaleImage)
 		data.DatabaseName = types.StringValue(specs.DatabaseName)
 		data.DatabaseReplicas = types.Int64Value(int64(specs.DatabaseReplicas))
@@ -508,12 +510,7 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		}
 		data.BootstrapCloudResources = types.BoolValue(specs.BootstrapCloudResources)
 
-		// Handle optional secret_name field
-		if specs.SecretName != "" {
-			data.SecretName = types.StringValue(specs.SecretName)
-		} else {
-			data.SecretName = types.StringNull()
-		}
+		data.SecretName = types.StringValue(specs.SecretName)
 		data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
 		data.InstanceType = types.StringValue(specs.InstanceType)
 		data.Nodepool = types.StringValue(specs.Nodepool)
@@ -549,9 +546,6 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 			}
 			data.NodeSelector = types.MapValueMust(types.StringType, selector)
 		}
-
-		// Update resource configs - simplified for now
-		// A full implementation would properly convert from proto back to terraform models
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

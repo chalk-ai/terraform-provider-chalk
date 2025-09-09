@@ -263,7 +263,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		!data.SpecsConfigJson.IsNull() || !data.ServiceUrl.IsNull() ||
 		!data.WorkerUrl.IsNull() || !data.KubeJobNamespace.IsNull() ||
 		!data.KubeServiceAccountName.IsNull() || !data.EnvironmentBuckets.IsNull() {
-		updateReq := &serverv1.UpdateEnvironmentTeamRequest{
+		updateReq := &serverv1.UpdateEnvironmentRequest{
 			Id:     data.Id.ValueString(),
 			Update: &serverv1.UpdateEnvironmentOperation{},
 		}
@@ -359,7 +359,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			},
 		})
 
-		_, err = tcUpdate.UpdateEnvironmentTeam(ctx, connect.NewRequest(updateReq))
+		_, err = tcUpdate.UpdateEnvironment(ctx, connect.NewRequest(updateReq))
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error Updating Chalk Environment",
@@ -539,7 +539,7 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 		},
 	})
 
-	updateReq := &serverv1.UpdateEnvironmentTeamRequest{
+	updateReq := &serverv1.UpdateEnvironmentRequest{
 		Id:     data.Id.ValueString(),
 		Update: &serverv1.UpdateEnvironmentOperation{},
 	}
@@ -652,7 +652,7 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 			Paths: updateMaskPaths,
 		}
 
-		_, err := tc.UpdateEnvironmentTeam(ctx, connect.NewRequest(updateReq))
+		_, err := tc.UpdateEnvironment(ctx, connect.NewRequest(updateReq))
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error Updating Chalk Environment",
