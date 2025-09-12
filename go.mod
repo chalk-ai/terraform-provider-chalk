@@ -4,8 +4,9 @@ go 1.25.0
 
 require (
 	connectrpc.com/connect v1.18.1
-	github.com/chalk-ai/chalk-go/gen v1.2.87
+	github.com/chalk-ai/chalk-go/gen v1.2.93
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
+	github.com/hashicorp/terraform-plugin-framework-validators v0.18.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	google.golang.org/protobuf v1.36.7
 )

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -51,14 +52,12 @@ type ClusterTimescaleResourceModel struct {
 	Internal                     types.Bool               `tfsdk:"internal"`
 	ServiceType                  types.String             `tfsdk:"service_type"`
 	PostgresParameters           types.Map                `tfsdk:"postgres_parameters"`
-	IncludeChalkNodeSelector     types.Bool               `tfsdk:"include_chalk_node_selector"`
 	BackupGcpServiceAccount      types.String             `tfsdk:"backup_gcp_service_account"`
 	InstanceType                 types.String             `tfsdk:"instance_type"`
 	Nodepool                     types.String             `tfsdk:"nodepool"`
 	NodeSelector                 types.Map                `tfsdk:"node_selector"`
 	DNSHostname                  types.String             `tfsdk:"dns_hostname"`
-	CreatedAt                    types.String             `tfsdk:"created_at"`
-	UpdatedAt                    types.String             `tfsdk:"updated_at"`
+	BootstrapCloudResources      types.Bool               `tfsdk:"bootstrap_cloud_resources"`
 }
 
 func (r *ClusterTimescaleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -127,6 +126,9 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			"storage_class": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes storage class",
 				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"namespace": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes namespace",
@@ -171,42 +173,56 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			},
 			"backup_bucket": schema.StringAttribute{
 				MarkdownDescription: "S3/GCS bucket for backups",
-				Required:            true,
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"backup_iam_role_arn": schema.StringAttribute{
 				MarkdownDescription: "IAM role ARN for backups",
-				Required:            true,
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"secret_name": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes secret name for database credentials",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"internal": schema.BoolAttribute{
 				MarkdownDescription: "Whether the database is internal",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
 			},
 			"service_type": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes service type",
 				Optional:            true,
 				Computed:            true,
-				Default:             stringdefault.StaticString("ClusterIP"),
+				Default:             stringdefault.StaticString("load-balancer"),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"postgres_parameters": schema.MapAttribute{
 				MarkdownDescription: "PostgreSQL configuration parameters",
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
-			"include_chalk_node_selector": schema.BoolAttribute{
-				MarkdownDescription: "Whether to include chalk node selector",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-			},
 			"backup_gcp_service_account": schema.StringAttribute{
 				MarkdownDescription: "GCP service account for backups",
 				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"instance_type": schema.StringAttribute{
 				MarkdownDescription: "Instance type",
@@ -224,14 +240,18 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			"dns_hostname": schema.StringAttribute{
 				MarkdownDescription: "DNS hostname",
 				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "Creation timestamp",
+			"bootstrap_cloud_resources": schema.BoolAttribute{
+				MarkdownDescription: "Whether to bootstrap cloud resources",
+				Optional:            true,
 				Computed:            true,
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "Last update timestamp",
-				Computed:            true,
+				Default:             booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
 			},
 		},
 	}
@@ -306,11 +326,13 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 			ConnectionPoolMaxConnections: data.ConnectionPoolMaxConnections.ValueString(),
 			ConnectionPoolSize:           data.ConnectionPoolSize.ValueString(),
 			ConnectionPoolMode:           data.ConnectionPoolMode.ValueString(),
-			BackupBucket:                 data.BackupBucket.ValueString(),
-			BackupIamRoleArn:             data.BackupIamRoleArn.ValueString(),
-			SecretName:                   data.SecretName.ValueString(),
-			IncludeChalkNodeSelector:     data.IncludeChalkNodeSelector.ValueBool(),
+			BootstrapCloudResources:      data.BootstrapCloudResources.ValueBool(),
 		},
+	}
+
+	// Handle optional secret_name field
+	if !data.SecretName.IsNull() {
+		createReq.Specs.SecretName = data.SecretName.ValueString()
 	}
 
 	// Set optional fields
@@ -338,6 +360,12 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	if !data.DNSHostname.IsNull() {
 		val := data.DNSHostname.ValueString()
 		createReq.Specs.DnsHostname = &val
+	}
+	if !data.BackupBucket.IsNull() {
+		createReq.Specs.BackupBucket = data.BackupBucket.ValueString()
+	}
+	if !data.BackupIamRoleArn.IsNull() {
+		createReq.Specs.BackupIamRoleArn = data.BackupIamRoleArn.ValueString()
 	}
 
 	// Convert resource configs
@@ -380,7 +408,7 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 		createReq.Specs.NodeSelector = selector
 	}
 
-	_, err := bc.CreateClusterTimescaleDB(ctx, connect.NewRequest(createReq))
+	metricsDb, err := bc.CreateClusterTimescaleDB(ctx, connect.NewRequest(createReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Chalk Cluster TimescaleDB",
@@ -389,31 +417,9 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	// Since CreateClusterTimescaleDB doesn't return the created resource, we need to get it
-	// We'll use the first environment ID to query for the TimescaleDB
-	if len(envIds) > 0 {
-		getReq := &serverv1.GetClusterTimescaleDBRequest{
-			EnvironmentId: envIds[0],
-		}
-
-		timescale, err := bc.GetClusterTimescaleDB(ctx, connect.NewRequest(getReq))
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Reading Created Chalk Cluster TimescaleDB",
-				fmt.Sprintf("TimescaleDB was created but could not be read: %v", err),
-			)
-			return
-		}
-
-		// Update with created values
-		data.Id = types.StringValue(timescale.Msg.Id)
-		if timescale.Msg.CreatedAt != nil {
-			data.CreatedAt = types.StringValue(timescale.Msg.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-		}
-		if timescale.Msg.UpdatedAt != nil {
-			data.UpdatedAt = types.StringValue(timescale.Msg.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-		}
-	}
+	// Update with created values
+	data.Id = types.StringValue(metricsDb.Msg.ClusterTimescaleId)
+	data.SecretName = types.StringValue(metricsDb.Msg.Specs.SecretName)
 
 	tflog.Trace(ctx, "created a chalk_cluster_timescale resource")
 
@@ -479,16 +485,10 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	// Update the model with the fetched data
-	if timescale.Msg.CreatedAt != nil {
-		data.CreatedAt = types.StringValue(timescale.Msg.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-	}
-	if timescale.Msg.UpdatedAt != nil {
-		data.UpdatedAt = types.StringValue(timescale.Msg.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-	}
-
 	// Update specs if available
 	if timescale.Msg.Specs != nil {
 		specs := timescale.Msg.Specs
+		data.Id = types.StringValue(timescale.Msg.Id)
 		data.TimescaleImage = types.StringValue(specs.TimescaleImage)
 		data.DatabaseName = types.StringValue(specs.DatabaseName)
 		data.DatabaseReplicas = types.Int64Value(int64(specs.DatabaseReplicas))
@@ -498,10 +498,19 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		data.ConnectionPoolMaxConnections = types.StringValue(specs.ConnectionPoolMaxConnections)
 		data.ConnectionPoolSize = types.StringValue(specs.ConnectionPoolSize)
 		data.ConnectionPoolMode = types.StringValue(specs.ConnectionPoolMode)
-		data.BackupBucket = types.StringValue(specs.BackupBucket)
-		data.BackupIamRoleArn = types.StringValue(specs.BackupIamRoleArn)
+		if specs.BackupBucket != "" {
+			data.BackupBucket = types.StringValue(specs.BackupBucket)
+		} else {
+			data.BackupBucket = types.StringNull()
+		}
+		if specs.BackupIamRoleArn != "" {
+			data.BackupIamRoleArn = types.StringValue(specs.BackupIamRoleArn)
+		} else {
+			data.BackupIamRoleArn = types.StringNull()
+		}
+		data.BootstrapCloudResources = types.BoolValue(specs.BootstrapCloudResources)
+
 		data.SecretName = types.StringValue(specs.SecretName)
-		data.IncludeChalkNodeSelector = types.BoolValue(specs.IncludeChalkNodeSelector)
 		data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
 		data.InstanceType = types.StringValue(specs.InstanceType)
 		data.Nodepool = types.StringValue(specs.Nodepool)
@@ -537,9 +546,6 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 			}
 			data.NodeSelector = types.MapValueMust(types.StringType, selector)
 		}
-
-		// Update resource configs - simplified for now
-		// A full implementation would properly convert from proto back to terraform models
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -559,7 +565,37 @@ func (r *ClusterTimescaleResource) Delete(ctx context.Context, req resource.Dele
 	// Note: According to the proto definition, there's no DeleteClusterTimescaleDB method
 	// This means the TimescaleDB lifecycle might be managed differently
 	// For now, we'll just remove it from Terraform state
-	tflog.Trace(ctx, "cluster TimescaleDB deletion - removing from terraform state only (no API delete available)")
+	data := ClusterTimescaleResourceModel{}
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
+	// Create builder client with token injection interceptor
+	bc := NewBuilderClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       r.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
+	})
+
+	_, err := bc.DeleteClusterTimescaleDB(ctx, connect.NewRequest(&serverv1.DeleteClusterTimescaleDBRequest{
+		ClusterTimescaleId: data.Id.ValueString(),
+	}))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Deleting Chalk Cluster TimescaleDB",
+			fmt.Sprintf("Could not delete cluster TimescaleDB %s: %v", data.Id.ValueString(), err),
+		)
+	}
 }
 
 func (r *ClusterTimescaleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

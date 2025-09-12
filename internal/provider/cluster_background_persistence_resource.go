@@ -110,8 +110,6 @@ type ClusterBackgroundPersistenceResourceModel struct {
 	RedisLightningSupportsHasMany        types.Bool   `tfsdk:"redis_lightning_supports_has_many"`
 	Insecure                             types.Bool   `tfsdk:"insecure"`
 	Writers                              types.List   `tfsdk:"writers"`
-	CreatedAt                            types.String `tfsdk:"created_at"`
-	UpdatedAt                            types.String `tfsdk:"updated_at"`
 }
 
 func (r *ClusterBackgroundPersistenceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -169,15 +167,15 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"bus_writer_image_go": schema.StringAttribute{
 				MarkdownDescription: "Go bus writer image",
-				Required:            true,
+				Optional:            true,
 			},
 			"bus_writer_image_python": schema.StringAttribute{
 				MarkdownDescription: "Python bus writer image",
-				Required:            true,
+				Optional:            true,
 			},
 			"bus_writer_image_bswl": schema.StringAttribute{
 				MarkdownDescription: "BSWL bus writer image",
-				Required:            true,
+				Optional:            true,
 			},
 			"bus_writer_image_rust": schema.StringAttribute{
 				MarkdownDescription: "Rust bus writer image",
@@ -217,7 +215,7 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"google_cloud_project": schema.StringAttribute{
 				MarkdownDescription: "Google Cloud project",
-				Required:            true,
+				Optional:            true,
 			},
 			"kafka_dlq_topic": schema.StringAttribute{
 				MarkdownDescription: "Kafka DLQ topic",
@@ -279,7 +277,7 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"kafka_sasl_secret": schema.StringAttribute{
 				MarkdownDescription: "Kafka SASL secret",
-				Required:            true,
+				Optional:            true,
 			},
 			"metadata_provider": schema.StringAttribute{
 				MarkdownDescription: "Metadata provider",
@@ -287,23 +285,23 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"kafka_bootstrap_servers": schema.StringAttribute{
 				MarkdownDescription: "Kafka bootstrap servers",
-				Required:            true,
+				Optional:            true,
 			},
 			"kafka_security_protocol": schema.StringAttribute{
 				MarkdownDescription: "Kafka security protocol",
-				Required:            true,
+				Optional:            true,
 			},
 			"kafka_sasl_mechanism": schema.StringAttribute{
 				MarkdownDescription: "Kafka SASL mechanism",
-				Required:            true,
+				Optional:            true,
 			},
 			"redis_is_clustered": schema.StringAttribute{
 				MarkdownDescription: "Redis is clustered",
-				Required:            true,
+				Optional:            true,
 			},
 			"snowflake_storage_integration_name": schema.StringAttribute{
 				MarkdownDescription: "Snowflake storage integration name",
-				Required:            true,
+				Optional:            true,
 			},
 			"redis_lightning_supports_has_many": schema.BoolAttribute{
 				MarkdownDescription: "Redis lightning supports has many",
@@ -328,7 +326,7 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 						},
 						"image_override": schema.StringAttribute{
 							MarkdownDescription: "Image override",
-							Required:            true,
+							Optional:            true,
 						},
 						"hpa_specs": schema.SingleNestedAttribute{
 							MarkdownDescription: "HPA specifications",
@@ -372,7 +370,7 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 						},
 						"version": schema.StringAttribute{
 							MarkdownDescription: "Writer version",
-							Required:            true,
+							Optional:            true,
 						},
 						"request": schema.SingleNestedAttribute{
 							MarkdownDescription: "Resource requests",
@@ -408,31 +406,31 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 						},
 						"metadata_sql_ssl_ca_cert_secret": schema.StringAttribute{
 							MarkdownDescription: "Metadata SQL SSL CA cert secret",
-							Required:            true,
+							Optional:            true,
 						},
 						"metadata_sql_ssl_client_cert_secret": schema.StringAttribute{
 							MarkdownDescription: "Metadata SQL SSL client cert secret",
-							Required:            true,
+							Optional:            true,
 						},
 						"metadata_sql_ssl_client_key_secret": schema.StringAttribute{
 							MarkdownDescription: "Metadata SQL SSL client key secret",
-							Required:            true,
+							Optional:            true,
 						},
 						"metadata_sql_uri_secret": schema.StringAttribute{
 							MarkdownDescription: "Metadata SQL URI secret",
-							Required:            true,
+							Optional:            true,
 						},
 						"offline_store_inserter_db_type": schema.StringAttribute{
 							MarkdownDescription: "Offline store inserter DB type",
-							Required:            true,
+							Optional:            true,
 						},
 						"storage_cache_prefix": schema.StringAttribute{
 							MarkdownDescription: "Storage cache prefix",
-							Required:            true,
+							Optional:            true,
 						},
 						"usage_store_uri": schema.StringAttribute{
 							MarkdownDescription: "Usage store URI",
-							Required:            true,
+							Optional:            true,
 						},
 						"results_writer_skip_producing_feature_metrics": schema.BoolAttribute{
 							MarkdownDescription: "Results writer skip producing feature metrics",
@@ -448,14 +446,6 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 						},
 					},
 				},
-			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "Creation timestamp",
-				Computed:            true,
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "Last update timestamp",
-				Computed:            true,
 			},
 		},
 	}
@@ -528,19 +518,43 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 	var protoWriters []*serverv1.BackgroundPersistenceWriterSpecs
 	for _, writer := range writers {
 		protoWriter := &serverv1.BackgroundPersistenceWriterSpecs{
-			Name:                           writer.Name.ValueString(),
-			ImageOverride:                  writer.ImageOverride.ValueString(),
-			Version:                        writer.Version.ValueString(),
-			BusSubscriberType:              writer.BusSubscriberType.ValueString(),
-			DefaultReplicaCount:            int32(writer.DefaultReplicaCount.ValueInt64()),
-			MetadataSqlSslCaCertSecret:     writer.MetadataSqlSslCaCertSecret.ValueString(),
-			MetadataSqlSslClientCertSecret: writer.MetadataSqlSslClientCertSecret.ValueString(),
-			MetadataSqlSslClientKeySecret:  writer.MetadataSqlSslClientKeySecret.ValueString(),
-			MetadataSqlUriSecret:           writer.MetadataSqlUriSecret.ValueString(),
-			OfflineStoreInserterDbType:     writer.OfflineStoreInserterDbType.ValueString(),
-			StorageCachePrefix:             writer.StorageCachePrefix.ValueString(),
-			UsageStoreUri:                  writer.UsageStoreUri.ValueString(),
-			QueryTableWriteDropRatio:       writer.QueryTableWriteDropRatio.ValueString(),
+			Name:              writer.Name.ValueString(),
+			BusSubscriberType: writer.BusSubscriberType.ValueString(),
+		}
+
+		// Handle optional string fields
+		if !writer.ImageOverride.IsNull() {
+			protoWriter.ImageOverride = writer.ImageOverride.ValueString()
+		}
+		if !writer.Version.IsNull() {
+			protoWriter.Version = writer.Version.ValueString()
+		}
+		if !writer.DefaultReplicaCount.IsNull() {
+			protoWriter.DefaultReplicaCount = int32(writer.DefaultReplicaCount.ValueInt64())
+		}
+		if !writer.MetadataSqlSslCaCertSecret.IsNull() {
+			protoWriter.MetadataSqlSslCaCertSecret = writer.MetadataSqlSslCaCertSecret.ValueString()
+		}
+		if !writer.MetadataSqlSslClientCertSecret.IsNull() {
+			protoWriter.MetadataSqlSslClientCertSecret = writer.MetadataSqlSslClientCertSecret.ValueString()
+		}
+		if !writer.MetadataSqlSslClientKeySecret.IsNull() {
+			protoWriter.MetadataSqlSslClientKeySecret = writer.MetadataSqlSslClientKeySecret.ValueString()
+		}
+		if !writer.MetadataSqlUriSecret.IsNull() {
+			protoWriter.MetadataSqlUriSecret = writer.MetadataSqlUriSecret.ValueString()
+		}
+		if !writer.OfflineStoreInserterDbType.IsNull() {
+			protoWriter.OfflineStoreInserterDbType = writer.OfflineStoreInserterDbType.ValueString()
+		}
+		if !writer.StorageCachePrefix.IsNull() {
+			protoWriter.StorageCachePrefix = writer.StorageCachePrefix.ValueString()
+		}
+		if !writer.UsageStoreUri.IsNull() {
+			protoWriter.UsageStoreUri = writer.UsageStoreUri.ValueString()
+		}
+		if !writer.QueryTableWriteDropRatio.IsNull() {
+			protoWriter.QueryTableWriteDropRatio = writer.QueryTableWriteDropRatio.ValueString()
 		}
 
 		// Convert optional fields
@@ -589,19 +603,33 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 
 		// Convert resource configs
 		if writer.Request != nil {
-			protoWriter.Request = &serverv1.KubeResourceConfig{
-				Cpu:              writer.Request.CPU.ValueString(),
-				Memory:           writer.Request.Memory.ValueString(),
-				EphemeralStorage: writer.Request.EphemeralStorage.ValueString(),
-				Storage:          writer.Request.Storage.ValueString(),
+			protoWriter.Request = &serverv1.KubeResourceConfig{}
+			if !writer.Request.CPU.IsNull() {
+				protoWriter.Request.Cpu = writer.Request.CPU.ValueString()
+			}
+			if !writer.Request.Memory.IsNull() {
+				protoWriter.Request.Memory = writer.Request.Memory.ValueString()
+			}
+			if !writer.Request.EphemeralStorage.IsNull() {
+				protoWriter.Request.EphemeralStorage = writer.Request.EphemeralStorage.ValueString()
+			}
+			if !writer.Request.Storage.IsNull() {
+				protoWriter.Request.Storage = writer.Request.Storage.ValueString()
 			}
 		}
 		if writer.Limit != nil {
-			protoWriter.Limit = &serverv1.KubeResourceConfig{
-				Cpu:              writer.Limit.CPU.ValueString(),
-				Memory:           writer.Limit.Memory.ValueString(),
-				EphemeralStorage: writer.Limit.EphemeralStorage.ValueString(),
-				Storage:          writer.Limit.Storage.ValueString(),
+			protoWriter.Limit = &serverv1.KubeResourceConfig{}
+			if !writer.Limit.CPU.IsNull() {
+				protoWriter.Limit.Cpu = writer.Limit.CPU.ValueString()
+			}
+			if !writer.Limit.Memory.IsNull() {
+				protoWriter.Limit.Memory = writer.Limit.Memory.ValueString()
+			}
+			if !writer.Limit.EphemeralStorage.IsNull() {
+				protoWriter.Limit.EphemeralStorage = writer.Limit.EphemeralStorage.ValueString()
+			}
+			if !writer.Limit.Storage.IsNull() {
+				protoWriter.Limit.Storage = writer.Limit.Storage.ValueString()
 			}
 		}
 
@@ -609,49 +637,83 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 	}
 
 	// Convert terraform model to proto request
+	commonSpecs := &serverv1.BackgroundPersistenceCommonSpecs{
+		Namespace:                            data.Namespace.ValueString(),
+		ServiceAccountName:                   data.ServiceAccountName.ValueString(),
+		BusBackend:                           data.BusBackend.ValueString(),
+		SecretClient:                         data.SecretClient.ValueString(),
+		BigqueryParquetUploadSubscriptionId:  data.BigqueryParquetUploadSubscriptionId.ValueString(),
+		BigqueryStreamingWriteSubscriptionId: data.BigqueryStreamingWriteSubscriptionId.ValueString(),
+		BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
+		BqUploadBucket:                       data.BqUploadBucket.ValueString(),
+		BqUploadTopic:                        data.BqUploadTopic.ValueString(),
+		KafkaDlqTopic:                        data.KafkaDlqTopic.ValueString(),
+		MetricsBusSubscriptionId:             data.MetricsBusSubscriptionId.ValueString(),
+		MetricsBusTopicId:                    data.MetricsBusTopicId.ValueString(),
+		OperationSubscriptionId:              data.OperationSubscriptionId.ValueString(),
+		QueryLogResultTopic:                  data.QueryLogResultTopic.ValueString(),
+		QueryLogSubscriptionId:               data.QueryLogSubscriptionId.ValueString(),
+		ResultBusMetricsSubscriptionId:       data.ResultBusMetricsSubscriptionId.ValueString(),
+		ResultBusOfflineStoreSubscriptionId:  data.ResultBusOfflineStoreSubscriptionId.ValueString(),
+		ResultBusOnlineStoreSubscriptionId:   data.ResultBusOnlineStoreSubscriptionId.ValueString(),
+		ResultBusTopicId:                     data.ResultBusTopicId.ValueString(),
+		UsageBusTopicId:                      data.UsageBusTopicId.ValueString(),
+		UsageEventsSubscriptionId:            data.UsageEventsSubscriptionId.ValueString(),
+		IncludeChalkNodeSelector:             data.IncludeChalkNodeSelector.ValueBool(),
+	}
+
+	// Handle optional google_cloud_project field
+	if !data.GoogleCloudProject.IsNull() {
+		commonSpecs.GoogleCloudProject = data.GoogleCloudProject.ValueString()
+	}
+
+	// Handle optional fields
+	if !data.BusWriterImageGo.IsNull() {
+		commonSpecs.BusWriterImageGo = data.BusWriterImageGo.ValueString()
+	}
+	if !data.BusWriterImagePython.IsNull() {
+		commonSpecs.BusWriterImagePython = data.BusWriterImagePython.ValueString()
+	}
+	if !data.BusWriterImageBswl.IsNull() {
+		commonSpecs.BusWriterImageBswl = data.BusWriterImageBswl.ValueString()
+	}
+
+	deploymentSpecs := &serverv1.BackgroundPersistenceDeploymentSpecs{
+		CommonPersistenceSpecs: commonSpecs,
+		ApiServerHost:          data.ApiServerHost.ValueString(),
+		MetadataProvider:       data.MetadataProvider.ValueString(),
+		Writers:                protoWriters,
+	}
+
+	// Handle optional deployment-level fields
+	if !data.KafkaSaslSecret.IsNull() {
+		deploymentSpecs.KafkaSaslSecret = data.KafkaSaslSecret.ValueString()
+	}
+	if !data.KafkaBootstrapServers.IsNull() {
+		deploymentSpecs.KafkaBootstrapServers = data.KafkaBootstrapServers.ValueString()
+	}
+	if !data.KafkaSecurityProtocol.IsNull() {
+		deploymentSpecs.KafkaSecurityProtocol = data.KafkaSecurityProtocol.ValueString()
+	}
+	if !data.KafkaSaslMechanism.IsNull() {
+		deploymentSpecs.KafkaSaslMechanism = data.KafkaSaslMechanism.ValueString()
+	}
+	if !data.RedisIsClustered.IsNull() {
+		deploymentSpecs.RedisIsClustered = data.RedisIsClustered.ValueString()
+	}
+	if !data.SnowflakeStorageIntegrationName.IsNull() {
+		deploymentSpecs.SnowflakeStorageIntegrationName = data.SnowflakeStorageIntegrationName.ValueString()
+	}
+	if !data.RedisLightningSupportsHasMany.IsNull() {
+		deploymentSpecs.RedisLightningSupportsHasMany = data.RedisLightningSupportsHasMany.ValueBool()
+	}
+	if !data.Insecure.IsNull() {
+		deploymentSpecs.Insecure = data.Insecure.ValueBool()
+	}
+
 	createReq := &serverv1.CreateClusterBackgroundPersistenceRequest{
 		EnvironmentIds: envIds,
-		Specs: &serverv1.BackgroundPersistenceDeploymentSpecs{
-			CommonPersistenceSpecs: &serverv1.BackgroundPersistenceCommonSpecs{
-				Namespace:                            data.Namespace.ValueString(),
-				BusWriterImageGo:                     data.BusWriterImageGo.ValueString(),
-				BusWriterImagePython:                 data.BusWriterImagePython.ValueString(),
-				BusWriterImageBswl:                   data.BusWriterImageBswl.ValueString(),
-				ServiceAccountName:                   data.ServiceAccountName.ValueString(),
-				BusBackend:                           data.BusBackend.ValueString(),
-				SecretClient:                         data.SecretClient.ValueString(),
-				BigqueryParquetUploadSubscriptionId:  data.BigqueryParquetUploadSubscriptionId.ValueString(),
-				BigqueryStreamingWriteSubscriptionId: data.BigqueryStreamingWriteSubscriptionId.ValueString(),
-				BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
-				BqUploadBucket:                       data.BqUploadBucket.ValueString(),
-				BqUploadTopic:                        data.BqUploadTopic.ValueString(),
-				GoogleCloudProject:                   data.GoogleCloudProject.ValueString(),
-				KafkaDlqTopic:                        data.KafkaDlqTopic.ValueString(),
-				MetricsBusSubscriptionId:             data.MetricsBusSubscriptionId.ValueString(),
-				MetricsBusTopicId:                    data.MetricsBusTopicId.ValueString(),
-				OperationSubscriptionId:              data.OperationSubscriptionId.ValueString(),
-				QueryLogResultTopic:                  data.QueryLogResultTopic.ValueString(),
-				QueryLogSubscriptionId:               data.QueryLogSubscriptionId.ValueString(),
-				ResultBusMetricsSubscriptionId:       data.ResultBusMetricsSubscriptionId.ValueString(),
-				ResultBusOfflineStoreSubscriptionId:  data.ResultBusOfflineStoreSubscriptionId.ValueString(),
-				ResultBusOnlineStoreSubscriptionId:   data.ResultBusOnlineStoreSubscriptionId.ValueString(),
-				ResultBusTopicId:                     data.ResultBusTopicId.ValueString(),
-				UsageBusTopicId:                      data.UsageBusTopicId.ValueString(),
-				UsageEventsSubscriptionId:            data.UsageEventsSubscriptionId.ValueString(),
-				IncludeChalkNodeSelector:             data.IncludeChalkNodeSelector.ValueBool(),
-			},
-			ApiServerHost:                   data.ApiServerHost.ValueString(),
-			KafkaSaslSecret:                 data.KafkaSaslSecret.ValueString(),
-			MetadataProvider:                data.MetadataProvider.ValueString(),
-			KafkaBootstrapServers:           data.KafkaBootstrapServers.ValueString(),
-			KafkaSecurityProtocol:           data.KafkaSecurityProtocol.ValueString(),
-			KafkaSaslMechanism:              data.KafkaSaslMechanism.ValueString(),
-			RedisIsClustered:                data.RedisIsClustered.ValueString(),
-			SnowflakeStorageIntegrationName: data.SnowflakeStorageIntegrationName.ValueString(),
-			RedisLightningSupportsHasMany:   data.RedisLightningSupportsHasMany.ValueBool(),
-			Insecure:                        data.Insecure.ValueBool(),
-			Writers:                         protoWriters,
-		},
+		Specs:          deploymentSpecs,
 	}
 
 	// Set optional rust image
@@ -687,12 +749,6 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		// Update with created values
 		data.Id = types.StringValue(bgPersistence.Msg.BackgroundPersistence.Id)
 		data.Kind = types.StringValue(bgPersistence.Msg.BackgroundPersistence.Kind)
-		if bgPersistence.Msg.BackgroundPersistence.CreatedAt != nil {
-			data.CreatedAt = types.StringValue(bgPersistence.Msg.BackgroundPersistence.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-		}
-		if bgPersistence.Msg.BackgroundPersistence.UpdatedAt != nil {
-			data.UpdatedAt = types.StringValue(bgPersistence.Msg.BackgroundPersistence.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-		}
 	}
 
 	tflog.Trace(ctx, "created a chalk_cluster_background_persistence resource")
@@ -762,21 +818,10 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 	bg := bgPersistence.Msg.BackgroundPersistence
 	data.Kind = types.StringValue(bg.Kind)
 
-	if bg.CreatedAt != nil {
-		data.CreatedAt = types.StringValue(bg.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-	}
-	if bg.UpdatedAt != nil {
-		data.UpdatedAt = types.StringValue(bg.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z"))
-	}
-
 	// Update specs if available
 	if bg.Specs != nil && bg.Specs.CommonPersistenceSpecs != nil {
 		common := bg.Specs.CommonPersistenceSpecs
 		data.Namespace = types.StringValue(common.Namespace)
-		data.BusWriterImageGo = types.StringValue(common.BusWriterImageGo)
-		data.BusWriterImagePython = types.StringValue(common.BusWriterImagePython)
-		data.BusWriterImageBswl = types.StringValue(common.BusWriterImageBswl)
-		data.BusWriterImageRust = types.StringValue(common.BusWriterImageRust)
 		data.ServiceAccountName = types.StringValue(common.ServiceAccountName)
 		data.BusBackend = types.StringValue(common.BusBackend)
 		data.SecretClient = types.StringValue(common.SecretClient)
@@ -785,7 +830,6 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 		data.BigqueryStreamingWriteTopic = types.StringValue(common.BigqueryStreamingWriteTopic)
 		data.BqUploadBucket = types.StringValue(common.BqUploadBucket)
 		data.BqUploadTopic = types.StringValue(common.BqUploadTopic)
-		data.GoogleCloudProject = types.StringValue(common.GoogleCloudProject)
 		data.KafkaDlqTopic = types.StringValue(common.KafkaDlqTopic)
 		data.MetricsBusSubscriptionId = types.StringValue(common.MetricsBusSubscriptionId)
 		data.MetricsBusTopicId = types.StringValue(common.MetricsBusTopicId)
@@ -800,15 +844,70 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 		data.UsageEventsSubscriptionId = types.StringValue(common.UsageEventsSubscriptionId)
 		data.IncludeChalkNodeSelector = types.BoolValue(common.IncludeChalkNodeSelector)
 
+		// Handle optional google_cloud_project field
+		if common.GoogleCloudProject != "" {
+			data.GoogleCloudProject = types.StringValue(common.GoogleCloudProject)
+		} else {
+			data.GoogleCloudProject = types.StringNull()
+		}
+
+		// Handle optional fields - set to null if empty, otherwise set the value
+		if common.BusWriterImageGo != "" {
+			data.BusWriterImageGo = types.StringValue(common.BusWriterImageGo)
+		} else {
+			data.BusWriterImageGo = types.StringNull()
+		}
+		if common.BusWriterImagePython != "" {
+			data.BusWriterImagePython = types.StringValue(common.BusWriterImagePython)
+		} else {
+			data.BusWriterImagePython = types.StringNull()
+		}
+		if common.BusWriterImageBswl != "" {
+			data.BusWriterImageBswl = types.StringValue(common.BusWriterImageBswl)
+		} else {
+			data.BusWriterImageBswl = types.StringNull()
+		}
+		if common.BusWriterImageRust != "" {
+			data.BusWriterImageRust = types.StringValue(common.BusWriterImageRust)
+		} else {
+			data.BusWriterImageRust = types.StringNull()
+		}
+
 		// Update deployment-level specs
 		data.ApiServerHost = types.StringValue(bg.Specs.ApiServerHost)
-		data.KafkaSaslSecret = types.StringValue(bg.Specs.KafkaSaslSecret)
 		data.MetadataProvider = types.StringValue(bg.Specs.MetadataProvider)
-		data.KafkaBootstrapServers = types.StringValue(bg.Specs.KafkaBootstrapServers)
-		data.KafkaSecurityProtocol = types.StringValue(bg.Specs.KafkaSecurityProtocol)
-		data.KafkaSaslMechanism = types.StringValue(bg.Specs.KafkaSaslMechanism)
-		data.RedisIsClustered = types.StringValue(bg.Specs.RedisIsClustered)
-		data.SnowflakeStorageIntegrationName = types.StringValue(bg.Specs.SnowflakeStorageIntegrationName)
+
+		// Handle optional deployment fields
+		if bg.Specs.KafkaSaslSecret != "" {
+			data.KafkaSaslSecret = types.StringValue(bg.Specs.KafkaSaslSecret)
+		} else {
+			data.KafkaSaslSecret = types.StringNull()
+		}
+		if bg.Specs.KafkaBootstrapServers != "" {
+			data.KafkaBootstrapServers = types.StringValue(bg.Specs.KafkaBootstrapServers)
+		} else {
+			data.KafkaBootstrapServers = types.StringNull()
+		}
+		if bg.Specs.KafkaSecurityProtocol != "" {
+			data.KafkaSecurityProtocol = types.StringValue(bg.Specs.KafkaSecurityProtocol)
+		} else {
+			data.KafkaSecurityProtocol = types.StringNull()
+		}
+		if bg.Specs.KafkaSaslMechanism != "" {
+			data.KafkaSaslMechanism = types.StringValue(bg.Specs.KafkaSaslMechanism)
+		} else {
+			data.KafkaSaslMechanism = types.StringNull()
+		}
+		if bg.Specs.RedisIsClustered != "" {
+			data.RedisIsClustered = types.StringValue(bg.Specs.RedisIsClustered)
+		} else {
+			data.RedisIsClustered = types.StringNull()
+		}
+		if bg.Specs.SnowflakeStorageIntegrationName != "" {
+			data.SnowflakeStorageIntegrationName = types.StringValue(bg.Specs.SnowflakeStorageIntegrationName)
+		} else {
+			data.SnowflakeStorageIntegrationName = types.StringNull()
+		}
 		data.RedisLightningSupportsHasMany = types.BoolValue(bg.Specs.RedisLightningSupportsHasMany)
 		data.Insecure = types.BoolValue(bg.Specs.Insecure)
 
