@@ -71,7 +71,6 @@ type BackgroundPersistenceWriterModel struct {
 type ClusterBackgroundPersistenceResourceModel struct {
 	Id                                   types.String `tfsdk:"id"`
 	EnvironmentIds                       types.List   `tfsdk:"environment_ids"`
-	Kind                                 types.String `tfsdk:"kind"`
 	Namespace                            types.String `tfsdk:"namespace"`
 	BusWriterImageGo                     types.String `tfsdk:"bus_writer_image_go"`
 	BusWriterImagePython                 types.String `tfsdk:"bus_writer_image_python"`
@@ -158,10 +157,6 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			"kube_cluster_id": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes cluster ID",
 				Optional:            true,
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "Background persistence kind",
-				Computed:            true,
 			},
 			"namespace": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes namespace",
