@@ -93,9 +93,6 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			"id": schema.StringAttribute{
 				MarkdownDescription: "TimescaleDB identifier",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"environment_ids": schema.ListAttribute{
 				MarkdownDescription: "List of environment IDs for the TimescaleDB cluster",
@@ -187,11 +184,7 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			},
 			"secret_name": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes secret name for database credentials",
-				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"internal": schema.BoolAttribute{
 				MarkdownDescription: "Whether the database is internal",
@@ -510,9 +503,13 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		data.BootstrapCloudResources = types.BoolValue(specs.BootstrapCloudResources)
 
 		data.SecretName = types.StringValue(specs.SecretName)
-		data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
+		if specs.BackupGcpServiceAccount != "" {
+			data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
+		}
 		data.InstanceType = types.StringValue(specs.InstanceType)
-		data.Nodepool = types.StringValue(specs.Nodepool)
+		if specs.Nodepool != "" {
+			data.Nodepool = types.StringValue(specs.Nodepool)
+		}
 
 		// Update optional fields
 		if specs.StorageClass != nil {
