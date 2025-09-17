@@ -110,6 +110,7 @@ type ClusterBackgroundPersistenceResourceModel struct {
 	RedisLightningSupportsHasMany        types.Bool   `tfsdk:"redis_lightning_supports_has_many"`
 	Insecure                             types.Bool   `tfsdk:"insecure"`
 	Writers                              types.List   `tfsdk:"writers"`
+	KubeClusterId                        types.String `tfsdk:"kube_cluster_id"`
 }
 
 func (r *ClusterBackgroundPersistenceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -151,8 +152,12 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"environment_ids": schema.ListAttribute{
 				MarkdownDescription: "List of environment IDs for the background persistence",
-				Required:            true,
+				Optional:            true,
 				ElementType:         types.StringType,
+			},
+			"kube_cluster_id": schema.StringAttribute{
+				MarkdownDescription: "Kubernetes cluster ID",
+				Optional:            true,
 			},
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "Background persistence kind",
@@ -499,17 +504,19 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		},
 	})
 
-	// Convert environment IDs
 	var envIds []string
-	diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	// Convert environment IDs
+	if !data.EnvironmentIds.IsNull() {
+		diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	// Convert writers
 	var writers []BackgroundPersistenceWriterModel
-	diags = data.Writers.ElementsAs(ctx, &writers, false)
+	diags := data.Writers.ElementsAs(ctx, &writers, false)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -711,9 +718,18 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		deploymentSpecs.Insecure = data.Insecure.ValueBool()
 	}
 
-	createReq := &serverv1.CreateClusterBackgroundPersistenceRequest{
-		EnvironmentIds: envIds,
-		Specs:          deploymentSpecs,
+	//create a deployment based on whether kube_cluster_id or environment_ids is provided
+	var createReq *serverv1.CreateClusterBackgroundPersistenceRequest
+	if !data.KubeClusterId.IsNull() {
+		createReq = &serverv1.CreateClusterBackgroundPersistenceRequest{
+			Specs:         deploymentSpecs,
+			KubeClusterId: data.KubeClusterId.ValueStringPointer(),
+		}
+	} else {
+		createReq = &serverv1.CreateClusterBackgroundPersistenceRequest{
+			EnvironmentIds: envIds,
+			Specs:          deploymentSpecs,
+		}
 	}
 
 	// Set optional rust image
@@ -721,7 +737,7 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		createReq.Specs.CommonPersistenceSpecs.BusWriterImageRust = data.BusWriterImageRust.ValueString()
 	}
 
-	_, err := bc.CreateClusterBackgroundPersistence(ctx, connect.NewRequest(createReq))
+	response, err := bc.CreateClusterBackgroundPersistence(ctx, connect.NewRequest(createReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Chalk Cluster Background Persistence",
@@ -730,26 +746,7 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		return
 	}
 
-	// Since CreateClusterBackgroundPersistence doesn't return the created resource, we need to get it
-	// We'll use the first environment ID to query for the background persistence
-	if len(envIds) > 0 {
-		getReq := &serverv1.GetClusterBackgroundPersistenceRequest{
-			EnvironmentId: envIds[0],
-		}
-
-		bgPersistence, err := bc.GetClusterBackgroundPersistence(ctx, connect.NewRequest(getReq))
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Reading Created Chalk Cluster Background Persistence",
-				fmt.Sprintf("Background persistence was created but could not be read: %v", err),
-			)
-			return
-		}
-
-		// Update with created values
-		data.Id = types.StringValue(bgPersistence.Msg.BackgroundPersistence.Id)
-		data.Kind = types.StringValue(bgPersistence.Msg.BackgroundPersistence.Kind)
-	}
+	data.Id = types.StringValue(response.Msg.Id)
 
 	tflog.Trace(ctx, "created a chalk_cluster_background_persistence resource")
 
@@ -785,24 +782,8 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 		},
 	})
 
-	// Get the first environment ID to query the background persistence
-	var envIds []string
-	diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if len(envIds) == 0 {
-		resp.Diagnostics.AddError(
-			"No Environment IDs",
-			"No environment IDs found in state for reading cluster background persistence",
-		)
-		return
-	}
-
 	getReq := &serverv1.GetClusterBackgroundPersistenceRequest{
-		EnvironmentId: envIds[0],
+		Id: data.Id.ValueStringPointer(),
 	}
 
 	bgPersistence, err := bc.GetClusterBackgroundPersistence(ctx, connect.NewRequest(getReq))
@@ -816,7 +797,6 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 
 	// Update the model with the fetched data
 	bg := bgPersistence.Msg.BackgroundPersistence
-	data.Kind = types.StringValue(bg.Kind)
 
 	// Update specs if available
 	if bg.Specs != nil && bg.Specs.CommonPersistenceSpecs != nil {

@@ -185,6 +185,11 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			"secret_name": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes secret name for database credentials",
 				Computed:            true,
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"internal": schema.BoolAttribute{
 				MarkdownDescription: "Whether the database is internal",
