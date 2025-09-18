@@ -66,6 +66,7 @@ type ClusterGatewayResourceModel struct {
 	ServiceAnnotations       types.Map                   `tfsdk:"service_annotations"`
 	LoadBalancerClass        types.String                `tfsdk:"load_balancer_class"`
 	ClusterGatewayId         types.String                `tfsdk:"cluster_gateway_id"`
+	KubeClusterId            types.String                `tfsdk:"kube_cluster_id"`
 }
 
 func (r *ClusterGatewayResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -86,8 +87,12 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 			},
 			"environment_ids": schema.ListAttribute{
 				MarkdownDescription: "List of environment IDs for the gateway",
-				Required:            true,
+				Optional:            true,
 				ElementType:         types.StringType,
+			},
+			"kube_cluster_id": schema.StringAttribute{
+				MarkdownDescription: "Kubernetes cluster ID",
+				Optional:            true,
 			},
 			"namespace": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes namespace for the gateway",
@@ -395,7 +400,12 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 		createReq.Specs.ClusterGatewayId = &val
 	}
 
-	_, err := bc.CreateClusterGateway(ctx, connect.NewRequest(createReq))
+	if !data.KubeClusterId.IsNull() {
+		val := data.KubeClusterId.ValueString()
+		createReq.KubeClusterId = &val
+	}
+
+	response, err := bc.CreateClusterGateway(ctx, connect.NewRequest(createReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Chalk Cluster Gateway",
@@ -404,26 +414,7 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	// Since CreateClusterGateway doesn't return the created gateway, we need to get it
-	// We'll use the first environment ID to query for the gateway
-	if len(envIds) > 0 {
-		getReq := &serverv1.GetClusterGatewayRequest{
-			EnvironmentId: envIds[0],
-		}
-
-		gateway, err := bc.GetClusterGateway(ctx, connect.NewRequest(getReq))
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error Reading Created Chalk Cluster Gateway",
-				fmt.Sprintf("Gateway was created but could not be read: %v", err),
-			)
-			return
-		}
-
-		// Update with created values
-		data.Id = types.StringValue(gateway.Msg.Id)
-	}
-
+	data.Id = types.StringValue(response.Msg.Id)
 	tflog.Trace(ctx, "created a chalk_cluster_gateway resource")
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -458,24 +449,8 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 		},
 	})
 
-	// Get the first environment ID to query the gateway
-	var envIds []string
-	diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if len(envIds) == 0 {
-		resp.Diagnostics.AddError(
-			"No Environment IDs",
-			"No environment IDs found in state for reading cluster gateway",
-		)
-		return
-	}
-
 	getReq := &serverv1.GetClusterGatewayRequest{
-		EnvironmentId: envIds[0],
+		Id: data.Id.ValueStringPointer(),
 	}
 
 	gateway, err := bc.GetClusterGateway(ctx, connect.NewRequest(getReq))

@@ -56,6 +56,16 @@ resource "chalk_kubernetes_cluster" "cluster" {
   cloud_credential_id = chalk_cloud_credentials.creds.id
 }
 
+resource "chalk_cluster_gateway_binding" "cgwb" {
+  cluster_gateway_id = chalk_cluster_gateway.test.id
+  cluster_id         = chalk_kubernetes_cluster.cluster.id
+}
+
+resource "chalk_cluster_background_persistence_deployment_binding" "cbpb" {
+  background_persistence_deployment_id = chalk_cluster_background_persistence.persistence.id
+  cluster_id                           = chalk_kubernetes_cluster.cluster.id
+}
+
 resource "chalk_environment" "test" {
   id                        = local.sanitized_email
   name                      = local.sanitized_email
@@ -103,7 +113,7 @@ resource "chalk_cluster_timescale" "timescale" {
 }
 
 resource "chalk_cluster_background_persistence" "persistence" {
-  environment_ids = [chalk_environment.test.id]
+  kube_cluster_id                          = chalk_kubernetes_cluster.cluster.id
   namespace                                = "ns-${local.sanitized_email}"
   service_account_name                     = "env-${local.sanitized_email}-workload-identity"
   bus_backend                              = "KAFKA"
@@ -158,7 +168,7 @@ resource "chalk_cluster_background_persistence" "persistence" {
 }
 
 resource "chalk_cluster_gateway" "test" {
-  environment_ids = [chalk_environment.test.id]
+  kube_cluster_id    = chalk_kubernetes_cluster.cluster.id
   namespace          = "chalk-envoy"
   gateway_name       = "cicd"
   gateway_class_name = "cicd-class"
@@ -173,30 +183,31 @@ resource "chalk_cluster_gateway" "test" {
   ]
 }
 
-resource "chalk_cloud_credentials" "creds2" {
-  kind                    = "aws"
-  name                    = "creds-staging-${local.sanitized_email}"
-  aws_account_id          = "742213191973"
-  aws_management_role_arn = "arn:aws:iam::742213191973:role/chalk-stag-stage-scoped-api-management"
-  aws_region              = "us-east-1"
-
-  gcp_workload_identity {
-    pool_id         = "stag-742213191973-pool"
-    provider_id     = "stag-742213191973-provider"
-    service_account = "aws-workload-742213191973@chalk-infra.iam.gserviceaccount.com"
-    project_number  = "610611181724"
-  }
-}
-
-resource "chalk_kubernetes_cluster" "cluster2" {
-  kind                = "EKS_STANDARD"
-  kubernetes_version  = "1.32"
-  managed             = false
-  name                = "chalk-stag-stage-eks-cluster"
-  cloud_credential_id = chalk_cloud_credentials.creds2.id
-}
-
-output "stag_id" {
-  value = chalk_kubernetes_cluster.cluster2.id
-}
+# FOR CROSS CLUSTER RESOURCES
+# resource "chalk_cloud_credentials" "creds2" {
+#   kind                    = "aws"
+#   name                    = "creds-staging-${local.sanitized_email}"
+#   aws_account_id          = "742213191973"
+#   aws_management_role_arn = "arn:aws:iam::742213191973:role/chalk-stag-stage-scoped-api-management"
+#   aws_region              = "us-east-1"
+#
+#   gcp_workload_identity {
+#     pool_id         = "stag-742213191973-pool"
+#     provider_id     = "stag-742213191973-provider"
+#     service_account = "aws-workload-742213191973@chalk-infra.iam.gserviceaccount.com"
+#     project_number  = "610611181724"
+#   }
+# }
+#
+# resource "chalk_kubernetes_cluster" "cluster2" {
+#   kind                = "EKS_STANDARD"
+#   kubernetes_version  = "1.32"
+#   managed             = false
+#   name                = "chalk-stag-stage-eks-cluster"
+#   cloud_credential_id = chalk_cloud_credentials.creds2.id
+# }
+#
+# output "stag_id" {
+#   value = chalk_kubernetes_cluster.cluster2.id
+# }
 

@@ -41,15 +41,8 @@ ls -la
 echo ""
 echo "🔍 Cleaning up Terraform files..."
 
-# Remove state files
-safe_remove "terraform.tfstate"
-safe_remove "terraform.tfstate.backup"
-
 # Remove lock file
 safe_remove ".terraform.lock.hcl"
-
-# Remove .terraform directory (contains provider cache)
-safe_remove_dir ".terraform"
 
 # Remove any crash logs
 safe_remove "crash.log"
@@ -84,7 +77,7 @@ fi
 
 # Change back to the terraform_tests directory
 cd terraform_tests
-
+terraform init
 echo ""
 echo "🎉 All Terraform state and cache files have been removed and provider has been recompiled!"
 echo "You can now run 'terraform init' to start fresh."
