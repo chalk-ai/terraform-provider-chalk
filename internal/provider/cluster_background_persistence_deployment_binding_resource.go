@@ -28,8 +28,8 @@ type ClusterBackgroundPersistenceDeploymentBindingResource struct {
 }
 
 type ClusterBackgroundPersistenceDeploymentBindingResourceModel struct {
-	ClusterID                            types.String `tfsdk:"cluster_id"`
-	BackgroundPersistenceDeploymentID    types.String `tfsdk:"background_persistence_deployment_id"`
+	ClusterID                         types.String `tfsdk:"cluster_id"`
+	BackgroundPersistenceDeploymentID types.String `tfsdk:"background_persistence_deployment_id"`
 }
 
 func (r *ClusterBackgroundPersistenceDeploymentBindingResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
