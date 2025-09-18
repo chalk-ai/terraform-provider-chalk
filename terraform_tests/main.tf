@@ -61,6 +61,11 @@ resource "chalk_cluster_gateway_binding" "cgwb" {
   cluster_id         = chalk_kubernetes_cluster.cluster.id
 }
 
+resource "chalk_cluster_background_persistence_deployment_binding" "cbpb" {
+  background_persistence_deployment_id = chalk_cluster_background_persistence.persistence.id
+  cluster_id                           = chalk_kubernetes_cluster.cluster.id
+}
+
 resource "chalk_environment" "test" {
   id                        = local.sanitized_email
   name                      = local.sanitized_email
@@ -178,7 +183,7 @@ resource "chalk_cluster_gateway" "test" {
   ]
 }
 
-#
+# FOR CROSS CLUSTER RESOURCES
 # resource "chalk_cloud_credentials" "creds2" {
 #   kind                    = "aws"
 #   name                    = "creds-staging-${local.sanitized_email}"
