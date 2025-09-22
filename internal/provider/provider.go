@@ -3,9 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
-	"os"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -148,8 +147,6 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewCloudCredentialsResource,
 		NewClusterGatewayBindingResource,
 		NewClusterBackgroundPersistenceDeploymentBindingResource,
-		NewTelemetryResource,
-		NewTelemetryBindingResource,
 	}
 }
 
