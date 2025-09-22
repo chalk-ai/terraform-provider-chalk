@@ -66,11 +66,6 @@ resource "chalk_cluster_background_persistence_deployment_binding" "cbpb" {
   cluster_id                           = chalk_kubernetes_cluster.cluster.id
 }
 
-resource "chalk_telemetry_binding" "telemetry_binding" {
-  cluster_id              = chalk_kubernetes_cluster.cluster.id
-  telemetry_deployment_id = chalk_telemetry.test.id
-}
-
 resource "chalk_environment" "test" {
   id                        = local.sanitized_email
   name                      = local.sanitized_email
@@ -94,7 +89,7 @@ resource "chalk_environment" "test" {
 }
 
 resource "chalk_cluster_timescale" "timescale" {
-  environment_ids                 = [chalk_environment.test.id]
+  environment_ids = [chalk_environment.test.id]
   timescale_image                 = "ghcr.io/imusmanmalik/timescaledb-postgis:16-3.4-54"
   database_name                   = "${local.sanitized_email}-chalk-metrics"
   database_replicas               = 1
@@ -160,7 +155,7 @@ resource "chalk_cluster_background_persistence" "persistence" {
         memory = "1Gi"
       }
 
-      }, {
+    }, {
       name                  = "cluster-manager"
       bus_subscriber_type   = "CLUSTER_MANAGER"
       default_replica_count = 1
@@ -189,11 +184,6 @@ resource "chalk_cluster_gateway" "test" {
     "service.beta.kubernetes.io/aws-load-balancer-type"       = "nlb"
     "service.beta.kubernetes.io/aws-load-balancer-attributes" = "load_balancing.cross_zone.enabled=true"
   }
-}
-
-resource "chalk_telemetry" "test" {
-  kube_cluster_id = chalk_kubernetes_cluster.cluster.id
-  namespace       = "ns-${local.sanitized_email}"
 }
 
 # FOR CROSS CLUSTER RESOURCES
