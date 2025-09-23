@@ -146,7 +146,7 @@ resource "chalk_cluster_background_persistence" "persistence" {
   kafka_bootstrap_servers                  = "b-2.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-1.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-3.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096"
   kafka_security_protocol                  = "SASL_SSL"
   kafka_sasl_mechanism                     = "SCRAM-SHA-512"
-  redis_is_clustered                       = "1"
+  redis_is_clustered = "0" // demo cluster online store is not clustered
   redis_lightning_supports_has_many        = false
   insecure                                 = true
 
@@ -175,17 +175,20 @@ resource "chalk_cluster_background_persistence" "persistence" {
 resource "chalk_cluster_gateway" "test" {
   kube_cluster_id    = chalk_kubernetes_cluster.cluster.id
   namespace          = "chalk-envoy"
-  gateway_name       = "cicd"
-  gateway_class_name = "cicd-class"
+  gateway_name       = "chalk-gw"
+  gateway_class_name = "chalk-gw-class"
 
-  listeners = [
-    {
-      name     = "http"
-      protocol = "HTTP"
-      port     = 80
-      from     = "All"
-    }
-  ]
+  config {
+    timeout_duration           = "300s"
+    dns_hostname               = "remote.internal.aws.chalk.dev"
+    letsencrypt_cluster_issuer = "chalk-letsencrypt-issuer"
+  }
+
+  service_annotations = {
+    "service.beta.kubernetes.io/aws-load-balancer-scheme"     = "internet-facing"
+    "service.beta.kubernetes.io/aws-load-balancer-type"       = "nlb"
+    "service.beta.kubernetes.io/aws-load-balancer-attributes" = "load_balancing.cross_zone.enabled=true"
+  }
 }
 
 resource "chalk_telemetry" "test" {
