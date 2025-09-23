@@ -1,9 +1,11 @@
 package provider
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"net/http"
+
+	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -16,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"net/http"
 )
 
 var _ resource.Resource = &ClusterGatewayResource{}
@@ -110,7 +111,7 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 			},
 			"listeners": schema.ListNestedAttribute{
 				MarkdownDescription: "Gateway listeners configuration",
-				Required:            false,
+				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"port": schema.Int64Attribute{

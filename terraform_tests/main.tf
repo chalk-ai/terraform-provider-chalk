@@ -178,7 +178,7 @@ resource "chalk_cluster_gateway" "test" {
   gateway_name       = "chalk-gw"
   gateway_class_name = "chalk-gw-class"
 
-  config {
+  config = {
     timeout_duration           = "300s"
     dns_hostname               = "remote.internal.aws.chalk.dev"
     letsencrypt_cluster_issuer = "chalk-letsencrypt-issuer"
@@ -194,6 +194,8 @@ resource "chalk_cluster_gateway" "test" {
 resource "chalk_telemetry" "test" {
   kube_cluster_id = chalk_kubernetes_cluster.cluster.id
   namespace       = "ns-${local.sanitized_email}"
+
+  depends_on = [chalk_cluster_gateway.test]
 }
 
 # FOR CROSS CLUSTER RESOURCES
