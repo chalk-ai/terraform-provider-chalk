@@ -1,12 +1,13 @@
 package provider
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
-	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"net/http"
 	"time"
+
+	"connectrpc.com/connect"
+	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -307,9 +308,10 @@ func (d *EnvironmentDataSource) Schema(ctx context.Context, req datasource.Schem
 				MarkdownDescription: "Environment object storage buckets",
 				Computed:            true,
 				AttributeTypes: map[string]attr.Type{
-					"dataset_bucket":       types.StringType,
-					"plan_stages_bucket":   types.StringType,
-					"source_bundle_bucket": types.StringType,
+					"dataset_bucket":        types.StringType,
+					"plan_stages_bucket":    types.StringType,
+					"source_bundle_bucket":  types.StringType,
+					"model_registry_bucket": types.StringType,
 				},
 			},
 			"cluster_timescaledb_secret": schema.StringAttribute{
@@ -682,9 +684,10 @@ func (d *EnvironmentDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	data.EnvironmentBuckets = types.ObjectNull(map[string]attr.Type{
-		"dataset_bucket":       types.StringType,
-		"plan_stages_bucket":   types.StringType,
-		"source_bundle_bucket": types.StringType,
+		"dataset_bucket":        types.StringType,
+		"plan_stages_bucket":    types.StringType,
+		"source_bundle_bucket":  types.StringType,
+		"model_registry_bucket": types.StringType,
 	})
 
 	if e.ClusterTimescaledbSecret != nil {
