@@ -78,8 +78,8 @@ resource "chalk_environment" "test" {
   kube_cluster_id           = chalk_kubernetes_cluster.cluster.id
   kube_job_namespace        = "ns-${local.sanitized_email}"
   kube_service_account_name = "env-${local.sanitized_email}-workload-identity"
-  service_url               = "https://${local.sanitized_email}.cicd.chalk.dev/"
-  worker_url                = "https://${local.sanitized_email}.cicd.chalk.dev/"
+  service_url               = "https://${local.sanitized_email}.remote.internal.aws.chalk.dev/"
+  worker_url                = "https://${local.sanitized_email}.remote.internal.aws.chalk.dev/"
   source_bundle_bucket      = "s3://chalk-cicd-test-source-bucket"
   additional_env_vars = {
     "CHALK_INITIALIZE_NATIVE_BUS_PUBLISHER" : "1", "CHALK_PERSIST_TO_OFFLINE_STORE_QUERY_LOG" : "1", "CHALK_PLANNER_ENABLE_NATIVE_RESULT_BUS_PERSISTENCE" : "1", "CHALK_PLANNER_PERSIST_VALUES_OFFLINE_STORE" : "0", "CHALK_PLANNER_PERSIST_VALUES_PARQUET" : "0", "CHALK_PLANNER_SKIP_RELATIONSHIP_DISTINCT" : "1", "CHALK_PLANNER_USE_FILTERED_JOINS" : "0", "CHALK_PLANNER_USE_NATIVE_SQL_OPERATORS" : "1", "CHALK_PLANNER_USE_NATIVE_STATISTICS_OPERATOR" : "0", "CHALK_PLANNER_VELOX_USE_ZERO_COPY_HASH_JOIN" : "1", "CHALK_SKIP_USAGE_PERSISTENCE" : "1", "CHALK_STATIC_UNDERSCORE_EXPRESSIONS" : "1", "CHECK_DUPLICATE_ROWS" : "0", "DD_TRACE_ENABLED" : "1", "GRPC_QUERY_SERVER_NO_TLS" : "1", "PYTHONOPTIMIZE" : "1"
@@ -114,7 +114,7 @@ resource "chalk_cluster_timescale" "timescale" {
   postgres_parameters = {
     max_connections = "200"
   }
-  dns_hostname = "${local.sanitized_email}.metrics.cicd.chalk.dev"
+  dns_hostname = "${local.sanitized_email}.metrics.remote.internal.aws.chalk.dev"
 }
 
 resource "chalk_cluster_background_persistence" "persistence" {
@@ -146,7 +146,7 @@ resource "chalk_cluster_background_persistence" "persistence" {
   kafka_bootstrap_servers                  = "b-2.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-1.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-3.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096"
   kafka_security_protocol                  = "SASL_SSL"
   kafka_sasl_mechanism                     = "SCRAM-SHA-512"
-  redis_is_clustered                       = "1"
+  redis_is_clustered = "0" // demo cluster online store is not clustered
   redis_lightning_supports_has_many        = false
   insecure                                 = true
 
@@ -175,22 +175,27 @@ resource "chalk_cluster_background_persistence" "persistence" {
 resource "chalk_cluster_gateway" "test" {
   kube_cluster_id    = chalk_kubernetes_cluster.cluster.id
   namespace          = "chalk-envoy"
-  gateway_name       = "cicd"
-  gateway_class_name = "cicd-class"
+  gateway_name       = "chalk-gw"
+  gateway_class_name = "chalk-gw-class"
 
-  listeners = [
-    {
-      name     = "http"
-      protocol = "HTTP"
-      port     = 80
-      from     = "All"
-    }
-  ]
+  config = {
+    timeout_duration           = "300s"
+    dns_hostname               = "remote.internal.aws.chalk.dev"
+    letsencrypt_cluster_issuer = "chalk-letsencrypt-issuer"
+  }
+
+  service_annotations = {
+    "service.beta.kubernetes.io/aws-load-balancer-scheme"     = "internet-facing"
+    "service.beta.kubernetes.io/aws-load-balancer-type"       = "nlb"
+    "service.beta.kubernetes.io/aws-load-balancer-attributes" = "load_balancing.cross_zone.enabled=true"
+  }
 }
 
 resource "chalk_telemetry" "test" {
   kube_cluster_id = chalk_kubernetes_cluster.cluster.id
   namespace       = "ns-${local.sanitized_email}"
+
+  depends_on = [chalk_cluster_gateway.test]
 }
 
 # FOR CROSS CLUSTER RESOURCES

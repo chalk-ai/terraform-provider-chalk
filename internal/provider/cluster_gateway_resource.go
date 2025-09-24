@@ -1,9 +1,11 @@
 package provider
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"net/http"
+
+	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -16,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"net/http"
 )
 
 var _ resource.Resource = &ClusterGatewayResource{}
@@ -43,7 +44,6 @@ type TLSCertificateConfigModel struct {
 }
 
 type GatewayProviderConfigModel struct {
-	Type                     types.String `tfsdk:"type"`
 	TimeoutDuration          types.String `tfsdk:"timeout_duration"`
 	DNSHostname              types.String `tfsdk:"dns_hostname"`
 	Replicas                 types.Int64  `tfsdk:"replicas"`
@@ -111,7 +111,7 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 			},
 			"listeners": schema.ListNestedAttribute{
 				MarkdownDescription: "Gateway listeners configuration",
-				Required:            true,
+				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"port": schema.Int64Attribute{
@@ -139,10 +139,6 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				MarkdownDescription: "Gateway provider configuration",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
-					"type": schema.StringAttribute{
-						MarkdownDescription: "Provider type (envoy or gcp)",
-						Required:            true,
-					},
 					"timeout_duration": schema.StringAttribute{
 						MarkdownDescription: "Timeout duration for Envoy gateway",
 						Optional:            true,
@@ -155,7 +151,7 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 						MarkdownDescription: "Number of replicas for Envoy gateway",
 						Optional:            true,
 						Computed:            true,
-						Default:             int64default.StaticInt64(1),
+						Default:             int64default.StaticInt64(2),
 					},
 					"min_available": schema.Int64Attribute{
 						MarkdownDescription: "Minimum available replicas for Envoy gateway",
@@ -307,52 +303,31 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 
 	// Convert provider config
 	if data.Config != nil {
-		switch data.Config.Type.ValueString() {
-		case "envoy":
-			envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
-			if !data.Config.TimeoutDuration.IsNull() {
-				val := data.Config.TimeoutDuration.ValueString()
-				envoyConfig.TimeoutDuration = &val
+		envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
+		envoyConfig.TimeoutDuration = data.Config.TimeoutDuration.ValueStringPointer()
+		envoyConfig.DnsHostname = data.Config.DNSHostname.ValueStringPointer()
+		if !data.Config.Replicas.IsNull() {
+			val := int32(data.Config.Replicas.ValueInt64())
+			envoyConfig.Replicas = &val
+		}
+		if !data.Config.MinAvailable.IsNull() {
+			val := int32(data.Config.MinAvailable.ValueInt64())
+			envoyConfig.MinAvailable = &val
+		}
+		envoyConfig.LetsencryptClusterIssuer = data.Config.LetsencryptClusterIssuer.ValueStringPointer()
+		if !data.Config.AdditionalDNSNames.IsNull() {
+			var dnsNames []string
+			diags = data.Config.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
 			}
-			if !data.Config.DNSHostname.IsNull() {
-				val := data.Config.DNSHostname.ValueString()
-				envoyConfig.DnsHostname = &val
-			}
-			if !data.Config.Replicas.IsNull() {
-				val := int32(data.Config.Replicas.ValueInt64())
-				envoyConfig.Replicas = &val
-			}
-			if !data.Config.MinAvailable.IsNull() {
-				val := int32(data.Config.MinAvailable.ValueInt64())
-				envoyConfig.MinAvailable = &val
-			}
-			if !data.Config.LetsencryptClusterIssuer.IsNull() {
-				val := data.Config.LetsencryptClusterIssuer.ValueString()
-				envoyConfig.LetsencryptClusterIssuer = &val
-			}
-			if !data.Config.AdditionalDNSNames.IsNull() {
-				var dnsNames []string
-				diags = data.Config.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
-				resp.Diagnostics.Append(diags...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				envoyConfig.AdditionalDnsNames = dnsNames
-			}
-			createReq.Specs.Config = &serverv1.GatewayProviderConfig{
-				Config: &serverv1.GatewayProviderConfig_Envoy{
-					Envoy: envoyConfig,
-				},
-			}
-		case "gcp":
-			gcpConfig := &serverv1.GCPGatewayProviderConfig{
-				DnsHostname: data.Config.DNSHostname.ValueString(),
-			}
-			createReq.Specs.Config = &serverv1.GatewayProviderConfig{
-				Config: &serverv1.GatewayProviderConfig_Gcp{
-					Gcp: gcpConfig,
-				},
-			}
+			envoyConfig.AdditionalDnsNames = dnsNames
+		}
+		createReq.Specs.Config = &serverv1.GatewayProviderConfig{
+			Config: &serverv1.GatewayProviderConfig_Envoy{
+				Envoy: envoyConfig,
+			},
 		}
 	}
 
@@ -391,19 +366,11 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 	}
 
 	// Set optional fields
-	if !data.LoadBalancerClass.IsNull() {
-		val := data.LoadBalancerClass.ValueString()
-		createReq.Specs.LoadBalancerClass = &val
-	}
-	if !data.ClusterGatewayId.IsNull() {
-		val := data.ClusterGatewayId.ValueString()
-		createReq.Specs.ClusterGatewayId = &val
-	}
+	createReq.Specs.LoadBalancerClass = data.LoadBalancerClass.ValueStringPointer()
 
-	if !data.KubeClusterId.IsNull() {
-		val := data.KubeClusterId.ValueString()
-		createReq.KubeClusterId = &val
-	}
+	createReq.Id = data.ClusterGatewayId.ValueStringPointer()
+
+	createReq.KubeClusterId = data.KubeClusterId.ValueStringPointer()
 
 	response, err := bc.CreateClusterGateway(ctx, connect.NewRequest(createReq))
 	if err != nil {
@@ -518,13 +485,75 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 			data.ServiceAnnotations = types.MapValueMust(types.StringType, annotations)
 		}
 
+		// Update config
+		if specs.Config != nil && specs.Config.GetEnvoy() != nil {
+			envoyConfig := specs.Config.GetEnvoy()
+			config := &GatewayProviderConfigModel{}
+
+			if envoyConfig.TimeoutDuration != nil {
+				config.TimeoutDuration = types.StringValue(*envoyConfig.TimeoutDuration)
+			} else {
+				config.TimeoutDuration = types.StringNull()
+			}
+
+			if envoyConfig.DnsHostname != nil {
+				config.DNSHostname = types.StringValue(*envoyConfig.DnsHostname)
+			} else {
+				config.DNSHostname = types.StringNull()
+			}
+
+			if envoyConfig.Replicas != nil {
+				config.Replicas = types.Int64Value(int64(*envoyConfig.Replicas))
+			} else {
+				config.Replicas = types.Int64Value(2) // default value
+			}
+
+			if envoyConfig.MinAvailable != nil {
+				config.MinAvailable = types.Int64Value(int64(*envoyConfig.MinAvailable))
+			} else {
+				config.MinAvailable = types.Int64Value(1) // default value
+			}
+
+			if envoyConfig.LetsencryptClusterIssuer != nil {
+				config.LetsencryptClusterIssuer = types.StringValue(*envoyConfig.LetsencryptClusterIssuer)
+			} else {
+				config.LetsencryptClusterIssuer = types.StringNull()
+			}
+
+			if len(envoyConfig.AdditionalDnsNames) > 0 {
+				var dnsValues []attr.Value
+				for _, dns := range envoyConfig.AdditionalDnsNames {
+					dnsValues = append(dnsValues, types.StringValue(dns))
+				}
+				config.AdditionalDNSNames = types.ListValueMust(types.StringType, dnsValues)
+			} else {
+				config.AdditionalDNSNames = types.ListNull(types.StringType)
+			}
+
+			data.Config = config
+		}
+
+		// Update TLS certificate
+		if specs.TlsCertificate != nil && specs.TlsCertificate.GetManualCertificate() != nil {
+			manualCert := specs.TlsCertificate.GetManualCertificate()
+			data.TLSCertificate = &TLSCertificateConfigModel{
+				SecretName:      types.StringValue(manualCert.SecretName),
+				SecretNamespace: types.StringValue(manualCert.SecretNamespace),
+			}
+		}
+
 		// Update optional string fields
 		if specs.LoadBalancerClass != nil {
 			data.LoadBalancerClass = types.StringValue(*specs.LoadBalancerClass)
 		}
-		if specs.ClusterGatewayId != nil {
-			data.ClusterGatewayId = types.StringValue(*specs.ClusterGatewayId)
+		if gateway.Msg.Id != "" {
+			data.ClusterGatewayId = types.StringValue(gateway.Msg.Id)
 		}
+	}
+
+	// Update kube cluster ID
+	if gateway.Msg.GetKubeClusterId() != "" {
+		data.KubeClusterId = types.StringValue(gateway.Msg.GetKubeClusterId())
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
