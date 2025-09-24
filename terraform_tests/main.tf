@@ -78,8 +78,8 @@ resource "chalk_environment" "test" {
   kube_cluster_id           = chalk_kubernetes_cluster.cluster.id
   kube_job_namespace        = "ns-${local.sanitized_email}"
   kube_service_account_name = "env-${local.sanitized_email}-workload-identity"
-  service_url               = "https://${local.sanitized_email}.cicd.chalk.dev/"
-  worker_url                = "https://${local.sanitized_email}.cicd.chalk.dev/"
+  service_url               = "https://${local.sanitized_email}.remote.internal.aws.chalk.dev/"
+  worker_url                = "https://${local.sanitized_email}.remote.internal.aws.chalk.dev/"
   source_bundle_bucket      = "s3://chalk-cicd-test-source-bucket"
   additional_env_vars = {
     "CHALK_INITIALIZE_NATIVE_BUS_PUBLISHER" : "1", "CHALK_PERSIST_TO_OFFLINE_STORE_QUERY_LOG" : "1", "CHALK_PLANNER_ENABLE_NATIVE_RESULT_BUS_PERSISTENCE" : "1", "CHALK_PLANNER_PERSIST_VALUES_OFFLINE_STORE" : "0", "CHALK_PLANNER_PERSIST_VALUES_PARQUET" : "0", "CHALK_PLANNER_SKIP_RELATIONSHIP_DISTINCT" : "1", "CHALK_PLANNER_USE_FILTERED_JOINS" : "0", "CHALK_PLANNER_USE_NATIVE_SQL_OPERATORS" : "1", "CHALK_PLANNER_USE_NATIVE_STATISTICS_OPERATOR" : "0", "CHALK_PLANNER_VELOX_USE_ZERO_COPY_HASH_JOIN" : "1", "CHALK_SKIP_USAGE_PERSISTENCE" : "1", "CHALK_STATIC_UNDERSCORE_EXPRESSIONS" : "1", "CHECK_DUPLICATE_ROWS" : "0", "DD_TRACE_ENABLED" : "1", "GRPC_QUERY_SERVER_NO_TLS" : "1", "PYTHONOPTIMIZE" : "1"
@@ -114,7 +114,7 @@ resource "chalk_cluster_timescale" "timescale" {
   postgres_parameters = {
     max_connections = "200"
   }
-  dns_hostname = "${local.sanitized_email}.metrics.cicd.chalk.dev"
+  dns_hostname = "${local.sanitized_email}.metrics.remote.internal.aws.chalk.dev"
 }
 
 resource "chalk_cluster_background_persistence" "persistence" {
