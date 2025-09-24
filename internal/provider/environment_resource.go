@@ -1,9 +1,11 @@
 package provider
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"net/http"
+
+	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -15,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
-	"net/http"
 )
 
 var _ resource.Resource = &EnvironmentResource{}
@@ -30,9 +31,10 @@ type EnvironmentResource struct {
 }
 
 type EnvironmentBucketsModel struct {
-	DatasetBucket      types.String `tfsdk:"dataset_bucket"`
-	PlanStagesBucket   types.String `tfsdk:"plan_stages_bucket"`
-	SourceBundleBucket types.String `tfsdk:"source_bundle_bucket"`
+	DatasetBucket       types.String `tfsdk:"dataset_bucket"`
+	PlanStagesBucket    types.String `tfsdk:"plan_stages_bucket"`
+	SourceBundleBucket  types.String `tfsdk:"source_bundle_bucket"`
+	ModelRegistryBucket types.String `tfsdk:"model_registry_bucket"`
 }
 
 type EnvironmentResourceModel struct {
@@ -163,6 +165,10 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 					},
 					"source_bundle_bucket": schema.StringAttribute{
 						MarkdownDescription: "Source bundle bucket",
+						Optional:            true,
+					},
+					"model_registry_bucket": schema.StringAttribute{
+						MarkdownDescription: "Model registry bucket",
 						Optional:            true,
 					},
 				},
@@ -490,15 +496,17 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 
 	if e.EnvironmentBuckets != nil {
 		bucketsAttrs := map[string]attr.Value{
-			"dataset_bucket":       types.StringValue(e.EnvironmentBuckets.DatasetBucket),
-			"plan_stages_bucket":   types.StringValue(e.EnvironmentBuckets.PlanStagesBucket),
-			"source_bundle_bucket": types.StringValue(e.EnvironmentBuckets.SourceBundleBucket),
+			"dataset_bucket":        types.StringValue(e.EnvironmentBuckets.DatasetBucket),
+			"plan_stages_bucket":    types.StringValue(e.EnvironmentBuckets.PlanStagesBucket),
+			"source_bundle_bucket":  types.StringValue(e.EnvironmentBuckets.SourceBundleBucket),
+			"model_registry_bucket": types.StringValue(e.EnvironmentBuckets.ModelRegistryBucket),
 		}
 		bucketsType := types.ObjectType{
 			AttrTypes: map[string]attr.Type{
-				"dataset_bucket":       types.StringType,
-				"plan_stages_bucket":   types.StringType,
-				"source_bundle_bucket": types.StringType,
+				"dataset_bucket":        types.StringType,
+				"plan_stages_bucket":    types.StringType,
+				"source_bundle_bucket":  types.StringType,
+				"model_registry_bucket": types.StringType,
 			},
 		}
 		data.EnvironmentBuckets = types.ObjectValueMust(bucketsType.AttrTypes, bucketsAttrs)

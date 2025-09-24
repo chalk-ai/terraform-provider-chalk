@@ -86,9 +86,10 @@ resource "chalk_environment" "test" {
   }
   engine_docker_registry_path = "engines/engine-${local.sanitized_email}"
   environment_buckets = {
-    "plan_stages_bucket"   = "s3://chalk-cicd-test-stages-bucket"
-    "source_bundle_bucket" = "s3://chalk-cicd-test-source-bucket"
-    "dataset_bucket"       = "s3://chalk-cicd-test-dataset-bucket"
+    "plan_stages_bucket"    = "s3://chalk-cicd-test-stages-bucket"
+    "source_bundle_bucket"  = "s3://chalk-cicd-test-source-bucket"
+    "dataset_bucket"        = "s3://chalk-cicd-test-dataset-bucket"
+    "model_registry_bucket" = "s3://chalk-cicd-test-model-registry-bucket"
   }
   managed = true
 }
