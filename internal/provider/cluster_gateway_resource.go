@@ -65,7 +65,6 @@ type ClusterGatewayResourceModel struct {
 	TLSCertificate           *TLSCertificateConfigModel  `tfsdk:"tls_certificate"`
 	ServiceAnnotations       types.Map                   `tfsdk:"service_annotations"`
 	LoadBalancerClass        types.String                `tfsdk:"load_balancer_class"`
-	ClusterGatewayId         types.String                `tfsdk:"cluster_gateway_id"`
 	KubeClusterId            types.String                `tfsdk:"kube_cluster_id"`
 }
 
@@ -202,10 +201,6 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 			},
 			"load_balancer_class": schema.StringAttribute{
 				MarkdownDescription: "Load balancer class",
-				Optional:            true,
-			},
-			"cluster_gateway_id": schema.StringAttribute{
-				MarkdownDescription: "Cluster gateway ID",
 				Optional:            true,
 			},
 		},
@@ -368,7 +363,9 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 	// Set optional fields
 	createReq.Specs.LoadBalancerClass = data.LoadBalancerClass.ValueStringPointer()
 
-	createReq.Id = data.ClusterGatewayId.ValueStringPointer()
+	if !data.Id.IsNull() {
+		createReq.Id = data.Id.ValueStringPointer()
+	}
 
 	createReq.KubeClusterId = data.KubeClusterId.ValueStringPointer()
 
@@ -545,9 +542,6 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 		// Update optional string fields
 		if specs.LoadBalancerClass != nil {
 			data.LoadBalancerClass = types.StringValue(*specs.LoadBalancerClass)
-		}
-		if gateway.Msg.Id != "" {
-			data.ClusterGatewayId = types.StringValue(gateway.Msg.Id)
 		}
 	}
 
