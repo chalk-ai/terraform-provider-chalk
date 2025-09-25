@@ -194,7 +194,6 @@ resource "chalk_cluster_gateway" "test" {
 
 resource "chalk_telemetry" "test" {
   kube_cluster_id = chalk_kubernetes_cluster.cluster.id
-  namespace       = "ns-${local.sanitized_email}"
 
   depends_on = [chalk_cluster_gateway.test]
 }
