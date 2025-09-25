@@ -147,6 +147,7 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 			"id": schema.StringAttribute{
 				MarkdownDescription: "Telemetry deployment identifier",
 				Computed:            true,
+				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -160,7 +161,7 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 			"namespace": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes namespace for the telemetry deployment",
-				Required:            true,
+				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -229,7 +230,7 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 
 	existingDeploymentGetRequest := &serverv1.GetTelemetryDeploymentRequest{
 		ClusterId: data.KubeClusterId.ValueString(),
-		Namespace: data.Namespace.ValueString(),
+		Namespace: data.Namespace.ValueStringPointer(),
 	}
 	existingDeploymentResponse, err := bc.GetTelemetryDeployment(ctx, connect.NewRequest(existingDeploymentGetRequest))
 	if err != nil {
@@ -245,7 +246,7 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 	createReq := &serverv1.CreateTelemetryDeploymentRequest{
 		ClusterId: data.KubeClusterId.ValueString(),
 		Spec: &serverv1.TelemetryDeploymentSpec{
-			Namespace: data.Namespace.ValueString(),
+			Namespace: data.Namespace.ValueStringPointer(),
 		},
 	}
 
@@ -347,7 +348,7 @@ func (r *TelemetryResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	getReq := &serverv1.GetTelemetryDeploymentRequest{
 		ClusterId: data.KubeClusterId.ValueString(),
-		Namespace: data.Namespace.ValueString(),
+		Namespace: data.Namespace.ValueStringPointer(),
 	}
 
 	telemetry, err := bc.GetTelemetryDeployment(ctx, connect.NewRequest(getReq))
@@ -362,7 +363,7 @@ func (r *TelemetryResource) Read(ctx context.Context, req resource.ReadRequest, 
 	// Update the model with the fetched data
 	spec := telemetry.Msg.Deployment.Spec
 	if spec != nil {
-		data.Namespace = types.StringValue(spec.Namespace)
+		data.Namespace = types.StringPointerValue(spec.Namespace)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -409,7 +410,7 @@ func (r *TelemetryResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	deleteRequest := &serverv1.DeleteTelemetryDeploymentRequest{
 		ClusterId: data.KubeClusterId.ValueString(),
-		Namespace: data.Namespace.ValueString(),
+		Namespace: data.Namespace.ValueStringPointer(),
 	}
 
 	_, err := bc.DeleteTelemetryDeployment(ctx, connect.NewRequest(deleteRequest))
