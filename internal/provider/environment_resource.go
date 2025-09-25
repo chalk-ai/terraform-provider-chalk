@@ -343,9 +343,10 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 				return
 			}
 			updateReq.Update.EnvironmentBuckets = &serverv1.EnvironmentObjectStorageConfig{
-				DatasetBucket:      buckets.DatasetBucket.ValueString(),
-				PlanStagesBucket:   buckets.PlanStagesBucket.ValueString(),
-				SourceBundleBucket: buckets.SourceBundleBucket.ValueString(),
+				DatasetBucket:       buckets.DatasetBucket.ValueString(),
+				PlanStagesBucket:    buckets.PlanStagesBucket.ValueString(),
+				SourceBundleBucket:  buckets.SourceBundleBucket.ValueString(),
+				ModelRegistryBucket: buckets.ModelRegistryBucket.ValueString(),
 			}
 			updateMaskPaths = append(updateMaskPaths, "environment_buckets")
 		}
@@ -647,9 +648,10 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 				return
 			}
 			updateReq.Update.EnvironmentBuckets = &serverv1.EnvironmentObjectStorageConfig{
-				DatasetBucket:      buckets.DatasetBucket.ValueString(),
-				PlanStagesBucket:   buckets.PlanStagesBucket.ValueString(),
-				SourceBundleBucket: buckets.SourceBundleBucket.ValueString(),
+				DatasetBucket:       buckets.DatasetBucket.ValueString(),
+				PlanStagesBucket:    buckets.PlanStagesBucket.ValueString(),
+				SourceBundleBucket:  buckets.SourceBundleBucket.ValueString(),
+				ModelRegistryBucket: buckets.ModelRegistryBucket.ValueString(),
 			}
 		}
 		updateMaskPaths = append(updateMaskPaths, "environment_buckets")
