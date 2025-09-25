@@ -1,9 +1,16 @@
-HOSTNAME=registry.terraform.io
-NAMESPACE=chalk-ai
-NAME=chalk
-BINARY=terraform-provider-${NAME}
-VERSION=0.1.0
-OS_ARCH=darwin_arm64
+HOSTNAME = registry.terraform.io
+NAMESPACE = chalk-ai
+NAME = chalk
+BINARY = terraform-provider-${NAME}
+VERSION = 0.1.0
+
+ifeq ($(shell uname -sm), Linux x86_64)
+OS_ARCH ?= linux_amd64
+else ifeq ($(shell uname -sm), Linux arm64)
+OS_ARCH ?= linux_arm64
+else
+OS_ARCH ?= darwin_arm64  # Assume Darwin by default
+endif
 
 default: install
 
