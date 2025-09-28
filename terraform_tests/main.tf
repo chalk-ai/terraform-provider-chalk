@@ -143,7 +143,7 @@ resource "chalk_cluster_background_persistence" "persistence" {
   usage_events_subscription_id             = "${local.sanitized_email}-usage-events"
   api_server_host                          = "http://${local.sanitized_email}-api-proxy-service.ns-${local.sanitized_email}.svc.cluster.local"
   kafka_sasl_secret                        = "AmazonMSK_chalk-cicd-test_chalk"
-  metadata_provider                        = "grpc_server"
+  metadata_provider                        = "GRPC_SERVER"
   kafka_bootstrap_servers                  = "b-2.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-1.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-3.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096"
   kafka_security_protocol                  = "SASL_SSL"
   kafka_sasl_mechanism                     = "SCRAM-SHA-512"
