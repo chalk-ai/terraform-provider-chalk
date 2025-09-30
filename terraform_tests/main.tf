@@ -25,12 +25,12 @@ provider "chalk" {
 }
 
 resource "chalk_project" "test" {
-  name = "remote-dev"
+  name = "fraud-template"
 }
 
 resource "chalk_cloud_credentials" "creds" {
   kind                    = "aws"
-  name                    = "creds-remote-dev-${local.sanitized_email}"
+  name                    = "creds-fraud-template-${local.sanitized_email}"
   aws_account_id          = "009160067517"
   aws_management_role_arn = "arn:aws:iam::009160067517:role/chalk-cicd-test-Chalk-Api-Management"
   aws_region              = "us-east-1"
