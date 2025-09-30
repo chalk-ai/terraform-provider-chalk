@@ -24,10 +24,6 @@ provider "chalk" {
   api_server    = "http://localhost:8080"
 }
 
-resource "chalk_project" "test" {
-  name = "fraud-template"
-}
-
 resource "chalk_cloud_credentials" "creds" {
   kind                    = "aws"
   name                    = "creds-fraud-template-${local.sanitized_email}"
@@ -74,7 +70,7 @@ resource "chalk_telemetry_binding" "telemetry_binding" {
 resource "chalk_environment" "test" {
   id                        = local.sanitized_email
   name                      = local.sanitized_email
-  project_id                = chalk_project.test.id
+  project_id                = "project"
   kube_cluster_id           = chalk_kubernetes_cluster.cluster.id
   kube_job_namespace        = "ns-${local.sanitized_email}"
   kube_service_account_name = "env-${local.sanitized_email}-workload-identity"
