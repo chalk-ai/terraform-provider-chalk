@@ -425,12 +425,198 @@ func (r *CloudCredentialsResource) Read(ctx context.Context, req resource.ReadRe
 }
 
 func (r *CloudCredentialsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Cloud credentials don't support update operations based on the proto definition
-	// The name and kind require replacement, and config changes would typically require recreation
-	resp.Diagnostics.AddError(
-		"Update Not Supported",
-		"Cloud credentials cannot be updated. Changes require resource replacement.",
+	var data CloudCredentialsResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create auth client first
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
 	)
+
+	// Create cloud credentials client with token injection interceptor
+	credClient := NewCloudAccountCredentialsClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       r.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
+	})
+
+	// Build the cloud config based on kind
+	var cloudConfig *serverv1.CloudConfig
+	kind := data.Kind.ValueString()
+
+	if kind == "aws" {
+		// Validate AWS required fields
+		if data.AWSAccountId.IsNull() || data.AWSManagementRoleArn.IsNull() || data.AWSRegion.IsNull() {
+			resp.Diagnostics.AddError(
+				"Missing AWS Configuration",
+				"For AWS cloud credentials, aws_account_id, aws_management_role_arn, and aws_region are required",
+			)
+			return
+		}
+
+		awsConfig := &serverv1.AWSCloudConfig{
+			AccountId:         data.AWSAccountId.ValueString(),
+			ManagementRoleArn: data.AWSManagementRoleArn.ValueString(),
+			Region:            data.AWSRegion.ValueString(),
+		}
+
+		if !data.AWSExternalId.IsNull() {
+			externalId := data.AWSExternalId.ValueString()
+			awsConfig.ExternalId = &externalId
+		}
+
+		// Add Docker build config if provided
+		if dockerConfig := buildDockerConfig(&data); dockerConfig != nil {
+			awsConfig.DockerBuildConfig = dockerConfig
+		}
+
+		// Add GCP workload identity if provided
+		if workloadIdentity := buildGCPWorkloadIdentity(&data); workloadIdentity != nil {
+			awsConfig.GcpWorkloadIdentity = workloadIdentity
+		}
+
+		cloudConfig = &serverv1.CloudConfig{
+			Config: &serverv1.CloudConfig_Aws{
+				Aws: awsConfig,
+			},
+		}
+	} else if kind == "gcp" {
+		// Validate GCP required fields
+		if data.GCPProjectId.IsNull() || data.GCPRegion.IsNull() {
+			resp.Diagnostics.AddError(
+				"Missing GCP Configuration",
+				"For GCP cloud credentials, gcp_project_id and gcp_region are required",
+			)
+			return
+		}
+
+		gcpConfig := &serverv1.GCPCloudConfig{
+			ProjectId: data.GCPProjectId.ValueString(),
+			Region:    data.GCPRegion.ValueString(),
+		}
+
+		if !data.GCPManagementServiceAccount.IsNull() {
+			serviceAccount := data.GCPManagementServiceAccount.ValueString()
+			gcpConfig.ManagementServiceAccount = &serviceAccount
+		}
+
+		// Add Docker build config if provided
+		if dockerConfig := buildDockerConfig(&data); dockerConfig != nil {
+			gcpConfig.DockerBuildConfig = dockerConfig
+		}
+
+		cloudConfig = &serverv1.CloudConfig{
+			Config: &serverv1.CloudConfig_Gcp{
+				Gcp: gcpConfig,
+			},
+		}
+	} else {
+		resp.Diagnostics.AddError(
+			"Invalid Cloud Kind",
+			fmt.Sprintf("Cloud kind must be 'aws' or 'gcp', got: %s", kind),
+		)
+		return
+	}
+
+	updateReq := &serverv1.UpdateCloudCredentialsRequest{
+		Id: data.Id.ValueString(),
+		Credentials: &serverv1.CloudCredentialsRequest{
+			Name:   data.Name.ValueString(),
+			Kind:   kind,
+			Config: cloudConfig,
+		},
+	}
+
+	creds, err := credClient.UpdateCloudCredentials(ctx, connect.NewRequest(updateReq))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Updating Cloud Credentials",
+			fmt.Sprintf("Could not update cloud credentials: %v", err),
+		)
+		return
+	}
+
+	// Update with returned values
+	c := creds.Msg.Credentials
+	data.Name = types.StringValue(c.Name)
+	data.Kind = types.StringValue(c.Kind)
+
+	// Extract configuration based on kind
+	if c.Spec != nil && c.Spec.Config != nil {
+		switch config := c.Spec.Config.(type) {
+		case *serverv1.CloudConfig_Aws:
+			aws := config.Aws
+			data.AWSAccountId = types.StringValue(aws.AccountId)
+			data.AWSManagementRoleArn = types.StringValue(aws.ManagementRoleArn)
+			data.AWSRegion = types.StringValue(aws.Region)
+			if aws.ExternalId != nil {
+				data.AWSExternalId = types.StringValue(*aws.ExternalId)
+			} else {
+				data.AWSExternalId = types.StringNull()
+			}
+
+			// Clear GCP fields
+			data.GCPProjectId = types.StringNull()
+			data.GCPRegion = types.StringNull()
+			data.GCPManagementServiceAccount = types.StringNull()
+
+			// Extract Docker build config if present
+			if aws.DockerBuildConfig != nil {
+				extractDockerConfig(aws.DockerBuildConfig, &data)
+			} else {
+				data.DockerBuildConfig = []DockerBuildConfigModel{}
+			}
+
+			// Extract GCP workload identity if present
+			if aws.GcpWorkloadIdentity != nil {
+				extractGCPWorkloadIdentity(aws.GcpWorkloadIdentity, &data)
+			} else {
+				data.GCPWorkloadIdentity = []GCPWorkloadIdentityModel{}
+			}
+		case *serverv1.CloudConfig_Gcp:
+			gcp := config.Gcp
+			data.GCPProjectId = types.StringValue(gcp.ProjectId)
+			data.GCPRegion = types.StringValue(gcp.Region)
+			if gcp.ManagementServiceAccount != nil {
+				data.GCPManagementServiceAccount = types.StringValue(*gcp.ManagementServiceAccount)
+			} else {
+				data.GCPManagementServiceAccount = types.StringNull()
+			}
+
+			// Clear AWS fields
+			data.AWSAccountId = types.StringNull()
+			data.AWSManagementRoleArn = types.StringNull()
+			data.AWSRegion = types.StringNull()
+			data.AWSExternalId = types.StringNull()
+
+			// Extract Docker build config if present
+			if gcp.DockerBuildConfig != nil {
+				extractDockerConfig(gcp.DockerBuildConfig, &data)
+			} else {
+				data.DockerBuildConfig = []DockerBuildConfigModel{}
+			}
+
+			// Clear GCP workload identity
+			data.GCPWorkloadIdentity = []GCPWorkloadIdentityModel{}
+		}
+	}
+
+	tflog.Trace(ctx, "updated chalk_cloud_credentials resource")
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *CloudCredentialsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

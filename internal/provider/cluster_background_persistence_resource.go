@@ -727,6 +727,11 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		}
 	}
 
+	// Support upsert by setting ID if it exists
+	if !data.Id.IsNull() {
+		createReq.Id = data.Id.ValueStringPointer()
+	}
+
 	// Set optional rust image
 	if !data.BusWriterImageRust.IsNull() {
 		createReq.Specs.CommonPersistenceSpecs.BusWriterImageRust = data.BusWriterImageRust.ValueString()
@@ -894,13 +899,284 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 }
 
 func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Note: According to the proto definition, there's no UpdateClusterBackgroundPersistence method
-	// So we'll need to delete and recreate, but this would be disruptive
-	// For now, we'll return an error indicating updates are not supported
-	resp.Diagnostics.AddError(
-		"Update Not Supported",
-		"Cluster background persistence updates are not supported by the Chalk API. Please recreate the resource if changes are needed.",
+	var data ClusterBackgroundPersistenceResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create auth client first
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
 	)
+
+	// Create builder client with token injection interceptor
+	bc := NewBuilderClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       r.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
+	})
+
+	var envIds []string
+	// Convert environment IDs
+	if !data.EnvironmentIds.IsNull() {
+		diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// Convert writers
+	var writers []BackgroundPersistenceWriterModel
+	diags := data.Writers.ElementsAs(ctx, &writers, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var protoWriters []*serverv1.BackgroundPersistenceWriterSpecs
+	for _, writer := range writers {
+		protoWriter := &serverv1.BackgroundPersistenceWriterSpecs{
+			Name:              writer.Name.ValueString(),
+			BusSubscriberType: writer.BusSubscriberType.ValueString(),
+		}
+
+		// Handle optional string fields
+		if !writer.ImageOverride.IsNull() {
+			protoWriter.ImageOverride = writer.ImageOverride.ValueString()
+		}
+		if !writer.Version.IsNull() {
+			protoWriter.Version = writer.Version.ValueString()
+		}
+		if !writer.DefaultReplicaCount.IsNull() {
+			protoWriter.DefaultReplicaCount = int32(writer.DefaultReplicaCount.ValueInt64())
+		}
+		if !writer.MetadataSqlSslCaCertSecret.IsNull() {
+			protoWriter.MetadataSqlSslCaCertSecret = writer.MetadataSqlSslCaCertSecret.ValueString()
+		}
+		if !writer.MetadataSqlSslClientCertSecret.IsNull() {
+			protoWriter.MetadataSqlSslClientCertSecret = writer.MetadataSqlSslClientCertSecret.ValueString()
+		}
+		if !writer.MetadataSqlSslClientKeySecret.IsNull() {
+			protoWriter.MetadataSqlSslClientKeySecret = writer.MetadataSqlSslClientKeySecret.ValueString()
+		}
+		if !writer.MetadataSqlUriSecret.IsNull() {
+			protoWriter.MetadataSqlUriSecret = writer.MetadataSqlUriSecret.ValueString()
+		}
+		if !writer.OfflineStoreInserterDbType.IsNull() {
+			protoWriter.OfflineStoreInserterDbType = writer.OfflineStoreInserterDbType.ValueString()
+		}
+		if !writer.StorageCachePrefix.IsNull() {
+			protoWriter.StorageCachePrefix = writer.StorageCachePrefix.ValueString()
+		}
+		if !writer.UsageStoreUri.IsNull() {
+			protoWriter.UsageStoreUri = writer.UsageStoreUri.ValueString()
+		}
+		if !writer.QueryTableWriteDropRatio.IsNull() {
+			protoWriter.QueryTableWriteDropRatio = writer.QueryTableWriteDropRatio.ValueString()
+		}
+
+		// Convert optional fields
+		if !writer.GkeSpot.IsNull() {
+			val := writer.GkeSpot.ValueBool()
+			protoWriter.GkeSpot = &val
+		}
+		if !writer.LoadWriterConfigmap.IsNull() {
+			val := writer.LoadWriterConfigmap.ValueBool()
+			protoWriter.LoadWriterConfigmap = &val
+		}
+		if !writer.KafkaConsumerGroupOverride.IsNull() {
+			protoWriter.KafkaConsumerGroupOverride = writer.KafkaConsumerGroupOverride.ValueString()
+		}
+		if !writer.MaxBatchSize.IsNull() {
+			val := int32(writer.MaxBatchSize.ValueInt64())
+			protoWriter.MaxBatchSize = &val
+		}
+		if !writer.MessageProcessingConcurrency.IsNull() {
+			val := int32(writer.MessageProcessingConcurrency.ValueInt64())
+			protoWriter.MessageProcessingConcurrency = &val
+		}
+		if !writer.ResultsWriterSkipProducingFeatureMetrics.IsNull() {
+			val := writer.ResultsWriterSkipProducingFeatureMetrics.ValueBool()
+			protoWriter.ResultsWriterSkipProducingFeatureMetrics = &val
+		}
+
+		// Convert HPA specs
+		if writer.HpaSpecs != nil {
+			protoWriter.HpaSpecs = &serverv1.BackgroundPersistenceWriterHpaSpecs{
+				HpaPubsubSubscriptionId: writer.HpaSpecs.HpaPubsubSubscriptionId.ValueString(),
+			}
+			if !writer.HpaSpecs.HpaMinReplicas.IsNull() {
+				val := int32(writer.HpaSpecs.HpaMinReplicas.ValueInt64())
+				protoWriter.HpaSpecs.HpaMinReplicas = &val
+			}
+			if !writer.HpaSpecs.HpaMaxReplicas.IsNull() {
+				val := int32(writer.HpaSpecs.HpaMaxReplicas.ValueInt64())
+				protoWriter.HpaSpecs.HpaMaxReplicas = &val
+			}
+			if !writer.HpaSpecs.HpaTargetAverageValue.IsNull() {
+				val := int32(writer.HpaSpecs.HpaTargetAverageValue.ValueInt64())
+				protoWriter.HpaSpecs.HpaTargetAverageValue = &val
+			}
+		}
+
+		// Convert resource configs
+		if writer.Request != nil {
+			protoWriter.Request = &serverv1.KubeResourceConfig{}
+			if !writer.Request.CPU.IsNull() {
+				protoWriter.Request.Cpu = writer.Request.CPU.ValueString()
+			}
+			if !writer.Request.Memory.IsNull() {
+				protoWriter.Request.Memory = writer.Request.Memory.ValueString()
+			}
+			if !writer.Request.EphemeralStorage.IsNull() {
+				protoWriter.Request.EphemeralStorage = writer.Request.EphemeralStorage.ValueString()
+			}
+			if !writer.Request.Storage.IsNull() {
+				protoWriter.Request.Storage = writer.Request.Storage.ValueString()
+			}
+		}
+		if writer.Limit != nil {
+			protoWriter.Limit = &serverv1.KubeResourceConfig{}
+			if !writer.Limit.CPU.IsNull() {
+				protoWriter.Limit.Cpu = writer.Limit.CPU.ValueString()
+			}
+			if !writer.Limit.Memory.IsNull() {
+				protoWriter.Limit.Memory = writer.Limit.Memory.ValueString()
+			}
+			if !writer.Limit.EphemeralStorage.IsNull() {
+				protoWriter.Limit.EphemeralStorage = writer.Limit.EphemeralStorage.ValueString()
+			}
+			if !writer.Limit.Storage.IsNull() {
+				protoWriter.Limit.Storage = writer.Limit.Storage.ValueString()
+			}
+		}
+
+		protoWriters = append(protoWriters, protoWriter)
+	}
+
+	// Convert terraform model to proto request - reuse create logic since it's an upsert
+	commonSpecs := &serverv1.BackgroundPersistenceCommonSpecs{
+		Namespace:                            data.Namespace.ValueString(),
+		ServiceAccountName:                   data.ServiceAccountName.ValueString(),
+		BusBackend:                           data.BusBackend.ValueString(),
+		SecretClient:                         data.SecretClient.ValueString(),
+		BigqueryParquetUploadSubscriptionId:  data.BigqueryParquetUploadSubscriptionId.ValueString(),
+		BigqueryStreamingWriteSubscriptionId: data.BigqueryStreamingWriteSubscriptionId.ValueString(),
+		BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
+		BqUploadBucket:                       data.BqUploadBucket.ValueString(),
+		BqUploadTopic:                        data.BqUploadTopic.ValueString(),
+		KafkaDlqTopic:                        data.KafkaDlqTopic.ValueString(),
+		MetricsBusSubscriptionId:             data.MetricsBusSubscriptionId.ValueString(),
+		MetricsBusTopicId:                    data.MetricsBusTopicId.ValueString(),
+		OperationSubscriptionId:              data.OperationSubscriptionId.ValueString(),
+		QueryLogResultTopic:                  data.QueryLogResultTopic.ValueString(),
+		QueryLogSubscriptionId:               data.QueryLogSubscriptionId.ValueString(),
+		ResultBusMetricsSubscriptionId:       data.ResultBusMetricsSubscriptionId.ValueString(),
+		ResultBusOfflineStoreSubscriptionId:  data.ResultBusOfflineStoreSubscriptionId.ValueString(),
+		ResultBusOnlineStoreSubscriptionId:   data.ResultBusOnlineStoreSubscriptionId.ValueString(),
+		ResultBusTopicId:                     data.ResultBusTopicId.ValueString(),
+		UsageBusTopicId:                      data.UsageBusTopicId.ValueString(),
+		UsageEventsSubscriptionId:            data.UsageEventsSubscriptionId.ValueString(),
+		IncludeChalkNodeSelector:             data.IncludeChalkNodeSelector.ValueBool(),
+	}
+
+	// Handle optional google_cloud_project field
+	if !data.GoogleCloudProject.IsNull() {
+		commonSpecs.GoogleCloudProject = data.GoogleCloudProject.ValueString()
+	}
+
+	// Handle optional fields
+	if !data.BusWriterImageGo.IsNull() {
+		commonSpecs.BusWriterImageGo = data.BusWriterImageGo.ValueString()
+	}
+	if !data.BusWriterImagePython.IsNull() {
+		commonSpecs.BusWriterImagePython = data.BusWriterImagePython.ValueString()
+	}
+	if !data.BusWriterImageBswl.IsNull() {
+		commonSpecs.BusWriterImageBswl = data.BusWriterImageBswl.ValueString()
+	}
+
+	deploymentSpecs := &serverv1.BackgroundPersistenceDeploymentSpecs{
+		CommonPersistenceSpecs: commonSpecs,
+		ApiServerHost:          data.ApiServerHost.ValueString(),
+		MetadataProvider:       data.MetadataProvider.ValueString(),
+		Writers:                protoWriters,
+	}
+
+	// Handle optional deployment-level fields
+	if !data.KafkaSaslSecret.IsNull() {
+		deploymentSpecs.KafkaSaslSecret = data.KafkaSaslSecret.ValueString()
+	}
+	if !data.KafkaBootstrapServers.IsNull() {
+		deploymentSpecs.KafkaBootstrapServers = data.KafkaBootstrapServers.ValueString()
+	}
+	if !data.KafkaSecurityProtocol.IsNull() {
+		deploymentSpecs.KafkaSecurityProtocol = data.KafkaSecurityProtocol.ValueString()
+	}
+	if !data.KafkaSaslMechanism.IsNull() {
+		deploymentSpecs.KafkaSaslMechanism = data.KafkaSaslMechanism.ValueString()
+	}
+	if !data.RedisIsClustered.IsNull() {
+		deploymentSpecs.RedisIsClustered = data.RedisIsClustered.ValueString()
+	}
+	if !data.SnowflakeStorageIntegrationName.IsNull() {
+		deploymentSpecs.SnowflakeStorageIntegrationName = data.SnowflakeStorageIntegrationName.ValueString()
+	}
+	if !data.RedisLightningSupportsHasMany.IsNull() {
+		deploymentSpecs.RedisLightningSupportsHasMany = data.RedisLightningSupportsHasMany.ValueBool()
+	}
+	if !data.Insecure.IsNull() {
+		deploymentSpecs.Insecure = data.Insecure.ValueBool()
+	}
+
+	//create a deployment based on whether kube_cluster_id or environment_ids is provided
+	var createReq *serverv1.CreateClusterBackgroundPersistenceRequest
+	if !data.KubeClusterId.IsNull() {
+		createReq = &serverv1.CreateClusterBackgroundPersistenceRequest{
+			Specs:         deploymentSpecs,
+			KubeClusterId: data.KubeClusterId.ValueStringPointer(),
+		}
+	} else {
+		createReq = &serverv1.CreateClusterBackgroundPersistenceRequest{
+			EnvironmentIds: envIds,
+			Specs:          deploymentSpecs,
+		}
+	}
+
+	// Use the known ID from current state for the upsert
+	createReq.Id = data.Id.ValueStringPointer()
+
+	// Set optional rust image
+	if !data.BusWriterImageRust.IsNull() {
+		createReq.Specs.CommonPersistenceSpecs.BusWriterImageRust = data.BusWriterImageRust.ValueString()
+	}
+
+	response, err := bc.CreateClusterBackgroundPersistence(ctx, connect.NewRequest(createReq))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Updating Chalk Cluster Background Persistence",
+			fmt.Sprintf("Could not update cluster background persistence: %v", err),
+		)
+		return
+	}
+
+	data.Id = types.StringValue(response.Msg.Id)
+
+	tflog.Trace(ctx, "updated a chalk_cluster_background_persistence resource")
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *ClusterBackgroundPersistenceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

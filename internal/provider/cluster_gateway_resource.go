@@ -554,13 +554,160 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 }
 
 func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Note: According to the proto definition, there's no UpdateClusterGateway method
-	// So we'll need to delete and recreate, but this would be disruptive
-	// For now, we'll return an error indicating updates are not supported
-	resp.Diagnostics.AddError(
-		"Update Not Supported",
-		"Cluster gateway updates are not supported by the Chalk API. Please recreate the resource if changes are needed.",
+	var data ClusterGatewayResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create auth client first
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
 	)
+
+	// Create builder client with token injection interceptor
+	bc := NewBuilderClient(ctx, &GrpcClientOptions{
+		httpClient: &http.Client{},
+		host:       r.client.ApiServer,
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
+	})
+
+	// Convert terraform model to proto request - reuse create logic since it's an upsert
+	createReq := &serverv1.CreateClusterGatewayRequest{
+		Specs: &serverv1.EnvoyGatewaySpecs{
+			Namespace:                data.Namespace.ValueString(),
+			GatewayName:              data.GatewayName.ValueString(),
+			GatewayClassName:         data.GatewayClassName.ValueString(),
+			IncludeChalkNodeSelector: data.IncludeChalkNodeSelector.ValueBool(),
+		},
+	}
+
+	// Convert environment IDs
+	var envIds []string
+	diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	createReq.EnvironmentIds = envIds
+
+	// Convert listeners
+	var listeners []EnvoyGatewayListenerModel
+	diags = data.Listeners.ElementsAs(ctx, &listeners, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	for _, listener := range listeners {
+		protoListener := &serverv1.EnvoyGatewayListener{
+			Port:     int32(listener.Port.ValueInt64()),
+			Protocol: listener.Protocol.ValueString(),
+			Name:     listener.Name.ValueString(),
+			AllowedRoutes: &serverv1.EnvoyGatewayAllowedRoutes{
+				Namespaces: &serverv1.EnvoyGatewayAllowedNamespaces{
+					From: listener.From.ValueString(),
+				},
+			},
+		}
+		createReq.Specs.Listeners = append(createReq.Specs.Listeners, protoListener)
+	}
+
+	// Convert provider config
+	if data.Config != nil {
+		envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
+		envoyConfig.TimeoutDuration = data.Config.TimeoutDuration.ValueStringPointer()
+		envoyConfig.DnsHostname = data.Config.DNSHostname.ValueStringPointer()
+		if !data.Config.Replicas.IsNull() {
+			val := int32(data.Config.Replicas.ValueInt64())
+			envoyConfig.Replicas = &val
+		}
+		if !data.Config.MinAvailable.IsNull() {
+			val := int32(data.Config.MinAvailable.ValueInt64())
+			envoyConfig.MinAvailable = &val
+		}
+		envoyConfig.LetsencryptClusterIssuer = data.Config.LetsencryptClusterIssuer.ValueStringPointer()
+		if !data.Config.AdditionalDNSNames.IsNull() {
+			var dnsNames []string
+			diags = data.Config.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			envoyConfig.AdditionalDnsNames = dnsNames
+		}
+		createReq.Specs.Config = &serverv1.GatewayProviderConfig{
+			Config: &serverv1.GatewayProviderConfig_Envoy{
+				Envoy: envoyConfig,
+			},
+		}
+	}
+
+	// Convert IP allowlist
+	if !data.IPAllowlist.IsNull() {
+		var ipList []string
+		diags = data.IPAllowlist.ElementsAs(ctx, &ipList, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		createReq.Specs.IpAllowlist = ipList
+	}
+
+	// Convert TLS certificate
+	if data.TLSCertificate != nil {
+		createReq.Specs.TlsCertificate = &serverv1.TLSCertificateConfig{
+			CertificateSource: &serverv1.TLSCertificateConfig_ManualCertificate{
+				ManualCertificate: &serverv1.TLSManualCertificateRef{
+					SecretName:      data.TLSCertificate.SecretName.ValueString(),
+					SecretNamespace: data.TLSCertificate.SecretNamespace.ValueString(),
+				},
+			},
+		}
+	}
+
+	// Convert service annotations
+	if !data.ServiceAnnotations.IsNull() {
+		annotations := make(map[string]string)
+		diags = data.ServiceAnnotations.ElementsAs(ctx, &annotations, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		createReq.Specs.ServiceAnnotations = annotations
+	}
+
+	// Set optional fields
+	createReq.Specs.LoadBalancerClass = data.LoadBalancerClass.ValueStringPointer()
+
+	// Use the known ID from the current state for the upsert
+	createReq.Id = data.Id.ValueStringPointer()
+
+	createReq.KubeClusterId = data.KubeClusterId.ValueStringPointer()
+
+	response, err := bc.CreateClusterGateway(ctx, connect.NewRequest(createReq))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Updating Chalk Cluster Gateway",
+			fmt.Sprintf("Could not update cluster gateway: %v", err),
+		)
+		return
+	}
+
+	data.Id = types.StringValue(response.Msg.Id)
+	tflog.Trace(ctx, "updated a chalk_cluster_gateway resource")
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *ClusterGatewayResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
