@@ -46,6 +46,7 @@ type EnvironmentResourceModel struct {
 	EngineDockerRegistryPath types.String `tfsdk:"engine_docker_registry_path"`
 	Managed                  types.Bool   `tfsdk:"managed"`
 	OnlineStoreSecret        types.String `tfsdk:"online_store_secret"`
+	OnlineStoreKind          types.String `tfsdk:"online_store_kind"`
 	FeatureStoreSecret       types.String `tfsdk:"feature_store_secret"`
 	PrivatePipRepositories   types.String `tfsdk:"private_pip_repositories"`
 	AdditionalEnvVars        types.Map    `tfsdk:"additional_env_vars"`
@@ -105,6 +106,10 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 				MarkdownDescription: "Online store secret",
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"online_store_kind": schema.StringAttribute{
+				MarkdownDescription: "Online store kind",
+				Optional:            true,
 			},
 			"feature_store_secret": schema.StringAttribute{
 				MarkdownDescription: "Feature store secret",
@@ -268,7 +273,8 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		!data.PrivatePipRepositories.IsNull() || !data.AdditionalEnvVars.IsNull() ||
 		!data.SpecsConfigJson.IsNull() || !data.ServiceUrl.IsNull() ||
 		!data.WorkerUrl.IsNull() || !data.KubeJobNamespace.IsNull() ||
-		!data.KubeServiceAccountName.IsNull() || !data.EnvironmentBuckets.IsNull() {
+		!data.KubeServiceAccountName.IsNull() || !data.EnvironmentBuckets.IsNull() ||
+		!data.OnlineStoreKind.IsNull() {
 		updateReq := &serverv1.UpdateEnvironmentRequest{
 			Id:     data.Id.ValueString(),
 			Update: &serverv1.UpdateEnvironmentOperation{},
@@ -280,6 +286,12 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			val := data.OnlineStoreSecret.ValueString()
 			updateReq.Update.OnlineStoreSecret = &val
 			updateMaskPaths = append(updateMaskPaths, "online_store_secret")
+		}
+
+		if !data.OnlineStoreKind.IsNull() {
+			val := data.OnlineStoreKind.ValueString()
+			updateReq.Update.OnlineStoreKind = &val
+			updateMaskPaths = append(updateMaskPaths, "online_store_kind")
 		}
 
 		if !data.FeatureStoreSecret.IsNull() {
@@ -451,6 +463,10 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		data.OnlineStoreSecret = types.StringValue(*e.OnlineStoreSecret)
 	}
 
+	if e.OnlineStoreKind != nil {
+		data.OnlineStoreKind = types.StringValue(*e.OnlineStoreKind)
+	}
+
 	if e.FeatureStoreSecret != nil {
 		data.FeatureStoreSecret = types.StringValue(*e.FeatureStoreSecret)
 	}
@@ -568,6 +584,14 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 			updateReq.Update.OnlineStoreSecret = &val
 		}
 		updateMaskPaths = append(updateMaskPaths, "online_store_secret")
+	}
+
+	if !data.OnlineStoreKind.Equal(state.OnlineStoreKind) {
+		if !data.OnlineStoreKind.IsNull() {
+			val := data.OnlineStoreKind.ValueString()
+			updateReq.Update.OnlineStoreKind = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "online_store_kind")
 	}
 
 	if !data.FeatureStoreSecret.Equal(state.FeatureStoreSecret) {
