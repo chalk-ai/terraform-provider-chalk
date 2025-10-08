@@ -63,7 +63,6 @@ type BackgroundPersistenceWriterModel struct {
 	MetadataSqlUriSecret                     types.String                         `tfsdk:"metadata_sql_uri_secret"`
 	OfflineStoreInserterDbType               types.String                         `tfsdk:"offline_store_inserter_db_type"`
 	StorageCachePrefix                       types.String                         `tfsdk:"storage_cache_prefix"`
-	UsageStoreUri                            types.String                         `tfsdk:"usage_store_uri"`
 	ResultsWriterSkipProducingFeatureMetrics types.Bool                           `tfsdk:"results_writer_skip_producing_feature_metrics"`
 	QueryTableWriteDropRatio                 types.String                         `tfsdk:"query_table_write_drop_ratio"`
 }
@@ -91,12 +90,9 @@ type ClusterBackgroundPersistenceResourceModel struct {
 	OperationSubscriptionId              types.String `tfsdk:"operation_subscription_id"`
 	QueryLogResultTopic                  types.String `tfsdk:"query_log_result_topic"`
 	QueryLogSubscriptionId               types.String `tfsdk:"query_log_subscription_id"`
-	ResultBusMetricsSubscriptionId       types.String `tfsdk:"result_bus_metrics_subscription_id"`
 	ResultBusOfflineStoreSubscriptionId  types.String `tfsdk:"result_bus_offline_store_subscription_id"`
 	ResultBusOnlineStoreSubscriptionId   types.String `tfsdk:"result_bus_online_store_subscription_id"`
 	ResultBusTopicId                     types.String `tfsdk:"result_bus_topic_id"`
-	UsageBusTopicId                      types.String `tfsdk:"usage_bus_topic_id"`
-	UsageEventsSubscriptionId            types.String `tfsdk:"usage_events_subscription_id"`
 	IncludeChalkNodeSelector             types.Bool   `tfsdk:"include_chalk_node_selector"`
 	ApiServerHost                        types.String `tfsdk:"api_server_host"`
 	KafkaSaslSecret                      types.String `tfsdk:"kafka_sasl_secret"`
@@ -219,7 +215,7 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"kafka_dlq_topic": schema.StringAttribute{
 				MarkdownDescription: "Kafka DLQ topic",
-				Required:            true,
+				Optional:            true,
 			},
 			"metrics_bus_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "Metrics bus subscription ID",
@@ -241,10 +237,6 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 				MarkdownDescription: "Query log subscription ID",
 				Required:            true,
 			},
-			"result_bus_metrics_subscription_id": schema.StringAttribute{
-				MarkdownDescription: "Result bus metrics subscription ID",
-				Required:            true,
-			},
 			"result_bus_offline_store_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "Result bus offline store subscription ID",
 				Required:            true,
@@ -255,14 +247,6 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"result_bus_topic_id": schema.StringAttribute{
 				MarkdownDescription: "Result bus topic ID",
-				Required:            true,
-			},
-			"usage_bus_topic_id": schema.StringAttribute{
-				MarkdownDescription: "Usage bus topic ID",
-				Required:            true,
-			},
-			"usage_events_subscription_id": schema.StringAttribute{
-				MarkdownDescription: "Usage events subscription ID",
 				Required:            true,
 			},
 			"include_chalk_node_selector": schema.BoolAttribute{
@@ -428,10 +412,6 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 							MarkdownDescription: "Storage cache prefix",
 							Optional:            true,
 						},
-						"usage_store_uri": schema.StringAttribute{
-							MarkdownDescription: "Usage store URI",
-							Optional:            true,
-						},
 						"results_writer_skip_producing_feature_metrics": schema.BoolAttribute{
 							MarkdownDescription: "Results writer skip producing feature metrics",
 							Optional:            true,
@@ -552,9 +532,6 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		if !writer.StorageCachePrefix.IsNull() {
 			protoWriter.StorageCachePrefix = writer.StorageCachePrefix.ValueString()
 		}
-		if !writer.UsageStoreUri.IsNull() {
-			protoWriter.UsageStoreUri = writer.UsageStoreUri.ValueString()
-		}
 		if !writer.QueryTableWriteDropRatio.IsNull() {
 			protoWriter.QueryTableWriteDropRatio = writer.QueryTableWriteDropRatio.ValueString()
 		}
@@ -649,24 +626,24 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
 		BqUploadBucket:                       data.BqUploadBucket.ValueString(),
 		BqUploadTopic:                        data.BqUploadTopic.ValueString(),
-		KafkaDlqTopic:                        data.KafkaDlqTopic.ValueString(),
 		MetricsBusSubscriptionId:             data.MetricsBusSubscriptionId.ValueString(),
 		MetricsBusTopicId:                    data.MetricsBusTopicId.ValueString(),
 		OperationSubscriptionId:              data.OperationSubscriptionId.ValueString(),
 		QueryLogResultTopic:                  data.QueryLogResultTopic.ValueString(),
 		QueryLogSubscriptionId:               data.QueryLogSubscriptionId.ValueString(),
-		ResultBusMetricsSubscriptionId:       data.ResultBusMetricsSubscriptionId.ValueString(),
 		ResultBusOfflineStoreSubscriptionId:  data.ResultBusOfflineStoreSubscriptionId.ValueString(),
 		ResultBusOnlineStoreSubscriptionId:   data.ResultBusOnlineStoreSubscriptionId.ValueString(),
 		ResultBusTopicId:                     data.ResultBusTopicId.ValueString(),
-		UsageBusTopicId:                      data.UsageBusTopicId.ValueString(),
-		UsageEventsSubscriptionId:            data.UsageEventsSubscriptionId.ValueString(),
 		IncludeChalkNodeSelector:             data.IncludeChalkNodeSelector.ValueBool(),
 	}
 
 	// Handle optional google_cloud_project field
 	if !data.GoogleCloudProject.IsNull() {
 		commonSpecs.GoogleCloudProject = data.GoogleCloudProject.ValueString()
+	}
+
+	if !data.KafkaDlqTopic.IsNull() {
+		commonSpecs.KafkaDlqTopic = data.KafkaDlqTopic.ValueString()
 	}
 
 	// Handle optional fields
@@ -810,19 +787,21 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 		data.BigqueryStreamingWriteTopic = types.StringValue(common.BigqueryStreamingWriteTopic)
 		data.BqUploadBucket = types.StringValue(common.BqUploadBucket)
 		data.BqUploadTopic = types.StringValue(common.BqUploadTopic)
-		data.KafkaDlqTopic = types.StringValue(common.KafkaDlqTopic)
 		data.MetricsBusSubscriptionId = types.StringValue(common.MetricsBusSubscriptionId)
 		data.MetricsBusTopicId = types.StringValue(common.MetricsBusTopicId)
 		data.OperationSubscriptionId = types.StringValue(common.OperationSubscriptionId)
 		data.QueryLogResultTopic = types.StringValue(common.QueryLogResultTopic)
 		data.QueryLogSubscriptionId = types.StringValue(common.QueryLogSubscriptionId)
-		data.ResultBusMetricsSubscriptionId = types.StringValue(common.ResultBusMetricsSubscriptionId)
 		data.ResultBusOfflineStoreSubscriptionId = types.StringValue(common.ResultBusOfflineStoreSubscriptionId)
 		data.ResultBusOnlineStoreSubscriptionId = types.StringValue(common.ResultBusOnlineStoreSubscriptionId)
 		data.ResultBusTopicId = types.StringValue(common.ResultBusTopicId)
-		data.UsageBusTopicId = types.StringValue(common.UsageBusTopicId)
-		data.UsageEventsSubscriptionId = types.StringValue(common.UsageEventsSubscriptionId)
 		data.IncludeChalkNodeSelector = types.BoolValue(common.IncludeChalkNodeSelector)
+
+		if common.KafkaDlqTopic != "" {
+			data.KafkaDlqTopic = types.StringValue(common.KafkaDlqTopic)
+		} else {
+			data.KafkaDlqTopic = types.StringNull()
+		}
 
 		// Handle optional google_cloud_project field
 		if common.GoogleCloudProject != "" {
@@ -980,9 +959,6 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 		if !writer.StorageCachePrefix.IsNull() {
 			protoWriter.StorageCachePrefix = writer.StorageCachePrefix.ValueString()
 		}
-		if !writer.UsageStoreUri.IsNull() {
-			protoWriter.UsageStoreUri = writer.UsageStoreUri.ValueString()
-		}
 		if !writer.QueryTableWriteDropRatio.IsNull() {
 			protoWriter.QueryTableWriteDropRatio = writer.QueryTableWriteDropRatio.ValueString()
 		}
@@ -1077,24 +1053,24 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 		BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
 		BqUploadBucket:                       data.BqUploadBucket.ValueString(),
 		BqUploadTopic:                        data.BqUploadTopic.ValueString(),
-		KafkaDlqTopic:                        data.KafkaDlqTopic.ValueString(),
 		MetricsBusSubscriptionId:             data.MetricsBusSubscriptionId.ValueString(),
 		MetricsBusTopicId:                    data.MetricsBusTopicId.ValueString(),
 		OperationSubscriptionId:              data.OperationSubscriptionId.ValueString(),
 		QueryLogResultTopic:                  data.QueryLogResultTopic.ValueString(),
 		QueryLogSubscriptionId:               data.QueryLogSubscriptionId.ValueString(),
-		ResultBusMetricsSubscriptionId:       data.ResultBusMetricsSubscriptionId.ValueString(),
 		ResultBusOfflineStoreSubscriptionId:  data.ResultBusOfflineStoreSubscriptionId.ValueString(),
 		ResultBusOnlineStoreSubscriptionId:   data.ResultBusOnlineStoreSubscriptionId.ValueString(),
 		ResultBusTopicId:                     data.ResultBusTopicId.ValueString(),
-		UsageBusTopicId:                      data.UsageBusTopicId.ValueString(),
-		UsageEventsSubscriptionId:            data.UsageEventsSubscriptionId.ValueString(),
 		IncludeChalkNodeSelector:             data.IncludeChalkNodeSelector.ValueBool(),
 	}
 
 	// Handle optional google_cloud_project field
 	if !data.GoogleCloudProject.IsNull() {
 		commonSpecs.GoogleCloudProject = data.GoogleCloudProject.ValueString()
+	}
+
+	if !data.KafkaDlqTopic.IsNull() {
+		commonSpecs.KafkaDlqTopic = data.KafkaDlqTopic.ValueString()
 	}
 
 	// Handle optional fields

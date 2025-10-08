@@ -347,8 +347,9 @@ func (r *TelemetryResource) Read(ctx context.Context, req resource.ReadRequest, 
 	})
 
 	getReq := &serverv1.GetTelemetryDeploymentRequest{
-		ClusterId: data.KubeClusterId.ValueString(),
-		Namespace: data.Namespace.ValueStringPointer(),
+		Identifier: &serverv1.GetTelemetryDeploymentRequest_TelemetryId{
+			TelemetryId: data.Id.ValueString(),
+		},
 	}
 
 	telemetry, err := bc.GetTelemetryDeployment(ctx, connect.NewRequest(getReq))
@@ -364,6 +365,7 @@ func (r *TelemetryResource) Read(ctx context.Context, req resource.ReadRequest, 
 	spec := telemetry.Msg.Deployment.Spec
 	if spec != nil {
 		data.Namespace = types.StringPointerValue(spec.Namespace)
+		data.KubeClusterId = types.StringValue(telemetry.Msg.Deployment.ClusterId)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
