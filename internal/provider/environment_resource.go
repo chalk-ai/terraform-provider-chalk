@@ -53,6 +53,7 @@ type EnvironmentResourceModel struct {
 	SpecsConfigJson          types.String `tfsdk:"specs_config_json"`
 	ServiceUrl               types.String `tfsdk:"service_url"`
 	WorkerUrl                types.String `tfsdk:"worker_url"`
+	BranchUrl                types.String `tfsdk:"branch_url"`
 	KubeJobNamespace         types.String `tfsdk:"kube_job_namespace"`
 	KubeServiceAccountName   types.String `tfsdk:"kube_service_account_name"`
 	EnvironmentBuckets       types.Object `tfsdk:"environment_buckets"`
@@ -135,6 +136,10 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 			},
 			"worker_url": schema.StringAttribute{
 				MarkdownDescription: "Worker URL",
+				Optional:            true,
+			},
+			"branch_url": schema.StringAttribute{
+				MarkdownDescription: "Branch URL",
 				Optional:            true,
 			},
 			"kube_job_namespace": schema.StringAttribute{
@@ -272,9 +277,9 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	if !data.OnlineStoreSecret.IsNull() || !data.FeatureStoreSecret.IsNull() ||
 		!data.PrivatePipRepositories.IsNull() || !data.AdditionalEnvVars.IsNull() ||
 		!data.SpecsConfigJson.IsNull() || !data.ServiceUrl.IsNull() ||
-		!data.WorkerUrl.IsNull() || !data.KubeJobNamespace.IsNull() ||
-		!data.KubeServiceAccountName.IsNull() || !data.EnvironmentBuckets.IsNull() ||
-		!data.OnlineStoreKind.IsNull() {
+		!data.WorkerUrl.IsNull() || !data.BranchUrl.IsNull() ||
+		!data.KubeJobNamespace.IsNull() || !data.KubeServiceAccountName.IsNull() ||
+		!data.EnvironmentBuckets.IsNull() || !data.OnlineStoreKind.IsNull() {
 		updateReq := &serverv1.UpdateEnvironmentRequest{
 			Id:     data.Id.ValueString(),
 			Update: &serverv1.UpdateEnvironmentOperation{},
@@ -333,6 +338,12 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			val := data.WorkerUrl.ValueString()
 			updateReq.Update.WorkerUrl = &val
 			updateMaskPaths = append(updateMaskPaths, "worker_url")
+		}
+
+		if !data.BranchUrl.IsNull() {
+			val := data.BranchUrl.ValueString()
+			updateReq.Update.BranchUrl = &val
+			updateMaskPaths = append(updateMaskPaths, "branch_url")
 		}
 
 		if !data.KubeJobNamespace.IsNull() {
@@ -499,6 +510,10 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		data.WorkerUrl = types.StringValue(*e.WorkerUrl)
 	}
 
+	if e.BranchUrl != nil {
+		data.BranchUrl = types.StringValue(*e.BranchUrl)
+	}
+
 	if e.KubeJobNamespace != nil {
 		data.KubeJobNamespace = types.StringValue(*e.KubeJobNamespace)
 	}
@@ -645,6 +660,14 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 			updateReq.Update.WorkerUrl = &val
 		}
 		updateMaskPaths = append(updateMaskPaths, "worker_url")
+	}
+
+	if !data.BranchUrl.Equal(state.BranchUrl) {
+		if !data.BranchUrl.IsNull() {
+			val := data.BranchUrl.ValueString()
+			updateReq.Update.BranchUrl = &val
+		}
+		updateMaskPaths = append(updateMaskPaths, "branch_url")
 	}
 
 	if !data.KubeJobNamespace.Equal(state.KubeJobNamespace) {
