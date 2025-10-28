@@ -41,16 +41,15 @@ type AzureCloudCredentialsResourceModel struct {
 	Name types.String `tfsdk:"name"`
 
 	// Azure Configuration
-	SubscriptionId  types.String `tfsdk:"subscription_id"`
-	TenantId        types.String `tfsdk:"tenant_id"`
-	Region          types.String `tfsdk:"region"`
-	ResourceGroup   types.String `tfsdk:"resource_group"`
-	ClientId        types.String `tfsdk:"client_id"`
+	SubscriptionId types.String `tfsdk:"subscription_id"`
+	TenantId       types.String `tfsdk:"tenant_id"`
+	Region         types.String `tfsdk:"region"`
+	ResourceGroup  types.String `tfsdk:"resource_group"`
 
 	// Block Configuration
-	DockerBuildConfig             []DockerBuildConfigModel             `tfsdk:"docker_build_config"`
-	ContainerRegistryConfig       []AzureContainerRegistryConfigModel  `tfsdk:"container_registry_config"`
-	KeyVaultConfig                []AzureKeyVaultConfigModel           `tfsdk:"key_vault_config"`
+	DockerBuildConfig       []DockerBuildConfigModel            `tfsdk:"docker_build_config"`
+	ContainerRegistryConfig []AzureContainerRegistryConfigModel `tfsdk:"container_registry_config"`
+	KeyVaultConfig          []AzureKeyVaultConfigModel          `tfsdk:"key_vault_config"`
 }
 
 func (r *AzureCloudCredentialsResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -93,10 +92,6 @@ func (r *AzureCloudCredentialsResource) Schema(ctx context.Context, req resource
 			"resource_group": schema.StringAttribute{
 				MarkdownDescription: "Azure resource group",
 				Required:            true,
-			},
-			"client_id": schema.StringAttribute{
-				MarkdownDescription: "Azure client ID (optional)",
-				Optional:            true,
 			},
 		},
 
@@ -219,11 +214,6 @@ func (r *AzureCloudCredentialsResource) Create(ctx context.Context, req resource
 		ResourceGroup:  data.ResourceGroup.ValueString(),
 	}
 
-	if !data.ClientId.IsNull() {
-		clientId := data.ClientId.ValueString()
-		azureConfig.ClientId = &clientId
-	}
-
 	// Add Docker build config if provided
 	if dockerConfig := buildDockerConfigForAzure(&data); dockerConfig != nil {
 		azureConfig.DockerBuildConfig = dockerConfig
@@ -323,12 +313,6 @@ func (r *AzureCloudCredentialsResource) Read(ctx context.Context, req resource.R
 			data.Region = types.StringValue(azure.Region)
 			data.ResourceGroup = types.StringValue(azure.ResourceGroup)
 
-			if azure.ClientId != nil {
-				data.ClientId = types.StringValue(*azure.ClientId)
-			} else {
-				data.ClientId = types.StringNull()
-			}
-
 			// Extract Docker build config if present
 			if azure.DockerBuildConfig != nil {
 				extractDockerConfigForAzure(azure.DockerBuildConfig, &data)
@@ -386,11 +370,6 @@ func (r *AzureCloudCredentialsResource) Update(ctx context.Context, req resource
 		ResourceGroup:  data.ResourceGroup.ValueString(),
 	}
 
-	if !data.ClientId.IsNull() {
-		clientId := data.ClientId.ValueString()
-		azureConfig.ClientId = &clientId
-	}
-
 	// Add Docker build config if provided
 	if dockerConfig := buildDockerConfigForAzure(&data); dockerConfig != nil {
 		azureConfig.DockerBuildConfig = dockerConfig
@@ -442,12 +421,6 @@ func (r *AzureCloudCredentialsResource) Update(ctx context.Context, req resource
 			data.TenantId = types.StringValue(azure.TenantId)
 			data.Region = types.StringValue(azure.Region)
 			data.ResourceGroup = types.StringValue(azure.ResourceGroup)
-
-			if azure.ClientId != nil {
-				data.ClientId = types.StringValue(*azure.ClientId)
-			} else {
-				data.ClientId = types.StringNull()
-			}
 
 			// Extract Docker build config if present
 			if azure.DockerBuildConfig != nil {
