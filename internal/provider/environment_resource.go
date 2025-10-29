@@ -399,7 +399,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		}
 	}
 
-	if !data.Managed.IsNull() {
+	if data.Managed.ValueBool() {
 		bc := NewBuilderClient(ctx, &GrpcClientOptions{
 			httpClient: &http.Client{},
 			host:       r.client.ApiServer,
