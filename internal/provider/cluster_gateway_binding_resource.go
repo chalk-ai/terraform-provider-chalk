@@ -83,14 +83,22 @@ func (r *ClusterGatewayBindingResource) Create(ctx context.Context, req resource
 		return
 	}
 
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
 	grpcClientOptions := &GrpcClientOptions{
 		httpClient: &http.Client{},
 		host:       r.client.ApiServer,
-	}
-
-	authClient := NewAuthClient(ctx, grpcClientOptions)
-	grpcClientOptions.interceptors = []connect.Interceptor{
-		MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
 	}
 
 	cloudComponentsClient := NewCloudComponentsClient(ctx, grpcClientOptions)
@@ -120,14 +128,22 @@ func (r *ClusterGatewayBindingResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
 	grpcClientOptions := &GrpcClientOptions{
 		httpClient: &http.Client{},
 		host:       r.client.ApiServer,
-	}
-
-	authClient := NewAuthClient(ctx, grpcClientOptions)
-	grpcClientOptions.interceptors = []connect.Interceptor{
-		MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
 	}
 
 	cloudComponentsClient := NewCloudComponentsClient(ctx, grpcClientOptions)
@@ -166,14 +182,22 @@ func (r *ClusterGatewayBindingResource) Delete(ctx context.Context, req resource
 		return
 	}
 
+	authClient := NewAuthClient(
+		ctx,
+		&GrpcClientOptions{
+			httpClient:   &http.Client{},
+			host:         r.client.ApiServer,
+			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
+		},
+	)
+
 	grpcClientOptions := &GrpcClientOptions{
 		httpClient: &http.Client{},
 		host:       r.client.ApiServer,
-	}
-
-	authClient := NewAuthClient(ctx, grpcClientOptions)
-	grpcClientOptions.interceptors = []connect.Interceptor{
-		MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+		},
 	}
 
 	cloudComponentsClient := NewCloudComponentsClient(ctx, grpcClientOptions)

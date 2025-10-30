@@ -228,20 +228,6 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 		},
 	})
 
-	existingDeploymentGetRequest := &serverv1.GetTelemetryDeploymentRequest{
-		ClusterId: data.KubeClusterId.ValueString(),
-		Namespace: data.Namespace.ValueStringPointer(),
-	}
-	existingDeploymentResponse, err := bc.GetTelemetryDeployment(ctx, connect.NewRequest(existingDeploymentGetRequest))
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Retrieving existing Chalk Cluster Telemetry Deployment",
-			fmt.Sprintf("Could not create cluster telemetry: %v", err),
-		)
-		return
-	}
-	data.Id = types.StringValue(existingDeploymentResponse.Msg.Deployment.Id)
-
 	// Convert terraform model to proto request
 	createReq := &serverv1.CreateTelemetryDeploymentRequest{
 		ClusterId: data.KubeClusterId.ValueString(),
@@ -303,7 +289,7 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 		}
 	}
 
-	_, err = bc.CreateTelemetryDeployment(ctx, connect.NewRequest(createReq))
+	createResp, err := bc.CreateTelemetryDeployment(ctx, connect.NewRequest(createReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Chalk Cluster Telemetry Deployment",
@@ -311,6 +297,8 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 		)
 		return
 	}
+
+	data.Id = types.StringValue(createResp.Msg.GetTelemetryDeploymentId())
 
 	tflog.Trace(ctx, "created a chalk_cluster_telemetry resource")
 
@@ -356,7 +344,7 @@ func (r *TelemetryResource) Read(ctx context.Context, req resource.ReadRequest, 
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Chalk Cluster Telemetry",
-			fmt.Sprintf("Could not read cluster telemetry %s-%s: %v", data.KubeClusterId.ValueString(), data.Namespace.ValueString(), err),
+			fmt.Sprintf("Could not read cluster telemetry [%s]: %v", data.Id.ValueString(), err),
 		)
 		return
 	}
