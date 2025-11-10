@@ -719,6 +719,28 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 	}
 
+	if data.Managed.ValueBool() {
+		bc := NewBuilderClient(ctx, &GrpcClientOptions{
+			httpClient: &http.Client{},
+			host:       r.client.ApiServer,
+			interceptors: []connect.Interceptor{
+				MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+				MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
+			},
+		})
+
+		_, err := bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
+			EnvironmentId: data.Id.ValueString(),
+		}))
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Bootstrapping Chalk Environment Cloud Resources",
+				fmt.Sprintf("Environment was created but cloud resources could not be bootstrapped: %v", err),
+			)
+			return
+		}
+	}
+
 	tflog.Trace(ctx, "updated a chalk_environment resource")
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

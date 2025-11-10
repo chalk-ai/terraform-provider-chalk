@@ -50,6 +50,7 @@ type AzureCloudCredentialsResourceModel struct {
 	DockerBuildConfig       []DockerBuildConfigModel            `tfsdk:"docker_build_config"`
 	ContainerRegistryConfig []AzureContainerRegistryConfigModel `tfsdk:"container_registry_config"`
 	KeyVaultConfig          []AzureKeyVaultConfigModel          `tfsdk:"key_vault_config"`
+	GCPWorkloadIdentity     []GCPWorkloadIdentityModel          `tfsdk:"gcp_workload_identity"`
 }
 
 func (r *AzureCloudCredentialsResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -155,6 +156,32 @@ func (r *AzureCloudCredentialsResource) Schema(ctx context.Context, req resource
 					listvalidator.SizeAtMost(1),
 				},
 			},
+			"gcp_workload_identity": schema.ListNestedBlock{
+				MarkdownDescription: "GCP workload identity configuration for Azure (optional, max 1)",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"project_number": schema.StringAttribute{
+							MarkdownDescription: "GCP project number for workload identity federation",
+							Optional:            true,
+						},
+						"service_account": schema.StringAttribute{
+							MarkdownDescription: "GCP service account email for workload identity",
+							Optional:            true,
+						},
+						"pool_id": schema.StringAttribute{
+							MarkdownDescription: "GCP workload identity pool ID",
+							Optional:            true,
+						},
+						"provider_id": schema.StringAttribute{
+							MarkdownDescription: "GCP workload identity provider ID",
+							Optional:            true,
+						},
+					},
+				},
+				Validators: []validator.List{
+					listvalidator.SizeAtMost(1),
+				},
+			},
 		},
 	}
 }
@@ -227,6 +254,11 @@ func (r *AzureCloudCredentialsResource) Create(ctx context.Context, req resource
 	// Add key vault config if provided
 	if keyVaultConfig := buildAzureKeyVaultConfig(&data); keyVaultConfig != nil {
 		azureConfig.KeyVaultConfig = keyVaultConfig
+	}
+
+	// Add GCP workload identity if provided
+	if workloadIdentity := buildGCPWorkloadIdentityForAzure(&data); workloadIdentity != nil {
+		azureConfig.GcpWorkloadIdentity = workloadIdentity
 	}
 
 	cloudConfig := &serverv1.CloudConfig{
@@ -327,6 +359,11 @@ func (r *AzureCloudCredentialsResource) Read(ctx context.Context, req resource.R
 			if azure.KeyVaultConfig != nil {
 				extractAzureKeyVaultConfig(azure.KeyVaultConfig, &data)
 			}
+
+			// Extract GCP workload identity if present
+			if azure.GcpWorkloadIdentity != nil {
+				extractGCPWorkloadIdentityForAzure(azure.GcpWorkloadIdentity, &data)
+			}
 		}
 	}
 
@@ -385,6 +422,11 @@ func (r *AzureCloudCredentialsResource) Update(ctx context.Context, req resource
 		azureConfig.KeyVaultConfig = keyVaultConfig
 	}
 
+	// Add GCP workload identity if provided
+	if workloadIdentity := buildGCPWorkloadIdentityForAzure(&data); workloadIdentity != nil {
+		azureConfig.GcpWorkloadIdentity = workloadIdentity
+	}
+
 	cloudConfig := &serverv1.CloudConfig{
 		Config: &serverv1.CloudConfig_Azure{
 			Azure: azureConfig,
@@ -441,6 +483,13 @@ func (r *AzureCloudCredentialsResource) Update(ctx context.Context, req resource
 				extractAzureKeyVaultConfig(azure.KeyVaultConfig, &data)
 			} else {
 				data.KeyVaultConfig = []AzureKeyVaultConfigModel{}
+			}
+
+			// Extract GCP workload identity if present
+			if azure.GcpWorkloadIdentity != nil {
+				extractGCPWorkloadIdentityForAzure(azure.GcpWorkloadIdentity, &data)
+			} else {
+				data.GCPWorkloadIdentity = []GCPWorkloadIdentityModel{}
 			}
 		}
 	}
@@ -604,4 +653,49 @@ func extractAzureKeyVaultConfig(vaultConfig *serverv1.AzureKeyVaultConfig, data 
 	}
 
 	data.KeyVaultConfig = []AzureKeyVaultConfigModel{vaultBlock}
+}
+
+// Helper function to build GCP workload identity if block is provided (for Azure)
+func buildGCPWorkloadIdentityForAzure(data *AzureCloudCredentialsResourceModel) *serverv1.GCPWorkloadIdentity {
+	if len(data.GCPWorkloadIdentity) == 0 {
+		return nil
+	}
+
+	workloadBlock := data.GCPWorkloadIdentity[0]
+	workloadIdentity := &serverv1.GCPWorkloadIdentity{}
+
+	if !workloadBlock.ProjectNumber.IsNull() {
+		workloadIdentity.GcpProjectNumber = workloadBlock.ProjectNumber.ValueString()
+	}
+	if !workloadBlock.ServiceAccount.IsNull() {
+		workloadIdentity.GcpServiceAccount = workloadBlock.ServiceAccount.ValueString()
+	}
+	if !workloadBlock.PoolId.IsNull() {
+		workloadIdentity.PoolId = workloadBlock.PoolId.ValueString()
+	}
+	if !workloadBlock.ProviderId.IsNull() {
+		workloadIdentity.ProviderId = workloadBlock.ProviderId.ValueString()
+	}
+
+	return workloadIdentity
+}
+
+// Helper function to extract GCP workload identity from proto to model (for Azure)
+func extractGCPWorkloadIdentityForAzure(workloadIdentity *serverv1.GCPWorkloadIdentity, data *AzureCloudCredentialsResourceModel) {
+	workloadBlock := GCPWorkloadIdentityModel{}
+
+	if workloadIdentity.GcpProjectNumber != "" {
+		workloadBlock.ProjectNumber = types.StringValue(workloadIdentity.GcpProjectNumber)
+	}
+	if workloadIdentity.GcpServiceAccount != "" {
+		workloadBlock.ServiceAccount = types.StringValue(workloadIdentity.GcpServiceAccount)
+	}
+	if workloadIdentity.PoolId != "" {
+		workloadBlock.PoolId = types.StringValue(workloadIdentity.PoolId)
+	}
+	if workloadIdentity.ProviderId != "" {
+		workloadBlock.ProviderId = types.StringValue(workloadIdentity.ProviderId)
+	}
+
+	data.GCPWorkloadIdentity = []GCPWorkloadIdentityModel{workloadBlock}
 }
