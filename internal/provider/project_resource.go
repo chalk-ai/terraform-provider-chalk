@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
-	"net/http"
 )
 
 var _ resource.Resource = &ProjectResource{}
@@ -24,7 +23,7 @@ func NewProjectResource() resource.Resource {
 }
 
 type ProjectResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type ProjectResourceModel struct {
@@ -74,12 +73,12 @@ func (r *ProjectResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -97,25 +96,8 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create team client with token injection interceptor
-	tc := NewTeamClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create team client
+	tc := r.client.NewTeamClient(ctx)
 
 	createReq := &serverv1.CreateProjectRequest{
 		Name: data.Name.ValueString(),
@@ -172,25 +154,7 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create team client with token injection interceptor
-	tc := NewTeamClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	tc := r.client.NewTeamClient(ctx)
 
 	// Get the project by fetching the team and finding the project
 	team, err := tc.GetTeam(ctx, connect.NewRequest(&serverv1.GetTeamRequest{}))
@@ -246,25 +210,7 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create team client with token injection interceptor
-	tc := NewTeamClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	tc := r.client.NewTeamClient(ctx)
 
 	updateReq := &serverv1.UpdateProjectRequest{
 		Id:     data.Id.ValueString(),
@@ -326,25 +272,7 @@ func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create team client with token injection interceptor
-	tc := NewTeamClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	tc := r.client.NewTeamClient(ctx)
 
 	archiveReq := &serverv1.ArchiveProjectRequest{
 		Id: data.Id.ValueString(),

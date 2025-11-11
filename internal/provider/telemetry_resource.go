@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -24,7 +23,7 @@ func NewTelemetryResource() resource.Resource {
 }
 
 type TelemetryResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type KubePersistentVolumeClaimModel struct {
@@ -185,12 +184,12 @@ func (r *TelemetryResource) Configure(ctx context.Context, req resource.Configur
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -209,24 +208,8 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	// Convert terraform model to proto request
 	createReq := &serverv1.CreateTelemetryDeploymentRequest{
@@ -315,24 +298,8 @@ func (r *TelemetryResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	getReq := &serverv1.GetTelemetryDeploymentRequest{
 		Identifier: &serverv1.GetTelemetryDeploymentRequest_TelemetryId{
@@ -379,24 +346,8 @@ func (r *TelemetryResource) Delete(ctx context.Context, req resource.DeleteReque
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	deleteRequest := &serverv1.DeleteTelemetryDeploymentRequest{
 		ClusterId: data.KubeClusterId.ValueString(),

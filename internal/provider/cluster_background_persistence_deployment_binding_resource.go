@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"net/http"
 )
 
 var (
@@ -24,7 +23,7 @@ func NewClusterBackgroundPersistenceDeploymentBindingResource() resource.Resourc
 }
 
 type ClusterBackgroundPersistenceDeploymentBindingResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type ClusterBackgroundPersistenceDeploymentBindingResourceModel struct {
@@ -63,11 +62,11 @@ func (r *ClusterBackgroundPersistenceDeploymentBindingResource) Configure(ctx co
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -83,25 +82,7 @@ func (r *ClusterBackgroundPersistenceDeploymentBindingResource) Create(ctx conte
 		return
 	}
 
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	grpcClientOptions := &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	}
-
-	cloudComponentsClient := NewCloudComponentsClient(ctx, grpcClientOptions)
+	cloudComponentsClient := r.client.NewCloudComponentsClient(ctx)
 
 	createRequest := &serverv1.CreateBindingClusterBackgroundPersistenceDeploymentRequest{
 		ClusterId:                         data.ClusterID.ValueString(),
@@ -128,25 +109,7 @@ func (r *ClusterBackgroundPersistenceDeploymentBindingResource) Read(ctx context
 		return
 	}
 
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	grpcClientOptions := &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	}
-
-	cloudComponentsClient := NewCloudComponentsClient(ctx, grpcClientOptions)
+	cloudComponentsClient := r.client.NewCloudComponentsClient(ctx)
 
 	getRequest := &serverv1.GetBindingClusterBackgroundPersistenceDeploymentRequest{
 		ClusterId: data.ClusterID.ValueString(),
@@ -182,25 +145,7 @@ func (r *ClusterBackgroundPersistenceDeploymentBindingResource) Delete(ctx conte
 		return
 	}
 
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	grpcClientOptions := &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	}
-
-	cloudComponentsClient := NewCloudComponentsClient(ctx, grpcClientOptions)
+	cloudComponentsClient := r.client.NewCloudComponentsClient(ctx)
 
 	deleteRequest := &serverv1.DeleteBindingClusterBackgroundPersistenceDeploymentRequest{
 		ClusterId: data.ClusterID.ValueString(),

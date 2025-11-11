@@ -132,8 +132,11 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		ApiServer:    apiServer,
 	}
 
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	// Create ClientManager to handle all gRPC client creation
+	clientManager := NewClientManager(client)
+
+	resp.DataSourceData = clientManager
+	resp.ResourceData = clientManager
 }
 
 func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resource {

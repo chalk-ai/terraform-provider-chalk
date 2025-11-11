@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -25,7 +24,7 @@ func NewTelemetryBindingResource() resource.Resource {
 }
 
 type TelemetryBindingResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type TelemetryBindingResourceModel struct {
@@ -64,11 +63,11 @@ func (r *TelemetryBindingResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -84,25 +83,7 @@ func (r *TelemetryBindingResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	grpcClientOptions := &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	}
-
-	cloudComponentsClient := NewCloudComponentsClient(ctx, grpcClientOptions)
+	cloudComponentsClient := r.client.NewCloudComponentsClient(ctx)
 
 	createRequest := &serverv1.CreateBindingClusterTelemetryDeploymentRequest{
 		ClusterId:             data.ClusterID.ValueString(),
@@ -129,25 +110,7 @@ func (r *TelemetryBindingResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	grpcClientOptions := &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	}
-
-	cloudComponentsClient := NewCloudComponentsClient(ctx, grpcClientOptions)
+	cloudComponentsClient := r.client.NewCloudComponentsClient(ctx)
 
 	getRequest := &serverv1.GetBindingClusterTelemetryDeploymentRequest{
 		ClusterId: data.ClusterID.ValueString(),
@@ -183,25 +146,7 @@ func (r *TelemetryBindingResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	grpcClientOptions := &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	}
-
-	cloudComponentsClient := NewCloudComponentsClient(ctx, grpcClientOptions)
+	cloudComponentsClient := r.client.NewCloudComponentsClient(ctx)
 
 	deleteRequest := &serverv1.DeleteBindingClusterTelemetryDeploymentRequest{
 		ClusterId: data.ClusterID.ValueString(),

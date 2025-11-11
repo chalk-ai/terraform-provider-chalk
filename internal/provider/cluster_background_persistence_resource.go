@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"net/http"
 )
 
 var _ resource.Resource = &ClusterBackgroundPersistenceResource{}
@@ -26,7 +25,7 @@ func NewClusterBackgroundPersistenceResource() resource.Resource {
 }
 
 type ClusterBackgroundPersistenceResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type KubeResourceConfigModel struct {
@@ -436,12 +435,12 @@ func (r *ClusterBackgroundPersistenceResource) Configure(ctx context.Context, re
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -460,24 +459,8 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	var envIds []string
 	// Convert environment IDs
@@ -740,24 +723,8 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	getReq := &serverv1.GetClusterBackgroundPersistenceRequest{
 		Id: data.Id.ValueStringPointer(),
@@ -887,24 +854,8 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	var envIds []string
 	// Convert environment IDs

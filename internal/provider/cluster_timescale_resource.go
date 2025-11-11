@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"net/http"
 )
 
 var _ resource.Resource = &ClusterTimescaleResource{}
@@ -28,7 +27,7 @@ func NewClusterTimescaleResource() resource.Resource {
 }
 
 type ClusterTimescaleResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type ClusterTimescaleResourceModel struct {
@@ -259,12 +258,12 @@ func (r *ClusterTimescaleResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -283,24 +282,8 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	// Convert environment IDs
 	var envIds []string
@@ -433,24 +416,8 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	// Get the first environment ID to query the TimescaleDB
 	var envIds []string
@@ -569,24 +536,8 @@ func (r *ClusterTimescaleResource) Delete(ctx context.Context, req resource.Dele
 	data := ClusterTimescaleResourceModel{}
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	_, err := bc.DeleteClusterTimescaleDB(ctx, connect.NewRequest(&serverv1.DeleteClusterTimescaleDBRequest{
 		ClusterTimescaleId: data.Id.ValueString(),

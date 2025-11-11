@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -28,7 +27,7 @@ func NewClusterGatewayResource() resource.Resource {
 }
 
 type ClusterGatewayResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type EnvoyGatewayListenerModel struct {
@@ -212,12 +211,12 @@ func (r *ClusterGatewayResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -236,24 +235,8 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	// Convert terraform model to proto request
 	createReq := &serverv1.CreateClusterGatewayRequest{
@@ -394,24 +377,8 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	getReq := &serverv1.GetClusterGatewayRequest{
 		Id: data.Id.ValueStringPointer(),
@@ -563,24 +530,8 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create builder client with token injection interceptor
-	bc := NewBuilderClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create builder client
+	bc := r.client.NewBuilderClient(ctx)
 
 	// Convert terraform model to proto request - reuse create logic since it's an upsert
 	createReq := &serverv1.CreateClusterGatewayRequest{

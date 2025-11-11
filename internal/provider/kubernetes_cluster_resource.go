@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"net/http"
 )
 
 // Custom validator to require field when managed=true
@@ -62,7 +61,7 @@ func NewKubernetesClusterResource() resource.Resource {
 }
 
 type KubernetesClusterResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type KubernetesClusterResourceModel struct {
@@ -161,12 +160,12 @@ func (r *KubernetesClusterResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -184,25 +183,8 @@ func (r *KubernetesClusterResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create cloud components client with token injection interceptor
-	cc := NewCloudComponentsClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create cloud components client
+	cc := r.client.NewCloudComponentsClient(ctx)
 
 	createReq := &serverv1.CreateCloudComponentClusterRequest{
 		Cluster: &serverv1.CloudComponentClusterRequest{
@@ -251,25 +233,8 @@ func (r *KubernetesClusterResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create cloud components client with token injection interceptor
-	cc := NewCloudComponentsClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create cloud components client
+	cc := r.client.NewCloudComponentsClient(ctx)
 
 	cluster, err := cc.GetCloudComponentCluster(ctx, connect.NewRequest(&serverv1.GetCloudComponentClusterRequest{
 		Id: data.Id.ValueString(),
@@ -297,25 +262,8 @@ func (r *KubernetesClusterResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create cloud components client with token injection interceptor
-	cc := NewCloudComponentsClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create cloud components client
+	cc := r.client.NewCloudComponentsClient(ctx)
 
 	updateReq := &serverv1.UpdateCloudComponentClusterRequest{
 		Id: data.Id.ValueString(),
@@ -365,25 +313,8 @@ func (r *KubernetesClusterResource) Delete(ctx context.Context, req resource.Del
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create cloud components client with token injection interceptor
-	cc := NewCloudComponentsClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create cloud components client
+	cc := r.client.NewCloudComponentsClient(ctx)
 
 	deleteReq := &serverv1.DeleteCloudComponentClusterRequest{
 		Id: data.Id.ValueString(),

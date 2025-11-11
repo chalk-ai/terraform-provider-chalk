@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"connectrpc.com/connect"
@@ -23,7 +22,7 @@ func NewEnvironmentDataSource() datasource.DataSource {
 }
 
 type EnvironmentDataSource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type EnvironmentDataSourceModel struct {
@@ -339,12 +338,12 @@ func (d *EnvironmentDataSource) Configure(ctx context.Context, req datasource.Co
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -366,26 +365,8 @@ func (d *EnvironmentDataSource) Read(ctx context.Context, req datasource.ReadReq
 		"id": data.Id.ValueString(),
 	})
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         d.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create team client with token injection interceptor
-	tc := NewTeamClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       d.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Id.ValueString()),
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, d.client.ClientID, d.client.ClientSecret),
-		},
-	})
+	// Create team client with env ID header
+	tc := d.client.NewTeamClient(ctx, data.Id.ValueString())
 
 	env, err := tc.GetEnv(ctx, connect.NewRequest(&serverv1.GetEnvRequest{}))
 	if err != nil {

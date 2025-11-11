@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -27,7 +26,7 @@ func NewEnvironmentResource() resource.Resource {
 }
 
 type EnvironmentResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type EnvironmentBucketsModel struct {
@@ -192,12 +191,12 @@ func (r *EnvironmentResource) Configure(ctx context.Context, req resource.Config
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -215,25 +214,8 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create team client with token injection interceptor
-	tc := NewTeamClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Get team client from ClientManager
+	tc := r.client.NewTeamClient(ctx)
 
 	createReq := &serverv1.CreateEnvironmentRequest{
 		ProjectId: data.ProjectId.ValueString(),
@@ -379,15 +361,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		// Use the environment ID for the header
-		tcUpdate := NewTeamClient(ctx, &GrpcClientOptions{
-			httpClient: &http.Client{},
-			host:       r.client.ApiServer,
-			interceptors: []connect.Interceptor{
-				MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Id.ValueString()),
-				MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-				MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-			},
-		})
+		tcUpdate := r.client.NewTeamClient(ctx, data.Id.ValueString())
 
 		_, err = tcUpdate.UpdateEnvironment(ctx, connect.NewRequest(updateReq))
 		if err != nil {
@@ -400,14 +374,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	if data.Managed.ValueBool() {
-		bc := NewBuilderClient(ctx, &GrpcClientOptions{
-			httpClient: &http.Client{},
-			host:       r.client.ApiServer,
-			interceptors: []connect.Interceptor{
-				MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-				MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-			},
-		})
+		bc := r.client.NewBuilderClient(ctx)
 
 		_, err := bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
 			EnvironmentId: data.Id.ValueString(),
@@ -436,25 +403,8 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create team client with token injection interceptor
-	tc := NewTeamClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Id.ValueString()),
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+// Create team client with token injection interceptor
+	tc := r.client.NewTeamClient(ctx, data.Id.ValueString())
 
 	env, err := tc.GetEnv(ctx, connect.NewRequest(&serverv1.GetEnvRequest{}))
 	if err != nil {
@@ -559,25 +509,8 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create team client with token injection interceptor
-	tc := NewTeamClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Id.ValueString()),
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+// Create team client with token injection interceptor
+	tc := r.client.NewTeamClient(ctx, data.Id.ValueString())
 
 	updateReq := &serverv1.UpdateEnvironmentRequest{
 		Id:     data.Id.ValueString(),
@@ -720,14 +653,7 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	if data.Managed.ValueBool() {
-		bc := NewBuilderClient(ctx, &GrpcClientOptions{
-			httpClient: &http.Client{},
-			host:       r.client.ApiServer,
-			interceptors: []connect.Interceptor{
-				MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-				MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-			},
-		})
+		bc := r.client.NewBuilderClient(ctx)
 
 		_, err := bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
 			EnvironmentId: data.Id.ValueString(),
@@ -756,24 +682,8 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	if !data.Managed.IsNull() {
-		bc := NewBuilderClient(ctx, &GrpcClientOptions{
-			httpClient: &http.Client{},
-			host:       r.client.ApiServer,
-			interceptors: []connect.Interceptor{
-				MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-				MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-			},
-		})
+if !data.Managed.IsNull() {
+		bc := r.client.NewBuilderClient(ctx)
 
 		_, err := bc.DeleteEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.DeleteEnvironmentCloudResourcesRequest{
 			EnvironmentId: data.Id.ValueString(),
@@ -788,15 +698,7 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	// Create team client with token injection interceptor
-	tc := NewTeamClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-env-id", data.Id.ValueString()),
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	tc := r.client.NewTeamClient(ctx, data.Id.ValueString())
 
 	archiveReq := &serverv1.ArchiveEnvironmentRequest{
 		Id: data.Id.ValueString(),

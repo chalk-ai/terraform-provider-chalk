@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"net/http"
 )
 
 var _ resource.Resource = &AzureCloudCredentialsResource{}
@@ -25,7 +24,7 @@ func NewAzureCloudCredentialsResource() resource.Resource {
 }
 
 type AzureCloudCredentialsResource struct {
-	client *ChalkClient
+	client *ClientManager
 }
 
 type AzureContainerRegistryConfigModel struct {
@@ -191,12 +190,12 @@ func (r *AzureCloudCredentialsResource) Configure(ctx context.Context, req resou
 		return
 	}
 
-	client, ok := req.ProviderData.(*ChalkClient)
+	client, ok := req.ProviderData.(*ClientManager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ChalkClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -213,25 +212,8 @@ func (r *AzureCloudCredentialsResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create cloud credentials client with token injection interceptor
-	credClient := NewCloudAccountCredentialsClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create cloud credentials client
+	credClient := r.client.NewCloudAccountCredentialsClient(ctx)
 
 	// Build the Azure cloud config
 	azureConfig := &serverv1.AzureCloudConfig{
@@ -301,25 +283,8 @@ func (r *AzureCloudCredentialsResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create cloud credentials client with token injection interceptor
-	credClient := NewCloudAccountCredentialsClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create cloud credentials client
+	credClient := r.client.NewCloudAccountCredentialsClient(ctx)
 
 	creds, err := credClient.GetCloudCredentials(ctx, connect.NewRequest(&serverv1.GetCloudCredentialsRequest{
 		Id: data.Id.ValueString(),
@@ -379,25 +344,8 @@ func (r *AzureCloudCredentialsResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create cloud credentials client with token injection interceptor
-	credClient := NewCloudAccountCredentialsClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create cloud credentials client
+	credClient := r.client.NewCloudAccountCredentialsClient(ctx)
 
 	// Build the Azure cloud config
 	azureConfig := &serverv1.AzureCloudConfig{
@@ -508,25 +456,8 @@ func (r *AzureCloudCredentialsResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	// Create auth client first
-	authClient := NewAuthClient(
-		ctx,
-		&GrpcClientOptions{
-			httpClient:   &http.Client{},
-			host:         r.client.ApiServer,
-			interceptors: []connect.Interceptor{MakeApiServerHeaderInterceptor("x-chalk-server", "go-api")},
-		},
-	)
-
-	// Create cloud credentials client with token injection interceptor
-	credClient := NewCloudAccountCredentialsClient(ctx, &GrpcClientOptions{
-		httpClient: &http.Client{},
-		host:       r.client.ApiServer,
-		interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, r.client.ClientID, r.client.ClientSecret),
-		},
-	})
+	// Create cloud credentials client
+	credClient := r.client.NewCloudAccountCredentialsClient(ctx)
 
 	deleteReq := &serverv1.DeleteCloudCredentialsRequest{
 		Id: data.Id.ValueString(),
