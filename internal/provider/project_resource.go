@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -23,7 +25,7 @@ func NewProjectResource() resource.Resource {
 }
 
 type ProjectResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type ProjectResourceModel struct {
@@ -73,12 +75,12 @@ func (r *ProjectResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -97,7 +99,11 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Create team client
-	tc := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	createReq := &serverv1.CreateProjectRequest{
 		Name: data.Name.ValueString(),
@@ -154,7 +160,11 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	tc := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	// Get the project by fetching the team and finding the project
 	team, err := tc.GetTeam(ctx, connect.NewRequest(&serverv1.GetTeamRequest{}))
@@ -210,7 +220,11 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tc := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	updateReq := &serverv1.UpdateProjectRequest{
 		Id:     data.Id.ValueString(),
@@ -272,13 +286,17 @@ func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	tc := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	archiveReq := &serverv1.ArchiveProjectRequest{
 		Id: data.Id.ValueString(),
 	}
 
-	_, err := tc.ArchiveProject(ctx, connect.NewRequest(archiveReq))
+	_, err = tc.ArchiveProject(ctx, connect.NewRequest(archiveReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Archiving Chalk Project",

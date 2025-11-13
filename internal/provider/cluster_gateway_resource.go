@@ -6,6 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -27,7 +29,7 @@ func NewClusterGatewayResource() resource.Resource {
 }
 
 type ClusterGatewayResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type EnvoyGatewayListenerModel struct {
@@ -211,12 +213,12 @@ func (r *ClusterGatewayResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -236,7 +238,11 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	// Convert terraform model to proto request
 	createReq := &serverv1.CreateClusterGatewayRequest{
@@ -378,7 +384,11 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	getReq := &serverv1.GetClusterGatewayRequest{
 		Id: data.Id.ValueStringPointer(),
@@ -531,7 +541,11 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	// Convert terraform model to proto request - reuse create logic since it's an upsert
 	createReq := &serverv1.CreateClusterGatewayRequest{

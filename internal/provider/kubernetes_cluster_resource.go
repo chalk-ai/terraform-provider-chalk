@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -61,7 +63,7 @@ func NewKubernetesClusterResource() resource.Resource {
 }
 
 type KubernetesClusterResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type KubernetesClusterResourceModel struct {
@@ -160,12 +162,12 @@ func (r *KubernetesClusterResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -184,7 +186,11 @@ func (r *KubernetesClusterResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Create cloud components client
-	cc := r.client.NewCloudComponentsClient(ctx)
+	cc, err := r.client.NewCloudComponentsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	createReq := &serverv1.CreateCloudComponentClusterRequest{
 		Cluster: &serverv1.CloudComponentClusterRequest{
@@ -234,7 +240,11 @@ func (r *KubernetesClusterResource) Read(ctx context.Context, req resource.ReadR
 	}
 
 	// Create cloud components client
-	cc := r.client.NewCloudComponentsClient(ctx)
+	cc, err := r.client.NewCloudComponentsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	cluster, err := cc.GetCloudComponentCluster(ctx, connect.NewRequest(&serverv1.GetCloudComponentClusterRequest{
 		Id: data.Id.ValueString(),
@@ -263,7 +273,11 @@ func (r *KubernetesClusterResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	// Create cloud components client
-	cc := r.client.NewCloudComponentsClient(ctx)
+	cc, err := r.client.NewCloudComponentsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	updateReq := &serverv1.UpdateCloudComponentClusterRequest{
 		Id: data.Id.ValueString(),
@@ -314,13 +328,17 @@ func (r *KubernetesClusterResource) Delete(ctx context.Context, req resource.Del
 	}
 
 	// Create cloud components client
-	cc := r.client.NewCloudComponentsClient(ctx)
+	cc, err := r.client.NewCloudComponentsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	deleteReq := &serverv1.DeleteCloudComponentClusterRequest{
 		Id: data.Id.ValueString(),
 	}
 
-	_, err := cc.DeleteCloudComponentCluster(ctx, connect.NewRequest(deleteReq))
+	_, err = cc.DeleteCloudComponentCluster(ctx, connect.NewRequest(deleteReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Kubernetes Cluster",

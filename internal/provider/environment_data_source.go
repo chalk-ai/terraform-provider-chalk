@@ -7,6 +7,8 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -22,7 +24,7 @@ func NewEnvironmentDataSource() datasource.DataSource {
 }
 
 type EnvironmentDataSource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type EnvironmentDataSourceModel struct {
@@ -338,12 +340,12 @@ func (d *EnvironmentDataSource) Configure(ctx context.Context, req datasource.Co
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -365,8 +367,12 @@ func (d *EnvironmentDataSource) Read(ctx context.Context, req datasource.ReadReq
 		"id": data.Id.ValueString(),
 	})
 
-	// Create team client with env ID header
-	tc := d.client.NewTeamClient(ctx, data.Id.ValueString())
+	// Create team client
+	tc, err := d.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	env, err := tc.GetEnv(ctx, connect.NewRequest(&serverv1.GetEnvRequest{}))
 	if err != nil {

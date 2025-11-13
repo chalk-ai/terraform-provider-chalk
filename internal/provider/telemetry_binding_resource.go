@@ -6,6 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -24,7 +26,7 @@ func NewTelemetryBindingResource() resource.Resource {
 }
 
 type TelemetryBindingResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type TelemetryBindingResourceModel struct {
@@ -63,11 +65,11 @@ func (r *TelemetryBindingResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -83,14 +85,18 @@ func (r *TelemetryBindingResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	cloudComponentsClient := r.client.NewCloudComponentsClient(ctx)
+	cloudComponentsClient, err := r.client.NewCloudComponentsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get cloud components client").Error())
+		return
+	}
 
 	createRequest := &serverv1.CreateBindingClusterTelemetryDeploymentRequest{
 		ClusterId:             data.ClusterID.ValueString(),
 		TelemetryDeploymentId: data.TelemetryDeploymentID.ValueString(),
 	}
 
-	_, err := cloudComponentsClient.CreateBindingClusterTelemetryDeployment(ctx, connect.NewRequest(createRequest))
+	_, err = cloudComponentsClient.CreateBindingClusterTelemetryDeployment(ctx, connect.NewRequest(createRequest))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating cluster gateway binding",
@@ -110,7 +116,11 @@ func (r *TelemetryBindingResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	cloudComponentsClient := r.client.NewCloudComponentsClient(ctx)
+	cloudComponentsClient, err := r.client.NewCloudComponentsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get cloud components client").Error())
+		return
+	}
 
 	getRequest := &serverv1.GetBindingClusterTelemetryDeploymentRequest{
 		ClusterId: data.ClusterID.ValueString(),
@@ -146,13 +156,17 @@ func (r *TelemetryBindingResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	cloudComponentsClient := r.client.NewCloudComponentsClient(ctx)
+	cloudComponentsClient, err := r.client.NewCloudComponentsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get cloud components client").Error())
+		return
+	}
 
 	deleteRequest := &serverv1.DeleteBindingClusterTelemetryDeploymentRequest{
 		ClusterId: data.ClusterID.ValueString(),
 	}
 
-	_, err := cloudComponentsClient.DeleteBindingClusterTelemetryDeployment(ctx, connect.NewRequest(deleteRequest))
+	_, err = cloudComponentsClient.DeleteBindingClusterTelemetryDeployment(ctx, connect.NewRequest(deleteRequest))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting cluster gateway binding",

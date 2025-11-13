@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -27,7 +29,7 @@ func NewClusterTimescaleResource() resource.Resource {
 }
 
 type ClusterTimescaleResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type ClusterTimescaleResourceModel struct {
@@ -258,12 +260,12 @@ func (r *ClusterTimescaleResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -283,7 +285,11 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	// Convert environment IDs
 	var envIds []string
@@ -417,7 +423,11 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	// Get the first environment ID to query the TimescaleDB
 	var envIds []string
@@ -537,9 +547,12 @@ func (r *ClusterTimescaleResource) Delete(ctx context.Context, req resource.Dele
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
-
-	_, err := bc.DeleteClusterTimescaleDB(ctx, connect.NewRequest(&serverv1.DeleteClusterTimescaleDBRequest{
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
+	_, err = bc.DeleteClusterTimescaleDB(ctx, connect.NewRequest(&serverv1.DeleteClusterTimescaleDBRequest{
 		ClusterTimescaleId: data.Id.ValueString(),
 	}))
 	if err != nil {

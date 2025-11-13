@@ -6,6 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -26,7 +28,7 @@ func NewEnvironmentResource() resource.Resource {
 }
 
 type EnvironmentResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type EnvironmentBucketsModel struct {
@@ -191,12 +193,12 @@ func (r *EnvironmentResource) Configure(ctx context.Context, req resource.Config
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -215,7 +217,11 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	// Get team client from ClientManager
-	tc := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	createReq := &serverv1.CreateEnvironmentRequest{
 		ProjectId: data.ProjectId.ValueString(),
@@ -245,8 +251,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	if !data.Managed.IsNull() {
 		createReq.Managed = data.Managed.ValueBool()
 	}
-
-	_, err := tc.CreateEnvironment(ctx, connect.NewRequest(createReq))
+	_, err = tc.CreateEnvironment(ctx, connect.NewRequest(createReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Chalk Environment",
@@ -361,7 +366,11 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		// Use the environment ID for the header
-		tcUpdate := r.client.NewTeamClient(ctx, data.Id.ValueString())
+		tcUpdate, err := r.client.NewTeamClient(ctx)
+		if err != nil {
+			resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+			return
+		}
 
 		_, err = tcUpdate.UpdateEnvironment(ctx, connect.NewRequest(updateReq))
 		if err != nil {
@@ -374,9 +383,12 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	if data.Managed.ValueBool() {
-		bc := r.client.NewBuilderClient(ctx)
-
-		_, err := bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
+		bc, err := r.client.NewBuilderClient(ctx)
+		if err != nil {
+			resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+			return
+		}
+	_, err = bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
 			EnvironmentId: data.Id.ValueString(),
 		}))
 		if err != nil {
@@ -402,9 +414,12 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	// Create auth client first
-// Create team client with token injection interceptor
-	tc := r.client.NewTeamClient(ctx, data.Id.ValueString())
+	// Create team client
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	env, err := tc.GetEnv(ctx, connect.NewRequest(&serverv1.GetEnvRequest{}))
 	if err != nil {
@@ -508,9 +523,12 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	// Create auth client first
-// Create team client with token injection interceptor
-	tc := r.client.NewTeamClient(ctx, data.Id.ValueString())
+	// Create team client
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	updateReq := &serverv1.UpdateEnvironmentRequest{
 		Id:     data.Id.ValueString(),
@@ -653,9 +671,12 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	if data.Managed.ValueBool() {
-		bc := r.client.NewBuilderClient(ctx)
-
-		_, err := bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
+		bc, err := r.client.NewBuilderClient(ctx)
+		if err != nil {
+			resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+			return
+		}
+	_, err = bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
 			EnvironmentId: data.Id.ValueString(),
 		}))
 		if err != nil {
@@ -683,9 +704,12 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	// Create auth client first
 if !data.Managed.IsNull() {
-		bc := r.client.NewBuilderClient(ctx)
-
-		_, err := bc.DeleteEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.DeleteEnvironmentCloudResourcesRequest{
+		bc, err := r.client.NewBuilderClient(ctx)
+		if err != nil {
+			resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+			return
+		}
+	_, err = bc.DeleteEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.DeleteEnvironmentCloudResourcesRequest{
 			EnvironmentId: data.Id.ValueString(),
 		}))
 		if err != nil {
@@ -697,14 +721,18 @@ if !data.Managed.IsNull() {
 		}
 	}
 
-	// Create team client with token injection interceptor
-	tc := r.client.NewTeamClient(ctx, data.Id.ValueString())
+	// Create team client
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	archiveReq := &serverv1.ArchiveEnvironmentRequest{
 		Id: data.Id.ValueString(),
 	}
 
-	_, err := tc.ArchiveEnvironment(ctx, connect.NewRequest(archiveReq))
+	_, err = tc.ArchiveEnvironment(ctx, connect.NewRequest(archiveReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Archiving Chalk Environment",

@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -24,7 +26,7 @@ func NewAzureCloudCredentialsResource() resource.Resource {
 }
 
 type AzureCloudCredentialsResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type AzureContainerRegistryConfigModel struct {
@@ -190,12 +192,12 @@ func (r *AzureCloudCredentialsResource) Configure(ctx context.Context, req resou
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -213,7 +215,11 @@ func (r *AzureCloudCredentialsResource) Create(ctx context.Context, req resource
 	}
 
 	// Create cloud credentials client
-	credClient := r.client.NewCloudAccountCredentialsClient(ctx)
+	credClient, err := r.client.NewCloudAccountCredentialsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get credentials client").Error())
+		return
+	}
 
 	// Build the Azure cloud config
 	azureConfig := &serverv1.AzureCloudConfig{
@@ -284,7 +290,11 @@ func (r *AzureCloudCredentialsResource) Read(ctx context.Context, req resource.R
 	}
 
 	// Create cloud credentials client
-	credClient := r.client.NewCloudAccountCredentialsClient(ctx)
+	credClient, err := r.client.NewCloudAccountCredentialsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get credentials client").Error())
+		return
+	}
 
 	creds, err := credClient.GetCloudCredentials(ctx, connect.NewRequest(&serverv1.GetCloudCredentialsRequest{
 		Id: data.Id.ValueString(),
@@ -345,7 +355,11 @@ func (r *AzureCloudCredentialsResource) Update(ctx context.Context, req resource
 	}
 
 	// Create cloud credentials client
-	credClient := r.client.NewCloudAccountCredentialsClient(ctx)
+	credClient, err := r.client.NewCloudAccountCredentialsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get credentials client").Error())
+		return
+	}
 
 	// Build the Azure cloud config
 	azureConfig := &serverv1.AzureCloudConfig{
@@ -457,13 +471,16 @@ func (r *AzureCloudCredentialsResource) Delete(ctx context.Context, req resource
 	}
 
 	// Create cloud credentials client
-	credClient := r.client.NewCloudAccountCredentialsClient(ctx)
+	credClient, err := r.client.NewCloudAccountCredentialsClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get credentials client").Error())
+		return
+	}
 
 	deleteReq := &serverv1.DeleteCloudCredentialsRequest{
 		Id: data.Id.ValueString(),
 	}
-
-	_, err := credClient.DeleteCloudCredentials(ctx, connect.NewRequest(deleteReq))
+	_, err = credClient.DeleteCloudCredentials(ctx, connect.NewRequest(deleteReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Azure Cloud Credentials",

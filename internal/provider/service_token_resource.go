@@ -6,6 +6,8 @@ import (
 	"fmt"
 	authv1 "github.com/chalk-ai/chalk-go/gen/chalk/auth/v1"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -24,7 +26,7 @@ func NewServiceTokenResource() resource.Resource {
 }
 
 type ServiceTokenResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type ServiceTokenResourceModel struct {
@@ -101,12 +103,12 @@ func (r *ServiceTokenResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -126,7 +128,11 @@ func (r *ServiceTokenResource) Create(ctx context.Context, req resource.CreateRe
 
 	// Create auth client first
 	// Create team client
-	tc := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	createReq := &serverv1.CreateServiceTokenRequest{
 		Name: data.Name.ValueString(),
@@ -244,7 +250,11 @@ func (r *ServiceTokenResource) Read(ctx context.Context, req resource.ReadReques
 
 	// Create auth client first
 	// Create team client
-	tc := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	listResp, err := tc.ListServiceTokens(ctx, connect.NewRequest(&serverv1.ListServiceTokensRequest{}))
 	if err != nil {
@@ -327,7 +337,11 @@ func (r *ServiceTokenResource) Update(ctx context.Context, req resource.UpdateRe
 
 	// Create auth client first
 	// Create team client
-	tc := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	updateReq := &serverv1.UpdateServiceTokenRequest{
 		ClientId: data.ClientId.ValueString(),
@@ -409,8 +423,7 @@ func (r *ServiceTokenResource) Update(ctx context.Context, req resource.UpdateRe
 			return
 		}
 	}
-
-	_, err := tc.UpdateServiceToken(ctx, connect.NewRequest(updateReq))
+	_, err = tc.UpdateServiceToken(ctx, connect.NewRequest(updateReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Chalk Service Token",
@@ -435,13 +448,16 @@ func (r *ServiceTokenResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	// Create auth client first
 	// Create team client
-	tc := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		return
+	}
 
 	deleteReq := &serverv1.DeleteServiceTokenRequest{
 		Id: data.Id.ValueString(),
 	}
-
-	_, err := tc.DeleteServiceToken(ctx, connect.NewRequest(deleteReq))
+	_, err = tc.DeleteServiceToken(ctx, connect.NewRequest(deleteReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Chalk Service Token",

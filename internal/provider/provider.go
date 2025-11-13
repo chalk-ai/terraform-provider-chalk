@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
-	"fmt"
+	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/samber/lo"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -77,14 +79,15 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	apiServer := data.ApiServer.ValueString()
 
 	if data.CredentialProcess.ValueString() != "" {
-		clientManager, err := NewClientManagerWithCredentialProcess(apiServer, data.CredentialProcess.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error configuring Chalk client with credential process",
-				fmt.Sprintf("Could not create Chalk client: %s", err),
-			)
-			return
-		}
+		jwt := serverv1.GetTokenResponse{}
+		clientManager := client.NewManager(
+			&client.Inputs{
+				APIServer:    lo.CoalesceOrEmpty(apiServer, "https://api.chalk.ai"),
+				ClientId:     clientID,
+				ClientSecret: clientSecret,
+				JWT:          &jwt,
+			},
+		)
 		resp.DataSourceData = clientManager
 		resp.ResourceData = clientManager
 		return
@@ -122,15 +125,15 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		return
 	}
 
-	client := &ChalkClient{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		ApiServer:    apiServer,
-		JWT:          nil,
-	}
-
 	// Create ClientManager to handle all gRPC client creation
-	clientManager := NewClientManager(client)
+	clientManager := client.NewManager(
+		&client.Inputs{
+			APIServer:    apiServer,
+			ClientId:     clientID,
+			ClientSecret: clientSecret,
+			JWT:          nil,
+		},
+	)
 
 	resp.DataSourceData = clientManager
 	resp.ResourceData = clientManager
@@ -158,15 +161,4 @@ func (p *ChalkProvider) DataSources(ctx context.Context) []func() datasource.Dat
 	return []func() datasource.DataSource{
 		NewEnvironmentDataSource,
 	}
-}
-
-type ChalkClient struct {
-	ClientID     string
-	ClientSecret string
-	ApiServer    string
-	JWT          *string
-}
-
-func (c *ChalkClient) String() string {
-	return fmt.Sprintf("ChalkClient{ApiServer: %s}", c.ApiServer)
 }

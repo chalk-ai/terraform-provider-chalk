@@ -4,17 +4,18 @@ go 1.25.0
 
 require (
 	connectrpc.com/connect v1.19.0
+	github.com/chalk-ai/chalk-go v1.2.134
 	github.com/chalk-ai/chalk-go/gen v1.2.134
+	github.com/cockroachdb/errors v1.12.0
 	github.com/hashicorp/terraform-plugin-framework v1.16.1
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
+	github.com/samber/lo v1.52.0
 	google.golang.org/protobuf v1.36.9
 )
 
 require (
 	github.com/apache/arrow/go/v16 v16.1.0 // indirect
-	github.com/chalk-ai/chalk-go v1.2.138 // indirect
-	github.com/cockroachdb/errors v1.12.0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20241215232642-bb51bb14a506 // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/fatih/color v1.15.0 // indirect

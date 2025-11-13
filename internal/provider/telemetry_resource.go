@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -23,7 +25,7 @@ func NewTelemetryResource() resource.Resource {
 }
 
 type TelemetryResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type KubePersistentVolumeClaimModel struct {
@@ -184,7 +186,7 @@ func (r *TelemetryResource) Configure(ctx context.Context, req resource.Configur
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	clientManager, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -195,7 +197,7 @@ func (r *TelemetryResource) Configure(ctx context.Context, req resource.Configur
 		return
 	}
 
-	r.client = client
+	r.client = clientManager
 }
 
 func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -207,9 +209,11 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	// Create auth client first
-	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	// Convert terraform model to proto request
 	createReq := &serverv1.CreateTelemetryDeploymentRequest{
@@ -299,7 +303,11 @@ func (r *TelemetryResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	getReq := &serverv1.GetTelemetryDeploymentRequest{
 		Identifier: &serverv1.GetTelemetryDeploymentRequest_TelemetryId{
@@ -347,14 +355,18 @@ func (r *TelemetryResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	deleteRequest := &serverv1.DeleteTelemetryDeploymentRequest{
 		ClusterId: data.KubeClusterId.ValueString(),
 		Namespace: data.Namespace.ValueStringPointer(),
 	}
 
-	_, err := bc.DeleteTelemetryDeployment(ctx, connect.NewRequest(deleteRequest))
+	_, err = bc.DeleteTelemetryDeployment(ctx, connect.NewRequest(deleteRequest))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Chalk Cluster Telemetry Deployment",

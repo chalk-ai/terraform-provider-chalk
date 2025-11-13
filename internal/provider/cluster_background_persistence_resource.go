@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
+	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -25,7 +27,7 @@ func NewClusterBackgroundPersistenceResource() resource.Resource {
 }
 
 type ClusterBackgroundPersistenceResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type KubeResourceConfigModel struct {
@@ -435,12 +437,12 @@ func (r *ClusterBackgroundPersistenceResource) Configure(ctx context.Context, re
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -460,7 +462,11 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	var envIds []string
 	// Convert environment IDs
@@ -724,7 +730,11 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	getReq := &serverv1.GetClusterBackgroundPersistenceRequest{
 		Id: data.Id.ValueStringPointer(),
@@ -855,7 +865,11 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 
 	// Create auth client first
 	// Create builder client
-	bc := r.client.NewBuilderClient(ctx)
+	bc, err := r.client.NewBuilderClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		return
+	}
 
 	var envIds []string
 	// Convert environment IDs
