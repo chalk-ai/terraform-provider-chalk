@@ -96,7 +96,7 @@ resource "chalk_environment" "test" {
 }
 
 resource "chalk_cluster_timescale" "timescale" {
-  environment_ids                 = [chalk_environment.test.id]
+  environment_ids = [chalk_environment.test.id]
   timescale_image                 = "ghcr.io/imusmanmalik/timescaledb-postgis:16-3.4-54"
   database_name                   = "${local.sanitized_email}-chalk-metrics"
   database_replicas               = 1
@@ -162,7 +162,7 @@ resource "chalk_cluster_background_persistence" "persistence" {
         memory = "1Gi"
       }
 
-      }, {
+    }, {
       name                  = "cluster-manager"
       bus_subscriber_type   = "CLUSTER_MANAGER"
       default_replica_count = 1
@@ -198,6 +198,7 @@ resource "chalk_telemetry" "test" {
 
   depends_on = [chalk_cluster_gateway.test]
 }
+
 
 # FOR CROSS CLUSTER RESOURCES
 # resource "chalk_cloud_credentials" "creds2" {

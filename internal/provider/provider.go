@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -21,9 +19,10 @@ type ChalkProvider struct {
 }
 
 type ChalkProviderModel struct {
-	ClientID     types.String `tfsdk:"client_id"`
-	ClientSecret types.String `tfsdk:"client_secret"`
-	ApiServer    types.String `tfsdk:"api_server"`
+	ClientID          types.String `tfsdk:"client_id"`
+	ClientSecret      types.String `tfsdk:"client_secret"`
+	CredentialProcess types.String `tfsdk:"credential_process"`
+	ApiServer         types.String `tfsdk:"api_server"`
 }
 
 func New(version string) func() provider.Provider {
@@ -51,6 +50,11 @@ func (p *ChalkProvider) Schema(ctx context.Context, req provider.SchemaRequest, 
 				Optional:            true,
 				Sensitive:           true,
 			},
+			"credential_process": schema.StringAttribute{
+				MarkdownDescription: "Shell command that returns a valid chalk JWT",
+				Optional:            true,
+				Sensitive:           true,
+			},
 			"api_server": schema.StringAttribute{
 				MarkdownDescription: "Chalk API server URL. Can also be set via CHALK_API_SERVER environment variable. Defaults to https://api.chalk.ai",
 				Optional:            true,
@@ -68,31 +72,23 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		return
 	}
 
-	if data.ClientID.IsUnknown() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("client_id"),
-			"Unknown Chalk Client ID",
-			"The provider cannot create the Chalk API client as there is an unknown configuration value for the Chalk client ID. "+
-				"Either target apply the source of the value first or set the value statically in the configuration.",
-		)
-	}
-
-	if data.ClientSecret.IsUnknown() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("client_secret"),
-			"Unknown Chalk Client Secret",
-			"The provider cannot create the Chalk API client as there is an unknown configuration value for the Chalk client secret. "+
-				"Either target apply the source of the value first or set the value statically in the configuration.",
-		)
-	}
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	clientID := data.ClientID.ValueString()
 	clientSecret := data.ClientSecret.ValueString()
 	apiServer := data.ApiServer.ValueString()
+
+	if data.CredentialProcess.ValueString() != "" {
+		clientManager, err := NewClientManagerWithCredentialProcess(apiServer, data.CredentialProcess.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error configuring Chalk client with credential process",
+				fmt.Sprintf("Could not create Chalk client: %s", err),
+			)
+			return
+		}
+		resp.DataSourceData = clientManager
+		resp.ResourceData = clientManager
+		return
+	}
 
 	// Check environment variables if not set in config
 	if clientID == "" {
@@ -130,6 +126,7 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		ApiServer:    apiServer,
+		JWT:          nil,
 	}
 
 	// Create ClientManager to handle all gRPC client creation
@@ -167,6 +164,7 @@ type ChalkClient struct {
 	ClientID     string
 	ClientSecret string
 	ApiServer    string
+	JWT          *string
 }
 
 func (c *ChalkClient) String() string {
