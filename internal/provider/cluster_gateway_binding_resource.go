@@ -6,7 +6,6 @@ import (
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -86,7 +85,7 @@ func (r *ClusterGatewayBindingResource) Create(ctx context.Context, req resource
 
 	cloudComponentsClient, err := r.client.NewCloudComponentsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get cloud components client").Error())
+		resp.Diagnostics.AddError("Cloud Components Client", err.Error())
 		return
 	}
 
@@ -116,7 +115,7 @@ func (r *ClusterGatewayBindingResource) Read(ctx context.Context, req resource.R
 
 	cloudComponentsClient, err := r.client.NewCloudComponentsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get cloud components client").Error())
+		resp.Diagnostics.AddError("Cloud Components Client", err.Error())
 		return
 	}
 
@@ -156,7 +155,7 @@ func (r *ClusterGatewayBindingResource) Delete(ctx context.Context, req resource
 
 	cloudComponentsClient, err := r.client.NewCloudComponentsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get cloud components client").Error())
+		resp.Diagnostics.AddError("Cloud Components Client", err.Error())
 		return
 	}
 

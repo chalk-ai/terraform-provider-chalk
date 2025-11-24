@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"github.com/chalk-ai/chalk-go"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
 	"github.com/samber/lo"
@@ -81,8 +83,8 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if data.CredentialProcess.ValueString() != "" {
 		jwt := serverv1.GetTokenResponse{}
 		clientManager := client.NewManager(
-			&client.Inputs{
-				APIServer:    lo.CoalesceOrEmpty(apiServer, "https://api.chalk.ai"),
+			&chalk.GRPCClientConfig{
+				ApiServer:    lo.CoalesceOrEmpty(apiServer, "https://api.chalk.ai"),
 				ClientId:     clientID,
 				ClientSecret: clientSecret,
 				JWT:          &jwt,
@@ -124,11 +126,12 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	resp.Diagnostics.AddWarning("client Info", fmt.Sprintf("clientid=%s cientsecret=%s apiserver=%s env=%s", clientID, clientSecret, apiServer, os.Getenv("_CHALK_ACTIVE_ENVIRONMENT")))
 
 	// Create ClientManager to handle all gRPC client creation
 	clientManager := client.NewManager(
-		&client.Inputs{
-			APIServer:    apiServer,
+		&chalk.GRPCClientConfig{
+			ApiServer:    apiServer,
 			ClientId:     clientID,
 			ClientSecret: clientSecret,
 			JWT:          nil,

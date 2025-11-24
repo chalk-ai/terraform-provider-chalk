@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -211,7 +210,7 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 
 	bc, err := r.client.NewBuilderClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 
@@ -305,7 +304,7 @@ func (r *TelemetryResource) Read(ctx context.Context, req resource.ReadRequest, 
 	// Create builder client
 	bc, err := r.client.NewBuilderClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 
@@ -357,7 +356,7 @@ func (r *TelemetryResource) Delete(ctx context.Context, req resource.DeleteReque
 	// Create builder client
 	bc, err := r.client.NewBuilderClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 

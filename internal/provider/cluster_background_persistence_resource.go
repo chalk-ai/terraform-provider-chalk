@@ -6,7 +6,6 @@ import (
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -464,7 +463,7 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 	// Create builder client
 	bc, err := r.client.NewBuilderClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 
@@ -732,7 +731,7 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 	// Create builder client
 	bc, err := r.client.NewBuilderClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 
@@ -867,7 +866,7 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 	// Create builder client
 	bc, err := r.client.NewBuilderClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 

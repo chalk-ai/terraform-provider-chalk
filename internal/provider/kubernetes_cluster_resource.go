@@ -6,7 +6,6 @@ import (
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -188,7 +187,7 @@ func (r *KubernetesClusterResource) Create(ctx context.Context, req resource.Cre
 	// Create cloud components client
 	cc, err := r.client.NewCloudComponentsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 
@@ -242,7 +241,7 @@ func (r *KubernetesClusterResource) Read(ctx context.Context, req resource.ReadR
 	// Create cloud components client
 	cc, err := r.client.NewCloudComponentsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 
@@ -275,7 +274,7 @@ func (r *KubernetesClusterResource) Update(ctx context.Context, req resource.Upd
 	// Create cloud components client
 	cc, err := r.client.NewCloudComponentsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 
@@ -330,7 +329,7 @@ func (r *KubernetesClusterResource) Delete(ctx context.Context, req resource.Del
 	// Create cloud components client
 	cc, err := r.client.NewCloudComponentsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -99,9 +98,9 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Create team client
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, "")
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 
@@ -160,9 +159,9 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, "")
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 
@@ -220,9 +219,9 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, "")
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 
@@ -286,9 +285,9 @@ func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, "")
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 

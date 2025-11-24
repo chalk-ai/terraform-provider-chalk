@@ -7,7 +7,6 @@ import (
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -217,9 +216,9 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	// Get team client from ClientManager
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, data.Id.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 
@@ -366,9 +365,9 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		// Use the environment ID for the header
-		tcUpdate, err := r.client.NewTeamClient(ctx)
+		tcUpdate, err := r.client.NewTeamClient(ctx, data.Id.ValueString())
 		if err != nil {
-			resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+			resp.Diagnostics.AddError("Team Client", err.Error())
 			return
 		}
 
@@ -385,10 +384,10 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 	if data.Managed.ValueBool() {
 		bc, err := r.client.NewBuilderClient(ctx)
 		if err != nil {
-			resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+			resp.Diagnostics.AddError("Team Client", err.Error())
 			return
 		}
-	_, err = bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
+		_, err = bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
 			EnvironmentId: data.Id.ValueString(),
 		}))
 		if err != nil {
@@ -415,9 +414,9 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	// Create team client
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, data.Id.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 
@@ -524,9 +523,9 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	// Create team client
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, data.Id.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 
@@ -673,10 +672,10 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	if data.Managed.ValueBool() {
 		bc, err := r.client.NewBuilderClient(ctx)
 		if err != nil {
-			resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+			resp.Diagnostics.AddError("Team Client", err.Error())
 			return
 		}
-	_, err = bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
+		_, err = bc.CreateEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.CreateEnvironmentCloudResourcesRequest{
 			EnvironmentId: data.Id.ValueString(),
 		}))
 		if err != nil {
@@ -703,13 +702,13 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	// Create auth client first
-if !data.Managed.IsNull() {
+	if !data.Managed.IsNull() {
 		bc, err := r.client.NewBuilderClient(ctx)
 		if err != nil {
-			resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+			resp.Diagnostics.AddError("Team Client", err.Error())
 			return
 		}
-	_, err = bc.DeleteEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.DeleteEnvironmentCloudResourcesRequest{
+		_, err = bc.DeleteEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.DeleteEnvironmentCloudResourcesRequest{
 			EnvironmentId: data.Id.ValueString(),
 		}))
 		if err != nil {
@@ -722,9 +721,9 @@ if !data.Managed.IsNull() {
 	}
 
 	// Create team client
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, data.Id.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 

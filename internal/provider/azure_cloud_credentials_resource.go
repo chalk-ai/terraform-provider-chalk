@@ -6,7 +6,6 @@ import (
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -217,7 +216,7 @@ func (r *AzureCloudCredentialsResource) Create(ctx context.Context, req resource
 	// Create cloud credentials client
 	credClient, err := r.client.NewCloudAccountCredentialsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get credentials client").Error())
+		resp.Diagnostics.AddError("Credentials Client", err.Error())
 		return
 	}
 
@@ -292,7 +291,7 @@ func (r *AzureCloudCredentialsResource) Read(ctx context.Context, req resource.R
 	// Create cloud credentials client
 	credClient, err := r.client.NewCloudAccountCredentialsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get credentials client").Error())
+		resp.Diagnostics.AddError("Credentials Client", err.Error())
 		return
 	}
 
@@ -357,7 +356,7 @@ func (r *AzureCloudCredentialsResource) Update(ctx context.Context, req resource
 	// Create cloud credentials client
 	credClient, err := r.client.NewCloudAccountCredentialsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get credentials client").Error())
+		resp.Diagnostics.AddError("Credentials Client", err.Error())
 		return
 	}
 
@@ -473,7 +472,7 @@ func (r *AzureCloudCredentialsResource) Delete(ctx context.Context, req resource
 	// Create cloud credentials client
 	credClient, err := r.client.NewCloudAccountCredentialsClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get credentials client").Error())
+		resp.Diagnostics.AddError("Credentials Client", err.Error())
 		return
 	}
 

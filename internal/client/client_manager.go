@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/chalk-ai/chalk-go"
 	"github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
 	"github.com/cockroachdb/errors"
 	"sync"
@@ -10,10 +11,7 @@ import (
 // Manager manages all gRPC clients for the Chalk provider
 // It lazily initializes and caches clients to avoid duplication
 type Manager struct {
-	factoryInputs          *Inputs
-	teamClient             serverv1connect.TeamServiceClient
-	teamOnce               sync.Once
-	teamOnceErr            error
+	factoryInputs          *chalk.GRPCClientConfig
 	builderClient          serverv1connect.BuilderServiceClient
 	builderOnce            sync.Once
 	builderOnceErr         error
@@ -26,7 +24,7 @@ type Manager struct {
 }
 
 // NewManager creates a new Manager instance
-func NewManager(factoryInputs *Inputs) *Manager {
+func NewManager(factoryInputs *chalk.GRPCClientConfig) *Manager {
 	return &Manager{
 		factoryInputs: factoryInputs,
 	}
@@ -48,20 +46,15 @@ func (m *Manager) NewBuilderClient(ctx context.Context) (serverv1connect.Builder
 	return m.builderClient, nil
 }
 
-func (m *Manager) NewTeamClient(ctx context.Context) (serverv1connect.TeamServiceClient, error) {
-	m.teamOnce.Do(func() {
-		teamClient, err := GetModuleClient(ctx, m.factoryInputs, serverv1connect.NewTeamServiceClient)
-		if err != nil {
-			m.teamOnceErr = errors.Wrap(err, "getting team client")
-			return
-		}
-		m.teamClient = teamClient
-	})
-
-	if m.teamOnceErr != nil {
-		return nil, errors.Wrap(m.teamOnceErr, "get team client")
+func (m *Manager) NewTeamClient(ctx context.Context, envid string) (serverv1connect.TeamServiceClient, error) {
+	// Team client depends on environment, so we don't use sync.Once here
+	teamInputs := *m.factoryInputs
+	teamInputs.EnvironmentId = envid
+	teamClient, err := GetModuleClient(ctx, &teamInputs, serverv1connect.NewTeamServiceClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting team client")
 	}
-	return m.teamClient, nil
+	return teamClient, nil
 }
 
 func (m *Manager) NewCloudComponentsClient(ctx context.Context) (serverv1connect.CloudComponentsServiceClient, error) {

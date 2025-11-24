@@ -7,7 +7,6 @@ import (
 	authv1 "github.com/chalk-ai/chalk-go/gen/chalk/auth/v1"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -128,9 +127,9 @@ func (r *ServiceTokenResource) Create(ctx context.Context, req resource.CreateRe
 
 	// Create auth client first
 	// Create team client
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, "")
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 
@@ -250,9 +249,9 @@ func (r *ServiceTokenResource) Read(ctx context.Context, req resource.ReadReques
 
 	// Create auth client first
 	// Create team client
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, "")
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 
@@ -337,9 +336,9 @@ func (r *ServiceTokenResource) Update(ctx context.Context, req resource.UpdateRe
 
 	// Create auth client first
 	// Create team client
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, "")
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 
@@ -448,9 +447,9 @@ func (r *ServiceTokenResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	// Create auth client first
 	// Create team client
-	tc, err := r.client.NewTeamClient(ctx)
+	tc, err := r.client.NewTeamClient(ctx, "")
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -287,7 +286,7 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	// Create builder client
 	bc, err := r.client.NewBuilderClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 
@@ -425,7 +424,7 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 	// Create builder client
 	bc, err := r.client.NewBuilderClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 
@@ -549,7 +548,7 @@ func (r *ClusterTimescaleResource) Delete(ctx context.Context, req resource.Dele
 	// Create builder client
 	bc, err := r.client.NewBuilderClient(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get builder client").Error())
+		resp.Diagnostics.AddError("Builder Client", err.Error())
 		return
 	}
 	_, err = bc.DeleteClusterTimescaleDB(ctx, connect.NewRequest(&serverv1.DeleteClusterTimescaleDBRequest{

@@ -8,7 +8,6 @@ import (
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/internal/client"
-	"github.com/cockroachdb/errors"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -368,9 +367,9 @@ func (d *EnvironmentDataSource) Read(ctx context.Context, req datasource.ReadReq
 	})
 
 	// Create team client
-	tc, err := d.client.NewTeamClient(ctx)
+	tc, err := d.client.NewTeamClient(ctx, data.Id.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("client error", errors.Wrap(err, "get team client").Error())
+		resp.Diagnostics.AddError("Team Client", err.Error())
 		return
 	}
 

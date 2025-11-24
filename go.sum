@@ -6,8 +6,6 @@ github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/
 github.com/bufbuild/protocompile v0.14.1/go.mod h1:ppVdAIhbr2H8asPk6k4pY7t9zB1OU5DoEw9xY/FUi1c=
 github.com/chalk-ai/chalk-go v1.2.134 h1:I3XEm0RIv2vGPBjePo/Qj6fgFan1dtLp0ERP5Xwz6DI=
 github.com/chalk-ai/chalk-go v1.2.134/go.mod h1:vTuQVXR4rbAmZx9nTKtNOuXwMTvDoxp6QFX9TmVHeRM=
-github.com/chalk-ai/chalk-go v1.2.138 h1:/sl8MvwO+Pak6yNu5C1xgauU4y1iSjSBomzQaetUDJk=
-github.com/chalk-ai/chalk-go v1.2.138/go.mod h1:vTuQVXR4rbAmZx9nTKtNOuXwMTvDoxp6QFX9TmVHeRM=
 github.com/chalk-ai/chalk-go/gen v1.2.134 h1:9BglfU2alQ9r4k9MEU86XhWphKSk1vE+KpkD3cpAyD0=
 github.com/chalk-ai/chalk-go/gen v1.2.134/go.mod h1:vOt5OfuuiNOiblT8JjmcHYv9AM7qNZC2IMNhbIK0uTs=
 github.com/cockroachdb/errors v1.12.0 h1:d7oCs6vuIMUQRVbi6jWWWEJZahLCfJpnJSVobd1/sUo=
