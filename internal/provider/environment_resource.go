@@ -37,25 +37,38 @@ type EnvironmentBucketsModel struct {
 }
 
 type EnvironmentResourceModel struct {
-	Id                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	ProjectId                types.String `tfsdk:"project_id"`
-	SourceBundleBucket       types.String `tfsdk:"source_bundle_bucket"`
+	// Should not be settable IDK, probably should have a random name
+	Id        types.String `tfsdk:"id"`
+	Name      types.String `tfsdk:"name"`
+	ProjectId types.String `tfsdk:"project_id"`
+
 	KubeClusterId            types.String `tfsdk:"kube_cluster_id"`
 	EngineDockerRegistryPath types.String `tfsdk:"engine_docker_registry_path"`
-	Managed                  types.Bool   `tfsdk:"managed"`
 	OnlineStoreSecret        types.String `tfsdk:"online_store_secret"`
 	OnlineStoreKind          types.String `tfsdk:"online_store_kind"`
 	FeatureStoreSecret       types.String `tfsdk:"feature_store_secret"`
-	PrivatePipRepositories   types.String `tfsdk:"private_pip_repositories"`
-	AdditionalEnvVars        types.Map    `tfsdk:"additional_env_vars"`
 	SpecsConfigJson          types.String `tfsdk:"specs_config_json"`
-	ServiceUrl               types.String `tfsdk:"service_url"`
-	WorkerUrl                types.String `tfsdk:"worker_url"`
-	BranchUrl                types.String `tfsdk:"branch_url"`
-	KubeJobNamespace         types.String `tfsdk:"kube_job_namespace"`
-	KubeServiceAccountName   types.String `tfsdk:"kube_service_account_name"`
-	EnvironmentBuckets       types.Object `tfsdk:"environment_buckets"`
+	Managed                  types.Bool   `tfsdk:"managed"`
+
+	//TODO remove, deprecated
+	SourceBundleBucket types.String `tfsdk:"source_bundle_bucket"`
+	//TODO fallback from gateway
+	ServiceUrl types.String `tfsdk:"service_url"`
+	//TODO fallback from gateway
+	WorkerUrl types.String `tfsdk:"worker_url"`
+	//TODO fallback from gateway
+	BranchUrl types.String `tfsdk:"branch_url"`
+	//TODO template if not provided
+	KubeJobNamespace types.String `tfsdk:"kube_job_namespace"`
+	//TODO template if not provided
+	KubeServiceAccountName types.String `tfsdk:"kube_service_account_name"`
+
+	//TODO move to a binding object eventually
+	EnvironmentBuckets types.Object `tfsdk:"environment_buckets"`
+
+	//Optional Fields
+	PrivatePipRepositories types.String `tfsdk:"private_pip_repositories"`
+	AdditionalEnvVars      types.Map    `tfsdk:"additional_env_vars"`
 }
 
 func (r *EnvironmentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -403,7 +416,7 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	// Create auth client first
-// Create team client with token injection interceptor
+	// Create team client with token injection interceptor
 	tc := r.client.NewTeamClient(ctx, data.Id.ValueString())
 
 	env, err := tc.GetEnv(ctx, connect.NewRequest(&serverv1.GetEnvRequest{}))
@@ -509,7 +522,7 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	// Create auth client first
-// Create team client with token injection interceptor
+	// Create team client with token injection interceptor
 	tc := r.client.NewTeamClient(ctx, data.Id.ValueString())
 
 	updateReq := &serverv1.UpdateEnvironmentRequest{
@@ -682,7 +695,7 @@ func (r *EnvironmentResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	// Create auth client first
-if !data.Managed.IsNull() {
+	if !data.Managed.IsNull() {
 		bc := r.client.NewBuilderClient(ctx)
 
 		_, err := bc.DeleteEnvironmentCloudResources(ctx, connect.NewRequest(&serverv1.DeleteEnvironmentCloudResourcesRequest{

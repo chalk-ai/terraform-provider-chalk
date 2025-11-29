@@ -52,19 +52,29 @@ type GatewayProviderConfigModel struct {
 }
 
 type ClusterGatewayResourceModel struct {
-	Id                       types.String                `tfsdk:"id"`
-	EnvironmentIds           types.List                  `tfsdk:"environment_ids"`
-	Namespace                types.String                `tfsdk:"namespace"`
-	GatewayName              types.String                `tfsdk:"gateway_name"`
-	GatewayClassName         types.String                `tfsdk:"gateway_class_name"`
-	Listeners                types.List                  `tfsdk:"listeners"`
-	Config                   *GatewayProviderConfigModel `tfsdk:"config"`
-	IncludeChalkNodeSelector types.Bool                  `tfsdk:"include_chalk_node_selector"`
-	IPAllowlist              types.List                  `tfsdk:"ip_allowlist"`
-	TLSCertificate           *TLSCertificateConfigModel  `tfsdk:"tls_certificate"`
-	ServiceAnnotations       types.Map                   `tfsdk:"service_annotations"`
-	LoadBalancerClass        types.String                `tfsdk:"load_balancer_class"`
-	KubeClusterId            types.String                `tfsdk:"kube_cluster_id"`
+	Id types.String `tfsdk:"id"`
+
+	// TODO remove this field
+	EnvironmentIds types.List   `tfsdk:"environment_ids"`
+	Namespace      types.String `tfsdk:"namespace"`
+	GatewayName    types.String `tfsdk:"gateway_name"`
+	//TODO default this
+	GatewayClassName types.String                `tfsdk:"gateway_class_name"`
+	Listeners        types.List                  `tfsdk:"listeners"`
+	Config           *GatewayProviderConfigModel `tfsdk:"config"`
+	// TODO Remove this field
+	IncludeChalkNodeSelector types.Bool                 `tfsdk:"include_chalk_node_selector"`
+	IPAllowlist              types.List                 `tfsdk:"ip_allowlist"`
+	TLSCertificate           *TLSCertificateConfigModel `tfsdk:"tls_certificate"`
+
+	// TODO make this more opinionated
+	ServiceAnnotations types.Map `tfsdk:"service_annotations"`
+
+	// TODO default this
+	LoadBalancerClass types.String `tfsdk:"load_balancer_class"`
+
+	// TODO Require this
+	KubeClusterId types.String `tfsdk:"kube_cluster_id"`
 }
 
 func (r *ClusterGatewayResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
