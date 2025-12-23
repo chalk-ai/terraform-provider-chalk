@@ -48,10 +48,11 @@ type CloudCredentialsResourceModel struct {
 	Kind types.String `tfsdk:"kind"`
 
 	// AWS Configuration
-	AWSAccountId         types.String `tfsdk:"aws_account_id"`
-	AWSManagementRoleArn types.String `tfsdk:"aws_management_role_arn"`
-	AWSRegion            types.String `tfsdk:"aws_region"`
-	AWSExternalId        types.String `tfsdk:"aws_external_id"`
+	AWSAccountId         types.String               `tfsdk:"aws_account_id"`
+	AWSManagementRoleArn types.String               `tfsdk:"aws_management_role_arn"`
+	AWSRegion            types.String               `tfsdk:"aws_region"`
+	AWSExternalId        types.String               `tfsdk:"aws_external_id"`
+	GCPWorkloadIdentity  []GCPWorkloadIdentityModel `tfsdk:"gcp_workload_identity"`
 
 	// GCP Configuration
 	GCPProjectId                types.String `tfsdk:"gcp_project_id"`
@@ -59,8 +60,7 @@ type CloudCredentialsResourceModel struct {
 	GCPManagementServiceAccount types.String `tfsdk:"gcp_management_service_account"`
 
 	// Block Configuration
-	DockerBuildConfig   []DockerBuildConfigModel   `tfsdk:"docker_build_config"`
-	GCPWorkloadIdentity []GCPWorkloadIdentityModel `tfsdk:"gcp_workload_identity"`
+	DockerBuildConfig []DockerBuildConfigModel `tfsdk:"docker_build_config"`
 }
 
 func (r *CloudCredentialsResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {

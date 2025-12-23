@@ -67,7 +67,9 @@ type BackgroundPersistenceWriterModel struct {
 }
 
 type ClusterBackgroundPersistenceResourceModel struct {
-	Id                                   types.String `tfsdk:"id"`
+	Id types.String `tfsdk:"id"`
+
+	//Todo remove EnvironmentIds
 	EnvironmentIds                       types.List   `tfsdk:"environment_ids"`
 	Namespace                            types.String `tfsdk:"namespace"`
 	BusWriterImageGo                     types.String `tfsdk:"bus_writer_image_go"`
@@ -92,19 +94,23 @@ type ClusterBackgroundPersistenceResourceModel struct {
 	ResultBusOfflineStoreSubscriptionId  types.String `tfsdk:"result_bus_offline_store_subscription_id"`
 	ResultBusOnlineStoreSubscriptionId   types.String `tfsdk:"result_bus_online_store_subscription_id"`
 	ResultBusTopicId                     types.String `tfsdk:"result_bus_topic_id"`
-	IncludeChalkNodeSelector             types.Bool   `tfsdk:"include_chalk_node_selector"`
-	ApiServerHost                        types.String `tfsdk:"api_server_host"`
-	KafkaSaslSecret                      types.String `tfsdk:"kafka_sasl_secret"`
-	MetadataProvider                     types.String `tfsdk:"metadata_provider"`
-	KafkaBootstrapServers                types.String `tfsdk:"kafka_bootstrap_servers"`
-	KafkaSecurityProtocol                types.String `tfsdk:"kafka_security_protocol"`
-	KafkaSaslMechanism                   types.String `tfsdk:"kafka_sasl_mechanism"`
-	RedisIsClustered                     types.String `tfsdk:"redis_is_clustered"`
-	SnowflakeStorageIntegrationName      types.String `tfsdk:"snowflake_storage_integration_name"`
-	RedisLightningSupportsHasMany        types.Bool   `tfsdk:"redis_lightning_supports_has_many"`
-	Insecure                             types.Bool   `tfsdk:"insecure"`
-	Writers                              types.List   `tfsdk:"writers"`
-	KubeClusterId                        types.String `tfsdk:"kube_cluster_id"`
+
+	//TODO deprecate
+	IncludeChalkNodeSelector types.Bool `tfsdk:"include_chalk_node_selector"`
+
+	//TODO remove in favor of intrinsic default
+	ApiServerHost                   types.String `tfsdk:"api_server_host"`
+	KafkaSaslSecret                 types.String `tfsdk:"kafka_sasl_secret"`
+	MetadataProvider                types.String `tfsdk:"metadata_provider"`
+	KafkaBootstrapServers           types.String `tfsdk:"kafka_bootstrap_servers"`
+	KafkaSecurityProtocol           types.String `tfsdk:"kafka_security_protocol"`
+	KafkaSaslMechanism              types.String `tfsdk:"kafka_sasl_mechanism"`
+	RedisIsClustered                types.String `tfsdk:"redis_is_clustered"`
+	SnowflakeStorageIntegrationName types.String `tfsdk:"snowflake_storage_integration_name"`
+	RedisLightningSupportsHasMany   types.Bool   `tfsdk:"redis_lightning_supports_has_many"`
+	Insecure                        types.Bool   `tfsdk:"insecure"`
+	Writers                         types.List   `tfsdk:"writers"`
+	KubeClusterId                   types.String `tfsdk:"kube_cluster_id"`
 }
 
 func (r *ClusterBackgroundPersistenceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {

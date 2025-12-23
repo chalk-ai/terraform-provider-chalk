@@ -127,9 +127,9 @@ func (r *KubernetesClusterResource) Schema(ctx context.Context, req resource.Sch
 			"cloud_credential_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the cloud credential to use for the cluster",
 				Optional:            true,
-				Validators: []validator.String{
-					RequiredWhenManaged(),
-				},
+				//Validators: []validator.String{
+				//	RequiredWhenManaged(),
+				//},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -137,9 +137,9 @@ func (r *KubernetesClusterResource) Schema(ctx context.Context, req resource.Sch
 			"vpc_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the VPC to use for the cluster",
 				Optional:            true,
-				Validators: []validator.String{
-					RequiredWhenManaged(),
-				},
+				//Validators: []validator.String{
+				//	RequiredWhenManaged(),
+				//},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
