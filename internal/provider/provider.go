@@ -148,6 +148,7 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewClusterBackgroundPersistenceResource,
 		NewClusterTimescaleResource,
 		NewKubernetesClusterResource,
+		NewManagedClusterResource,
 		NewCloudCredentialsResource,
 		NewAzureCloudCredentialsResource,
 		NewClusterGatewayBindingResource,

@@ -43,10 +43,11 @@ type TLSCertificateConfigModel struct {
 }
 
 type GatewayProviderConfigModel struct {
-	TimeoutDuration          types.String `tfsdk:"timeout_duration"`
-	DNSHostname              types.String `tfsdk:"dns_hostname"`
-	Replicas                 types.Int64  `tfsdk:"replicas"`
-	MinAvailable             types.Int64  `tfsdk:"min_available"`
+	TimeoutDuration types.String `tfsdk:"timeout_duration"`
+	DNSHostname     types.String `tfsdk:"dns_hostname"`
+	Replicas        types.Int64  `tfsdk:"replicas"`
+	MinAvailable    types.Int64  `tfsdk:"min_available"`
+	//Todo Add default
 	LetsencryptClusterIssuer types.String `tfsdk:"letsencrypt_cluster_issuer"`
 	AdditionalDNSNames       types.List   `tfsdk:"additional_dns_names"`
 }
@@ -55,9 +56,8 @@ type ClusterGatewayResourceModel struct {
 	Id types.String `tfsdk:"id"`
 
 	// TODO remove this field
-	EnvironmentIds types.List   `tfsdk:"environment_ids"`
-	Namespace      types.String `tfsdk:"namespace"`
-	GatewayName    types.String `tfsdk:"gateway_name"`
+	Namespace   types.String `tfsdk:"namespace"`
+	GatewayName types.String `tfsdk:"gateway_name"`
 	//TODO default this
 	GatewayClassName types.String                `tfsdk:"gateway_class_name"`
 	Listeners        types.List                  `tfsdk:"listeners"`
@@ -92,11 +92,6 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"environment_ids": schema.ListAttribute{
-				MarkdownDescription: "List of environment IDs for the gateway",
-				Optional:            true,
-				ElementType:         types.StringType,
 			},
 			"kube_cluster_id": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes cluster ID",
@@ -258,18 +253,9 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 		},
 	}
 
-	// Convert environment IDs
-	var envIds []string
-	diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	createReq.EnvironmentIds = envIds
-
 	// Convert listeners
 	var listeners []EnvoyGatewayListenerModel
-	diags = data.Listeners.ElementsAs(ctx, &listeners, false)
+	diags := data.Listeners.ElementsAs(ctx, &listeners, false)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -553,18 +539,9 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 		},
 	}
 
-	// Convert environment IDs
-	var envIds []string
-	diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	createReq.EnvironmentIds = envIds
-
 	// Convert listeners
 	var listeners []EnvoyGatewayListenerModel
-	diags = data.Listeners.ElementsAs(ctx, &listeners, false)
+	diags := data.Listeners.ElementsAs(ctx, &listeners, false)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

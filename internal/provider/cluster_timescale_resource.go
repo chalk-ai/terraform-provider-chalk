@@ -50,17 +50,23 @@ type ClusterTimescaleResourceModel struct {
 	Request   *KubeResourceConfigModel `tfsdk:"request"`
 
 	// TODO Disable This
-	Limit                        *KubeResourceConfigModel `tfsdk:"limit"`
-	ConnectionPoolReplicas       types.Int64              `tfsdk:"connection_pool_replicas"`
-	ConnectionPoolMaxConnections types.String             `tfsdk:"connection_pool_max_connections"`
-	ConnectionPoolSize           types.String             `tfsdk:"connection_pool_size"`
-	ConnectionPoolMode           types.String             `tfsdk:"connection_pool_mode"`
-	BackupBucket                 types.String             `tfsdk:"backup_bucket"`
-	BackupIamRoleArn             types.String             `tfsdk:"backup_iam_role_arn"`
+	Limit *KubeResourceConfigModel `tfsdk:"limit"`
 
-	// Disable this
+	// TODO make optional Computed
+	ConnectionPoolReplicas       types.Int64  `tfsdk:"connection_pool_replicas"`
+	ConnectionPoolMaxConnections types.String `tfsdk:"connection_pool_max_connections"`
+	ConnectionPoolSize           types.String `tfsdk:"connection_pool_size"`
+
+	// TODO Remove, this shoudl always be transaction
+	ConnectionPoolMode types.String `tfsdk:"connection_pool_mode"`
+
+	BackupBucket     types.String `tfsdk:"backup_bucket"`
+	BackupIamRoleArn types.String `tfsdk:"backup_iam_role_arn"`
+
+	// Todo Disable this
 	SecretName types.String `tfsdk:"secret_name"`
-	Internal   types.Bool   `tfsdk:"internal"`
+
+	Internal types.Bool `tfsdk:"internal"`
 
 	// TODO Default This
 	ServiceType             types.String `tfsdk:"service_type"`
