@@ -5,16 +5,7 @@ terraform {
       source  = "registry.terraform.io/chalk-ai/chalk"
       version = "0.1.0"
     }
-    google = {
-      source  = "hashicorp/google"
-      version = "5.0.0"
-    }
   }
-}
-data "google_client_openid_userinfo" "me" {}
-
-locals {
-  sanitized_email = replace(data.google_client_openid_userinfo.me.email, "/[^a-zA-Z0-9-]/", "-")
 }
 
 # Fixed token
@@ -26,7 +17,7 @@ provider "chalk" {
 
 resource "chalk_cloud_credentials" "creds" {
   kind                    = "aws"
-  name                    = "creds-remote-dev-${local.sanitized_email}"
+  name                    = "creds-remote-dev-ari-chalk-ai"
   aws_account_id          = "009160067517"
   aws_management_role_arn = "arn:aws:iam::009160067517:role/chalk-cicd-test-Chalk-Api-Management"
   aws_region              = "us-east-1"
@@ -40,7 +31,7 @@ resource "chalk_cloud_credentials" "creds" {
 
   docker_build_config {
     builder            = "argo"
-    notification_topic = "arn:aws:sqs:us-east-1:009160067517:argo-build-queue-${local.sanitized_email}"
+    notification_topic = "arn:aws:sqs:us-east-1:009160067517:argo-build-queue-ari-chalk-ai"
   }
 }
 
@@ -51,6 +42,29 @@ resource "chalk_cloud_credentials" "creds" {
 #   name                = "chalk-cicd-test-eks-cluster"
 #   cloud_credential_id = chalk_cloud_credentials.creds.id
 # }
+
+resource "chalk_managed_aws_vpc" "vpc" {
+  cidr_block          = "10.100.0.0/16"
+  cloud_credential_id = chalk_cloud_credentials.creds.id
+  subnets = [
+    {
+      name               = "subnet-1"
+      private_cidr_block = "10.100.1.0/8"
+      public_cidr_block  = "10.100.2.0/8"
+      availability_zone  = "a"
+    }, {
+      name               = "subnet-2"
+      private_cidr_block = "10.100.3.0/8"
+      public_cidr_block  = "10.100.4.0/8"
+      availability_zone  = "b"
+    }, {
+      name               = "subnet-3"
+      private_cidr_block = "10.100.5.0/8"
+      public_cidr_block  = "10.100.6.0/8"
+      availability_zone  = "c"
+    }
+  ]
+}
 
 resource "chalk_managed_cluster" "cluster" {
   cloud_credential_id = chalk_cloud_credentials.creds.id
