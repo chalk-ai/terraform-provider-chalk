@@ -79,6 +79,8 @@ type ClusterTimescaleResourceModel struct {
 	// TODO Default This
 	DNSHostname             types.String `tfsdk:"dns_hostname"`
 	BootstrapCloudResources types.Bool   `tfsdk:"bootstrap_cloud_resources"`
+	GatewayPort             types.Int64  `tfsdk:"gateway_port"`
+	GatewayId               types.String `tfsdk:"gateway_id"`
 }
 
 func (r *ClusterTimescaleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -271,6 +273,14 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 					boolplanmodifier.RequiresReplace(),
 				},
 			},
+			"gateway_port": schema.Int64Attribute{
+				MarkdownDescription: "Gateway port for the TimescaleDB",
+				Optional:            true,
+			},
+			"gateway_id": schema.StringAttribute{
+				MarkdownDescription: "Gateway ID for the TimescaleDB",
+				Optional:            true,
+			},
 		},
 	}
 }
@@ -368,6 +378,14 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	}
 	if !data.BackupIamRoleArn.IsNull() {
 		createReq.Specs.BackupIamRoleArn = data.BackupIamRoleArn.ValueString()
+	}
+	if !data.GatewayPort.IsNull() {
+		val := int32(data.GatewayPort.ValueInt64())
+		createReq.Specs.GatewayPort = &val
+	}
+	if !data.GatewayId.IsNull() {
+		val := data.GatewayId.ValueString()
+		createReq.Specs.GatewayId = &val
 	}
 
 	// Convert resource configs
@@ -517,6 +535,12 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		}
 		if specs.DnsHostname != nil {
 			data.DNSHostname = types.StringValue(*specs.DnsHostname)
+		}
+		if specs.GatewayPort != nil {
+			data.GatewayPort = types.Int64Value(int64(*specs.GatewayPort))
+		}
+		if specs.GatewayId != nil {
+			data.GatewayId = types.StringValue(*specs.GatewayId)
 		}
 
 		// Update postgres parameters
