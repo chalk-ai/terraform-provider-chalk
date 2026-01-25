@@ -748,6 +748,13 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 	// Update the model with the fetched data
 	bg := bgPersistence.Msg.BackgroundPersistence
 
+	// Set kube_cluster_id
+	if bg.GetKubeClusterId() != "" {
+		data.KubeClusterId = types.StringValue(bg.GetKubeClusterId())
+	} else {
+		data.KubeClusterId = types.StringNull()
+	}
+
 	// Update specs if available
 	if bg.Specs != nil && bg.Specs.CommonPersistenceSpecs != nil {
 		common := bg.Specs.CommonPersistenceSpecs

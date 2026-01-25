@@ -358,6 +358,7 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 	}
 
 	data.Id = types.StringValue(response.Msg.Id)
+
 	tflog.Trace(ctx, "created a chalk_cluster_gateway resource")
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -511,6 +512,8 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 	// Update kube cluster ID
 	if gateway.Msg.GetKubeClusterId() != "" {
 		data.KubeClusterId = types.StringValue(gateway.Msg.GetKubeClusterId())
+	} else {
+		data.KubeClusterId = types.StringNull()
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

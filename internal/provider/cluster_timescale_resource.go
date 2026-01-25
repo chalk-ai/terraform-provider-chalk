@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -12,9 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -32,55 +36,36 @@ type ClusterTimescaleResource struct {
 
 type ClusterTimescaleResourceModel struct {
 	Id             types.String `tfsdk:"id"`
+	EnvironmentId  types.String `tfsdk:"environment_id"`
 	EnvironmentIds types.List   `tfsdk:"environment_ids"`
 
-	// TODO default this
-	TimescaleImage types.String `tfsdk:"timescale_image"`
-
-	// TODO default this
-	DatabaseName types.String `tfsdk:"database_name"`
-
-	// TODO default this
-	DatabaseReplicas types.Int64  `tfsdk:"database_replicas"`
-	Storage          types.String `tfsdk:"storage"`
-	StorageClass     types.String `tfsdk:"storage_class"`
-
-	// TODO default this
-	Namespace types.String             `tfsdk:"namespace"`
-	Request   *KubeResourceConfigModel `tfsdk:"request"`
-
-	// TODO Disable This
-	Limit *KubeResourceConfigModel `tfsdk:"limit"`
-
-	// TODO make optional Computed
-	ConnectionPoolReplicas       types.Int64  `tfsdk:"connection_pool_replicas"`
-	ConnectionPoolMaxConnections types.String `tfsdk:"connection_pool_max_connections"`
-	ConnectionPoolSize           types.String `tfsdk:"connection_pool_size"`
-
-	// TODO Remove, this shoudl always be transaction
-	ConnectionPoolMode types.String `tfsdk:"connection_pool_mode"`
-
-	BackupBucket     types.String `tfsdk:"backup_bucket"`
-	BackupIamRoleArn types.String `tfsdk:"backup_iam_role_arn"`
-
-	// Todo Disable this
-	SecretName types.String `tfsdk:"secret_name"`
-
-	Internal types.Bool `tfsdk:"internal"`
-
-	// TODO Default This
-	ServiceType             types.String `tfsdk:"service_type"`
-	PostgresParameters      types.Map    `tfsdk:"postgres_parameters"`
-	BackupGcpServiceAccount types.String `tfsdk:"backup_gcp_service_account"`
+	// Primary Configurations
 	InstanceType            types.String `tfsdk:"instance_type"`
 	Nodepool                types.String `tfsdk:"nodepool"`
 	NodeSelector            types.Map    `tfsdk:"node_selector"`
-
-	// TODO Default This
 	DNSHostname             types.String `tfsdk:"dns_hostname"`
 	BootstrapCloudResources types.Bool   `tfsdk:"bootstrap_cloud_resources"`
 	GatewayPort             types.Int64  `tfsdk:"gateway_port"`
 	GatewayId               types.String `tfsdk:"gateway_id"`
+
+	// Computed Defaults and Optional Configurations
+	TimescaleImage               types.String             `tfsdk:"timescale_image"`
+	DatabaseName                 types.String             `tfsdk:"database_name"`
+	DatabaseReplicas             types.Int64              `tfsdk:"database_replicas"`
+	Storage                      types.String             `tfsdk:"storage"`
+	StorageClass                 types.String             `tfsdk:"storage_class"`
+	Namespace                    types.String             `tfsdk:"namespace"`
+	Request                      *KubeResourceConfigModel `tfsdk:"request"`
+	ConnectionPoolReplicas       types.Int64              `tfsdk:"connection_pool_replicas"`
+	ConnectionPoolMaxConnections types.String             `tfsdk:"connection_pool_max_connections"`
+	ConnectionPoolSize           types.String             `tfsdk:"connection_pool_size"`
+	BackupBucket                 types.String             `tfsdk:"backup_bucket"`
+	BackupIamRoleArn             types.String             `tfsdk:"backup_iam_role_arn"`
+	SecretName                   types.String             `tfsdk:"secret_name"`
+	Internal                     types.Bool               `tfsdk:"internal"`
+	ServiceType                  types.String             `tfsdk:"service_type"`
+	PostgresParameters           types.Map                `tfsdk:"postgres_parameters"`
+	BackupGcpServiceAccount      types.String             `tfsdk:"backup_gcp_service_account"`
 }
 
 func (r *ClusterTimescaleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -117,20 +102,36 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 				MarkdownDescription: "TimescaleDB identifier",
 				Computed:            true,
 			},
+			"environment_id": schema.StringAttribute{
+				MarkdownDescription: "Environment ID for the TimescaleDB cluster",
+				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(path.MatchRoot("environment_ids")),
+				},
+			},
 			"environment_ids": schema.ListAttribute{
 				MarkdownDescription: "List of environment IDs for the TimescaleDB cluster",
-				Required:            true,
+				Optional:            true,
 				ElementType:         types.StringType,
+				Validators: []validator.List{
+					listvalidator.ExactlyOneOf(path.MatchRoot("environment_id")),
+				},
 			},
 			"timescale_image": schema.StringAttribute{
 				MarkdownDescription: "TimescaleDB Docker image",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"database_name": schema.StringAttribute{
 				MarkdownDescription: "Database name",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"database_replicas": schema.Int64Attribute{
@@ -141,7 +142,11 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			},
 			"storage": schema.StringAttribute{
 				MarkdownDescription: "Storage size (e.g., '100Gi')",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"storage_class": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes storage class",
@@ -152,57 +157,59 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			},
 			"namespace": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes namespace",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"request": schema.SingleNestedAttribute{
 				MarkdownDescription: "Resource requests",
 				Optional:            true,
-				Attributes:          kubeResourceConfigSchema.Attributes,
-			},
-			"limit": schema.SingleNestedAttribute{
-				MarkdownDescription: "Resource limits",
-				Optional:            true,
+				Computed:            true,
 				Attributes:          kubeResourceConfigSchema.Attributes,
 			},
 			"connection_pool_replicas": schema.Int64Attribute{
 				MarkdownDescription: "Number of connection pool replicas",
 				Optional:            true,
 				Computed:            true,
-				Default:             int64default.StaticInt64(1),
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"connection_pool_max_connections": schema.StringAttribute{
 				MarkdownDescription: "Maximum connections for the connection pool",
 				Optional:            true,
 				Computed:            true,
-				Default:             stringdefault.StaticString("100"),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"connection_pool_size": schema.StringAttribute{
 				MarkdownDescription: "Connection pool size",
 				Optional:            true,
 				Computed:            true,
-				Default:             stringdefault.StaticString("25"),
-			},
-			"connection_pool_mode": schema.StringAttribute{
-				MarkdownDescription: "Connection pool mode (e.g., 'transaction', 'session')",
-				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString("transaction"),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"backup_bucket": schema.StringAttribute{
 				MarkdownDescription: "S3/GCS bucket for backups",
 				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"backup_iam_role_arn": schema.StringAttribute{
 				MarkdownDescription: "IAM role ARN for backups",
 				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"secret_name": schema.StringAttribute{
@@ -235,13 +242,16 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			"postgres_parameters": schema.MapAttribute{
 				MarkdownDescription: "PostgreSQL configuration parameters",
 				Optional:            true,
+				Computed:            true,
 				ElementType:         types.StringType,
 			},
 			"backup_gcp_service_account": schema.StringAttribute{
 				MarkdownDescription: "GCP service account for backups",
 				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"instance_type": schema.StringAttribute{
@@ -319,27 +329,56 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 
 	// Convert environment IDs
 	var envIds []string
-	diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !data.EnvironmentId.IsNull() {
+		// Single environment ID provided
+		envIds = []string{data.EnvironmentId.ValueString()}
+	} else {
+		// List of environment IDs provided
+		diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	// Convert terraform model to proto request
 	createReq := &serverv1.CreateClusterTimescaleDBRequest{
 		EnvironmentIds: envIds,
 		Specs: &serverv1.ClusterTimescaleSpecs{
-			TimescaleImage:               data.TimescaleImage.ValueString(),
-			DatabaseName:                 data.DatabaseName.ValueString(),
-			DatabaseReplicas:             int32(data.DatabaseReplicas.ValueInt64()),
-			Storage:                      data.Storage.ValueString(),
-			Namespace:                    data.Namespace.ValueString(),
-			ConnectionPoolReplicas:       int32(data.ConnectionPoolReplicas.ValueInt64()),
-			ConnectionPoolMaxConnections: data.ConnectionPoolMaxConnections.ValueString(),
-			ConnectionPoolSize:           data.ConnectionPoolSize.ValueString(),
-			ConnectionPoolMode:           data.ConnectionPoolMode.ValueString(),
-			BootstrapCloudResources:      data.BootstrapCloudResources.ValueBool(),
+			DatabaseReplicas:        int32(data.DatabaseReplicas.ValueInt64()),
+			BootstrapCloudResources: data.BootstrapCloudResources.ValueBool(),
 		},
+	}
+
+	// Handle optional timescale_image field
+	if !data.TimescaleImage.IsNull() {
+		createReq.Specs.TimescaleImage = data.TimescaleImage.ValueString()
+	}
+
+	// Handle optional database_name field
+	if !data.DatabaseName.IsNull() {
+		createReq.Specs.DatabaseName = data.DatabaseName.ValueString()
+	}
+
+	// Handle optional namespace field
+	if !data.Namespace.IsNull() {
+		createReq.Specs.Namespace = data.Namespace.ValueString()
+	}
+
+	// Handle optional storage field
+	if !data.Storage.IsNull() {
+		createReq.Specs.Storage = data.Storage.ValueString()
+	}
+
+	// Handle optional connection pool fields
+	if !data.ConnectionPoolReplicas.IsNull() {
+		createReq.Specs.ConnectionPoolReplicas = int32(data.ConnectionPoolReplicas.ValueInt64())
+	}
+	if !data.ConnectionPoolMaxConnections.IsNull() {
+		createReq.Specs.ConnectionPoolMaxConnections = data.ConnectionPoolMaxConnections.ValueString()
+	}
+	if !data.ConnectionPoolSize.IsNull() {
+		createReq.Specs.ConnectionPoolSize = data.ConnectionPoolSize.ValueString()
 	}
 
 	// Handle optional secret_name field
@@ -397,19 +436,11 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 			Storage:          data.Request.Storage.ValueString(),
 		}
 	}
-	if data.Limit != nil {
-		createReq.Specs.Limit = &serverv1.KubeResourceConfig{
-			Cpu:              data.Limit.CPU.ValueString(),
-			Memory:           data.Limit.Memory.ValueString(),
-			EphemeralStorage: data.Limit.EphemeralStorage.ValueString(),
-			Storage:          data.Limit.Storage.ValueString(),
-		}
-	}
 
 	// Convert postgres parameters
 	if !data.PostgresParameters.IsNull() {
 		params := make(map[string]string)
-		diags = data.PostgresParameters.ElementsAs(ctx, &params, false)
+		diags := data.PostgresParameters.ElementsAs(ctx, &params, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -420,7 +451,7 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	// Convert node selector
 	if !data.NodeSelector.IsNull() {
 		selector := make(map[string]string)
-		diags = data.NodeSelector.ElementsAs(ctx, &selector, false)
+		diags := data.NodeSelector.ElementsAs(ctx, &selector, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -440,6 +471,71 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	// Update with created values
 	data.Id = types.StringValue(metricsDb.Msg.ClusterTimescaleId)
 	data.SecretName = types.StringValue(metricsDb.Msg.Specs.SecretName)
+	data.TimescaleImage = types.StringValue(metricsDb.Msg.Specs.TimescaleImage)
+	data.DatabaseName = types.StringValue(metricsDb.Msg.Specs.DatabaseName)
+	data.Namespace = types.StringValue(metricsDb.Msg.Specs.Namespace)
+	data.Storage = types.StringValue(metricsDb.Msg.Specs.Storage)
+
+	// Set computed connection pool fields
+	data.ConnectionPoolReplicas = types.Int64Value(int64(metricsDb.Msg.Specs.ConnectionPoolReplicas))
+	data.ConnectionPoolMaxConnections = types.StringValue(metricsDb.Msg.Specs.ConnectionPoolMaxConnections)
+	data.ConnectionPoolSize = types.StringValue(metricsDb.Msg.Specs.ConnectionPoolSize)
+
+	// Set computed backup fields
+	if metricsDb.Msg.Specs.BackupBucket != "" {
+		data.BackupBucket = types.StringValue(metricsDb.Msg.Specs.BackupBucket)
+	} else {
+		data.BackupBucket = types.StringNull()
+	}
+	if metricsDb.Msg.Specs.BackupIamRoleArn != "" {
+		data.BackupIamRoleArn = types.StringValue(metricsDb.Msg.Specs.BackupIamRoleArn)
+	} else {
+		data.BackupIamRoleArn = types.StringNull()
+	}
+	if metricsDb.Msg.Specs.BackupGcpServiceAccount != "" {
+		data.BackupGcpServiceAccount = types.StringValue(metricsDb.Msg.Specs.BackupGcpServiceAccount)
+	} else {
+		data.BackupGcpServiceAccount = types.StringNull()
+	}
+
+	// Set computed resource configs
+	if metricsDb.Msg.Specs.Request != nil {
+		request := &KubeResourceConfigModel{}
+		if metricsDb.Msg.Specs.Request.Cpu != "" {
+			request.CPU = types.StringValue(metricsDb.Msg.Specs.Request.Cpu)
+		} else {
+			request.CPU = types.StringNull()
+		}
+		if metricsDb.Msg.Specs.Request.Memory != "" {
+			request.Memory = types.StringValue(metricsDb.Msg.Specs.Request.Memory)
+		} else {
+			request.Memory = types.StringNull()
+		}
+		if metricsDb.Msg.Specs.Request.EphemeralStorage != "" {
+			request.EphemeralStorage = types.StringValue(metricsDb.Msg.Specs.Request.EphemeralStorage)
+		} else {
+			request.EphemeralStorage = types.StringNull()
+		}
+		if metricsDb.Msg.Specs.Request.Storage != "" {
+			request.Storage = types.StringValue(metricsDb.Msg.Specs.Request.Storage)
+		} else {
+			request.Storage = types.StringNull()
+		}
+		data.Request = request
+	} else {
+		data.Request = nil
+	}
+
+	// Set computed postgres parameters
+	if len(metricsDb.Msg.Specs.PostgresParameters) > 0 {
+		params := make(map[string]attr.Value)
+		for k, v := range metricsDb.Msg.Specs.PostgresParameters {
+			params[k] = types.StringValue(v)
+		}
+		data.PostgresParameters = types.MapValueMust(types.StringType, params)
+	} else {
+		data.PostgresParameters = types.MapNull(types.StringType)
+	}
 
 	tflog.Trace(ctx, "created a chalk_cluster_timescale resource")
 
@@ -459,24 +555,36 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 	// Create builder client
 	bc := r.client.NewBuilderClient(ctx)
 
-	// Get the first environment ID to query the TimescaleDB
-	var envIds []string
-	diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	// Get the environment ID to query the TimescaleDB
+	// Track which form was used so we can preserve it
+	var envId string
+	var usedSingular bool
+	if !data.EnvironmentId.IsNull() {
+		// Single environment ID provided
+		envId = data.EnvironmentId.ValueString()
+		usedSingular = true
+	} else {
+		// List of environment IDs provided
+		var envIds []string
+		diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
-	if len(envIds) == 0 {
-		resp.Diagnostics.AddError(
-			"No Environment IDs",
-			"No environment IDs found in state for reading cluster TimescaleDB",
-		)
-		return
+		if len(envIds) == 0 {
+			resp.Diagnostics.AddError(
+				"No Environment IDs",
+				"No environment IDs found in state for reading cluster TimescaleDB",
+			)
+			return
+		}
+		envId = envIds[0]
+		usedSingular = false
 	}
 
 	getReq := &serverv1.GetClusterTimescaleDBRequest{
-		EnvironmentId: envIds[0],
+		EnvironmentId: envId,
 	}
 
 	timescale, err := bc.GetClusterTimescaleDB(ctx, connect.NewRequest(getReq))
@@ -493,6 +601,19 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 	if timescale.Msg.Specs != nil {
 		specs := timescale.Msg.Specs
 		data.Id = types.StringValue(timescale.Msg.Id)
+
+		// Preserve environment_id or environment_ids - keep whichever one was already set in state
+		// This prevents drift during reads and imports
+		if usedSingular {
+			// Keep environment_id, clear environment_ids
+			// environment_id is already set in data
+			data.EnvironmentIds = types.ListNull(types.StringType)
+		} else {
+			// Keep environment_ids, clear environment_id
+			// environment_ids is already set in data
+			data.EnvironmentId = types.StringNull()
+		}
+
 		data.TimescaleImage = types.StringValue(specs.TimescaleImage)
 		data.DatabaseName = types.StringValue(specs.DatabaseName)
 		data.DatabaseReplicas = types.Int64Value(int64(specs.DatabaseReplicas))
@@ -501,7 +622,6 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		data.ConnectionPoolReplicas = types.Int64Value(int64(specs.ConnectionPoolReplicas))
 		data.ConnectionPoolMaxConnections = types.StringValue(specs.ConnectionPoolMaxConnections)
 		data.ConnectionPoolSize = types.StringValue(specs.ConnectionPoolSize)
-		data.ConnectionPoolMode = types.StringValue(specs.ConnectionPoolMode)
 		if specs.BackupBucket != "" {
 			data.BackupBucket = types.StringValue(specs.BackupBucket)
 		} else {
@@ -517,30 +637,50 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		data.SecretName = types.StringValue(specs.SecretName)
 		if specs.BackupGcpServiceAccount != "" {
 			data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
+		} else {
+			data.BackupGcpServiceAccount = types.StringNull()
 		}
-		data.InstanceType = types.StringValue(specs.InstanceType)
+		if specs.InstanceType != "" {
+			data.InstanceType = types.StringValue(specs.InstanceType)
+		} else {
+			data.InstanceType = types.StringNull()
+		}
 		if specs.Nodepool != "" {
 			data.Nodepool = types.StringValue(specs.Nodepool)
+		} else {
+			data.Nodepool = types.StringNull()
 		}
 
 		// Update optional fields
 		if specs.StorageClass != nil {
 			data.StorageClass = types.StringValue(*specs.StorageClass)
+		} else {
+			data.StorageClass = types.StringNull()
 		}
 		if specs.Internal != nil {
 			data.Internal = types.BoolValue(*specs.Internal)
+		} else {
+			data.Internal = types.BoolNull()
 		}
 		if specs.ServiceType != nil {
 			data.ServiceType = types.StringValue(*specs.ServiceType)
+		} else {
+			data.ServiceType = types.StringNull()
 		}
 		if specs.DnsHostname != nil {
 			data.DNSHostname = types.StringValue(*specs.DnsHostname)
+		} else {
+			data.DNSHostname = types.StringNull()
 		}
 		if specs.GatewayPort != nil {
 			data.GatewayPort = types.Int64Value(int64(*specs.GatewayPort))
+		} else {
+			data.GatewayPort = types.Int64Null()
 		}
 		if specs.GatewayId != nil {
 			data.GatewayId = types.StringValue(*specs.GatewayId)
+		} else {
+			data.GatewayId = types.StringNull()
 		}
 
 		// Update postgres parameters
@@ -550,6 +690,8 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 				params[k] = types.StringValue(v)
 			}
 			data.PostgresParameters = types.MapValueMust(types.StringType, params)
+		} else {
+			data.PostgresParameters = types.MapNull(types.StringType)
 		}
 
 		// Update node selector
@@ -559,6 +701,36 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 				selector[k] = types.StringValue(v)
 			}
 			data.NodeSelector = types.MapValueMust(types.StringType, selector)
+		} else {
+			data.NodeSelector = types.MapNull(types.StringType)
+		}
+
+		// Update resource configs
+		if specs.Request != nil {
+			request := &KubeResourceConfigModel{}
+			if specs.Request.Cpu != "" {
+				request.CPU = types.StringValue(specs.Request.Cpu)
+			} else {
+				request.CPU = types.StringNull()
+			}
+			if specs.Request.Memory != "" {
+				request.Memory = types.StringValue(specs.Request.Memory)
+			} else {
+				request.Memory = types.StringNull()
+			}
+			if specs.Request.EphemeralStorage != "" {
+				request.EphemeralStorage = types.StringValue(specs.Request.EphemeralStorage)
+			} else {
+				request.EphemeralStorage = types.StringNull()
+			}
+			if specs.Request.Storage != "" {
+				request.Storage = types.StringValue(specs.Request.Storage)
+			} else {
+				request.Storage = types.StringNull()
+			}
+			data.Request = request
+		} else {
+			data.Request = nil
 		}
 	}
 
@@ -597,5 +769,17 @@ func (r *ClusterTimescaleResource) Delete(ctx context.Context, req resource.Dele
 }
 
 func (r *ClusterTimescaleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	// Import ID is the environment_id
+	// Set it as environment_ids (plural) as a list with single element
+	// This matches the recommended config format and prevents drift
+	envId := req.ID
+
+	envIds, diags := types.ListValueFrom(ctx, types.StringType, []string{envId})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Set environment_ids - Read will populate the rest including the actual resource ID
+	resp.State.SetAttribute(ctx, path.Root("environment_ids"), envIds)
 }
