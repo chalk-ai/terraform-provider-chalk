@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -60,11 +61,11 @@ type ClusterTimescaleResourceModel struct {
 	TimescaleImage               types.String             `tfsdk:"timescale_image"`
 	DatabaseName                 types.String             `tfsdk:"database_name"`
 	DatabaseReplicas             types.Int64              `tfsdk:"database_replicas"`
-	Storage                      types.String             `tfsdk:"storage"`
-	StorageClass                 types.String             `tfsdk:"storage_class"`
-	Namespace                    types.String             `tfsdk:"namespace"`
-	Request                      *KubeResourceConfigModel `tfsdk:"request"`
-	ConnectionPoolReplicas       types.Int64              `tfsdk:"connection_pool_replicas"`
+	Storage                      types.String `tfsdk:"storage"`
+	StorageClass                 types.String `tfsdk:"storage_class"`
+	Namespace                    types.String `tfsdk:"namespace"`
+	Request                      types.Object `tfsdk:"request"`
+	ConnectionPoolReplicas       types.Int64  `tfsdk:"connection_pool_replicas"`
 	ConnectionPoolMaxConnections types.String             `tfsdk:"connection_pool_max_connections"`
 	ConnectionPoolSize           types.String             `tfsdk:"connection_pool_size"`
 	SecretName                   types.String             `tfsdk:"secret_name"`
@@ -421,12 +422,18 @@ func (r *ClusterTimescaleResource) upsertClusterTimescale(ctx context.Context, d
 	}
 
 	// Convert resource configs
-	if data.Request != nil {
+	if !data.Request.IsNull() && !data.Request.IsUnknown() {
+		var request KubeResourceConfigModel
+		d := data.Request.As(ctx, &request, basetypes.ObjectAsOptions{})
+		diags.Append(d...)
+		if diags.HasError() {
+			return fmt.Errorf("failed to convert request config")
+		}
 		createReq.Specs.Request = &serverv1.KubeResourceConfig{
-			Cpu:              data.Request.CPU.ValueString(),
-			Memory:           data.Request.Memory.ValueString(),
-			EphemeralStorage: data.Request.EphemeralStorage.ValueString(),
-			Storage:          data.Request.Storage.ValueString(),
+			Cpu:              request.CPU.ValueString(),
+			Memory:           request.Memory.ValueString(),
+			EphemeralStorage: request.EphemeralStorage.ValueString(),
+			Storage:          request.Storage.ValueString(),
 		}
 	}
 
@@ -489,30 +496,42 @@ func (r *ClusterTimescaleResource) upsertClusterTimescale(ctx context.Context, d
 
 	// Set computed resource configs
 	if metricsDb.Msg.Specs.Request != nil {
-		request := &KubeResourceConfigModel{}
+		requestAttrs := map[string]attr.Value{
+			"cpu":               types.StringNull(),
+			"memory":            types.StringNull(),
+			"ephemeral_storage": types.StringNull(),
+			"storage":           types.StringNull(),
+		}
 		if metricsDb.Msg.Specs.Request.Cpu != "" {
-			request.CPU = types.StringValue(metricsDb.Msg.Specs.Request.Cpu)
-		} else {
-			request.CPU = types.StringNull()
+			requestAttrs["cpu"] = types.StringValue(metricsDb.Msg.Specs.Request.Cpu)
 		}
 		if metricsDb.Msg.Specs.Request.Memory != "" {
-			request.Memory = types.StringValue(metricsDb.Msg.Specs.Request.Memory)
-		} else {
-			request.Memory = types.StringNull()
+			requestAttrs["memory"] = types.StringValue(metricsDb.Msg.Specs.Request.Memory)
 		}
 		if metricsDb.Msg.Specs.Request.EphemeralStorage != "" {
-			request.EphemeralStorage = types.StringValue(metricsDb.Msg.Specs.Request.EphemeralStorage)
-		} else {
-			request.EphemeralStorage = types.StringNull()
+			requestAttrs["ephemeral_storage"] = types.StringValue(metricsDb.Msg.Specs.Request.EphemeralStorage)
 		}
 		if metricsDb.Msg.Specs.Request.Storage != "" {
-			request.Storage = types.StringValue(metricsDb.Msg.Specs.Request.Storage)
-		} else {
-			request.Storage = types.StringNull()
+			requestAttrs["storage"] = types.StringValue(metricsDb.Msg.Specs.Request.Storage)
 		}
-		data.Request = request
+		data.Request, _ = types.ObjectValue(
+			map[string]attr.Type{
+				"cpu":               types.StringType,
+				"memory":            types.StringType,
+				"ephemeral_storage": types.StringType,
+				"storage":           types.StringType,
+			},
+			requestAttrs,
+		)
 	} else {
-		data.Request = nil
+		data.Request = types.ObjectNull(
+			map[string]attr.Type{
+				"cpu":               types.StringType,
+				"memory":            types.StringType,
+				"ephemeral_storage": types.StringType,
+				"storage":           types.StringType,
+			},
+		)
 	}
 
 	// Set computed postgres parameters
@@ -723,30 +742,42 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 
 		// Update resource configs
 		if specs.Request != nil {
-			request := &KubeResourceConfigModel{}
+			requestAttrs := map[string]attr.Value{
+				"cpu":               types.StringNull(),
+				"memory":            types.StringNull(),
+				"ephemeral_storage": types.StringNull(),
+				"storage":           types.StringNull(),
+			}
 			if specs.Request.Cpu != "" {
-				request.CPU = types.StringValue(specs.Request.Cpu)
-			} else {
-				request.CPU = types.StringNull()
+				requestAttrs["cpu"] = types.StringValue(specs.Request.Cpu)
 			}
 			if specs.Request.Memory != "" {
-				request.Memory = types.StringValue(specs.Request.Memory)
-			} else {
-				request.Memory = types.StringNull()
+				requestAttrs["memory"] = types.StringValue(specs.Request.Memory)
 			}
 			if specs.Request.EphemeralStorage != "" {
-				request.EphemeralStorage = types.StringValue(specs.Request.EphemeralStorage)
-			} else {
-				request.EphemeralStorage = types.StringNull()
+				requestAttrs["ephemeral_storage"] = types.StringValue(specs.Request.EphemeralStorage)
 			}
 			if specs.Request.Storage != "" {
-				request.Storage = types.StringValue(specs.Request.Storage)
-			} else {
-				request.Storage = types.StringNull()
+				requestAttrs["storage"] = types.StringValue(specs.Request.Storage)
 			}
-			data.Request = request
+			data.Request, _ = types.ObjectValue(
+				map[string]attr.Type{
+					"cpu":               types.StringType,
+					"memory":            types.StringType,
+					"ephemeral_storage": types.StringType,
+					"storage":           types.StringType,
+				},
+				requestAttrs,
+			)
 		} else {
-			data.Request = nil
+			data.Request = types.ObjectNull(
+				map[string]attr.Type{
+					"cpu":               types.StringType,
+					"memory":            types.StringType,
+					"ephemeral_storage": types.StringType,
+					"storage":           types.StringType,
+				},
+			)
 		}
 	}
 
