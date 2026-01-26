@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -850,8 +851,230 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 		data.RedisLightningSupportsHasMany = types.BoolValue(bg.Specs.RedisLightningSupportsHasMany)
 		data.Insecure = types.BoolValue(bg.Specs.Insecure)
 
-		// Update writers - this is complex, so for now we'll keep the existing state
-		// A full implementation would convert from proto back to terraform models
+		// Update writers - convert from proto back to terraform models
+		if len(bg.Specs.Writers) > 0 {
+			var tfWriters []BackgroundPersistenceWriterModel
+			for _, protoWriter := range bg.Specs.Writers {
+				tfWriter := BackgroundPersistenceWriterModel{
+					Name:              types.StringValue(protoWriter.Name),
+					BusSubscriberType: types.StringValue(protoWriter.BusSubscriberType),
+				}
+
+				// Handle optional string fields
+				if protoWriter.ImageOverride != "" {
+					tfWriter.ImageOverride = types.StringValue(protoWriter.ImageOverride)
+				} else {
+					tfWriter.ImageOverride = types.StringNull()
+				}
+				if protoWriter.Version != "" {
+					tfWriter.Version = types.StringValue(protoWriter.Version)
+				} else {
+					tfWriter.Version = types.StringNull()
+				}
+				if protoWriter.DefaultReplicaCount != 0 {
+					tfWriter.DefaultReplicaCount = types.Int64Value(int64(protoWriter.DefaultReplicaCount))
+				} else {
+					tfWriter.DefaultReplicaCount = types.Int64Null()
+				}
+				if protoWriter.MetadataSqlSslCaCertSecret != "" {
+					tfWriter.MetadataSqlSslCaCertSecret = types.StringValue(protoWriter.MetadataSqlSslCaCertSecret)
+				} else {
+					tfWriter.MetadataSqlSslCaCertSecret = types.StringNull()
+				}
+				if protoWriter.MetadataSqlSslClientCertSecret != "" {
+					tfWriter.MetadataSqlSslClientCertSecret = types.StringValue(protoWriter.MetadataSqlSslClientCertSecret)
+				} else {
+					tfWriter.MetadataSqlSslClientCertSecret = types.StringNull()
+				}
+				if protoWriter.MetadataSqlSslClientKeySecret != "" {
+					tfWriter.MetadataSqlSslClientKeySecret = types.StringValue(protoWriter.MetadataSqlSslClientKeySecret)
+				} else {
+					tfWriter.MetadataSqlSslClientKeySecret = types.StringNull()
+				}
+				if protoWriter.MetadataSqlUriSecret != "" {
+					tfWriter.MetadataSqlUriSecret = types.StringValue(protoWriter.MetadataSqlUriSecret)
+				} else {
+					tfWriter.MetadataSqlUriSecret = types.StringNull()
+				}
+				if protoWriter.OfflineStoreInserterDbType != "" {
+					tfWriter.OfflineStoreInserterDbType = types.StringValue(protoWriter.OfflineStoreInserterDbType)
+				} else {
+					tfWriter.OfflineStoreInserterDbType = types.StringNull()
+				}
+				if protoWriter.StorageCachePrefix != "" {
+					tfWriter.StorageCachePrefix = types.StringValue(protoWriter.StorageCachePrefix)
+				} else {
+					tfWriter.StorageCachePrefix = types.StringNull()
+				}
+				if protoWriter.QueryTableWriteDropRatio != "" {
+					tfWriter.QueryTableWriteDropRatio = types.StringValue(protoWriter.QueryTableWriteDropRatio)
+				} else {
+					tfWriter.QueryTableWriteDropRatio = types.StringNull()
+				}
+				if protoWriter.KafkaConsumerGroupOverride != "" {
+					tfWriter.KafkaConsumerGroupOverride = types.StringValue(protoWriter.KafkaConsumerGroupOverride)
+				} else {
+					tfWriter.KafkaConsumerGroupOverride = types.StringNull()
+				}
+
+				// Handle optional pointer fields
+				if protoWriter.GkeSpot != nil {
+					tfWriter.GkeSpot = types.BoolValue(*protoWriter.GkeSpot)
+				} else {
+					tfWriter.GkeSpot = types.BoolNull()
+				}
+				if protoWriter.LoadWriterConfigmap != nil {
+					tfWriter.LoadWriterConfigmap = types.BoolValue(*protoWriter.LoadWriterConfigmap)
+				} else {
+					tfWriter.LoadWriterConfigmap = types.BoolNull()
+				}
+				if protoWriter.MaxBatchSize != nil {
+					tfWriter.MaxBatchSize = types.Int64Value(int64(*protoWriter.MaxBatchSize))
+				} else {
+					tfWriter.MaxBatchSize = types.Int64Null()
+				}
+				if protoWriter.MessageProcessingConcurrency != nil {
+					tfWriter.MessageProcessingConcurrency = types.Int64Value(int64(*protoWriter.MessageProcessingConcurrency))
+				} else {
+					tfWriter.MessageProcessingConcurrency = types.Int64Null()
+				}
+				if protoWriter.ResultsWriterSkipProducingFeatureMetrics != nil {
+					tfWriter.ResultsWriterSkipProducingFeatureMetrics = types.BoolValue(*protoWriter.ResultsWriterSkipProducingFeatureMetrics)
+				} else {
+					tfWriter.ResultsWriterSkipProducingFeatureMetrics = types.BoolNull()
+				}
+
+				// Convert HPA specs
+				if protoWriter.HpaSpecs != nil {
+					tfWriter.HpaSpecs = &BackgroundPersistenceWriterHpaModel{
+						HpaPubsubSubscriptionId: types.StringValue(protoWriter.HpaSpecs.HpaPubsubSubscriptionId),
+					}
+					if protoWriter.HpaSpecs.HpaMinReplicas != nil {
+						tfWriter.HpaSpecs.HpaMinReplicas = types.Int64Value(int64(*protoWriter.HpaSpecs.HpaMinReplicas))
+					} else {
+						tfWriter.HpaSpecs.HpaMinReplicas = types.Int64Null()
+					}
+					if protoWriter.HpaSpecs.HpaMaxReplicas != nil {
+						tfWriter.HpaSpecs.HpaMaxReplicas = types.Int64Value(int64(*protoWriter.HpaSpecs.HpaMaxReplicas))
+					} else {
+						tfWriter.HpaSpecs.HpaMaxReplicas = types.Int64Null()
+					}
+					if protoWriter.HpaSpecs.HpaTargetAverageValue != nil {
+						tfWriter.HpaSpecs.HpaTargetAverageValue = types.Int64Value(int64(*protoWriter.HpaSpecs.HpaTargetAverageValue))
+					} else {
+						tfWriter.HpaSpecs.HpaTargetAverageValue = types.Int64Null()
+					}
+				}
+
+				// Convert resource configs
+				if protoWriter.Request != nil {
+					tfWriter.Request = &KubeResourceConfigModel{}
+					if protoWriter.Request.Cpu != "" {
+						tfWriter.Request.CPU = types.StringValue(protoWriter.Request.Cpu)
+					} else {
+						tfWriter.Request.CPU = types.StringNull()
+					}
+					if protoWriter.Request.Memory != "" {
+						tfWriter.Request.Memory = types.StringValue(protoWriter.Request.Memory)
+					} else {
+						tfWriter.Request.Memory = types.StringNull()
+					}
+					if protoWriter.Request.EphemeralStorage != "" {
+						tfWriter.Request.EphemeralStorage = types.StringValue(protoWriter.Request.EphemeralStorage)
+					} else {
+						tfWriter.Request.EphemeralStorage = types.StringNull()
+					}
+					if protoWriter.Request.Storage != "" {
+						tfWriter.Request.Storage = types.StringValue(protoWriter.Request.Storage)
+					} else {
+						tfWriter.Request.Storage = types.StringNull()
+					}
+				}
+
+				if protoWriter.Limit != nil {
+					tfWriter.Limit = &KubeResourceConfigModel{}
+					if protoWriter.Limit.Cpu != "" {
+						tfWriter.Limit.CPU = types.StringValue(protoWriter.Limit.Cpu)
+					} else {
+						tfWriter.Limit.CPU = types.StringNull()
+					}
+					if protoWriter.Limit.Memory != "" {
+						tfWriter.Limit.Memory = types.StringValue(protoWriter.Limit.Memory)
+					} else {
+						tfWriter.Limit.Memory = types.StringNull()
+					}
+					if protoWriter.Limit.EphemeralStorage != "" {
+						tfWriter.Limit.EphemeralStorage = types.StringValue(protoWriter.Limit.EphemeralStorage)
+					} else {
+						tfWriter.Limit.EphemeralStorage = types.StringNull()
+					}
+					if protoWriter.Limit.Storage != "" {
+						tfWriter.Limit.Storage = types.StringValue(protoWriter.Limit.Storage)
+					} else {
+						tfWriter.Limit.Storage = types.StringNull()
+					}
+				}
+
+				tfWriters = append(tfWriters, tfWriter)
+			}
+
+			// Convert to types.List
+			writersList, diags := types.ListValueFrom(ctx, types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"name":                                            types.StringType,
+					"image_override":                                  types.StringType,
+					"hpa_specs":                                       types.ObjectType{AttrTypes: map[string]attr.Type{"hpa_pubsub_subscription_id": types.StringType, "hpa_min_replicas": types.Int64Type, "hpa_max_replicas": types.Int64Type, "hpa_target_average_value": types.Int64Type}},
+					"gke_spot":                                        types.BoolType,
+					"load_writer_configmap":                           types.BoolType,
+					"version":                                         types.StringType,
+					"request":                                         types.ObjectType{AttrTypes: map[string]attr.Type{"cpu": types.StringType, "memory": types.StringType, "ephemeral_storage": types.StringType, "storage": types.StringType}},
+					"limit":                                           types.ObjectType{AttrTypes: map[string]attr.Type{"cpu": types.StringType, "memory": types.StringType, "ephemeral_storage": types.StringType, "storage": types.StringType}},
+					"bus_subscriber_type":                             types.StringType,
+					"default_replica_count":                           types.Int64Type,
+					"kafka_consumer_group_override":                   types.StringType,
+					"max_batch_size":                                  types.Int64Type,
+					"message_processing_concurrency":                  types.Int64Type,
+					"metadata_sql_ssl_ca_cert_secret":                 types.StringType,
+					"metadata_sql_ssl_client_cert_secret":             types.StringType,
+					"metadata_sql_ssl_client_key_secret":              types.StringType,
+					"metadata_sql_uri_secret":                         types.StringType,
+					"offline_store_inserter_db_type":                  types.StringType,
+					"storage_cache_prefix":                            types.StringType,
+					"results_writer_skip_producing_feature_metrics":   types.BoolType,
+					"query_table_write_drop_ratio":                    types.StringType,
+				},
+			}, tfWriters)
+			resp.Diagnostics.Append(diags...)
+			if !resp.Diagnostics.HasError() {
+				data.Writers = writersList
+			}
+		} else {
+			data.Writers = types.ListNull(types.ObjectType{
+				AttrTypes: map[string]attr.Type{
+					"name":                                            types.StringType,
+					"image_override":                                  types.StringType,
+					"hpa_specs":                                       types.ObjectType{AttrTypes: map[string]attr.Type{"hpa_pubsub_subscription_id": types.StringType, "hpa_min_replicas": types.Int64Type, "hpa_max_replicas": types.Int64Type, "hpa_target_average_value": types.Int64Type}},
+					"gke_spot":                                        types.BoolType,
+					"load_writer_configmap":                           types.BoolType,
+					"version":                                         types.StringType,
+					"request":                                         types.ObjectType{AttrTypes: map[string]attr.Type{"cpu": types.StringType, "memory": types.StringType, "ephemeral_storage": types.StringType, "storage": types.StringType}},
+					"limit":                                           types.ObjectType{AttrTypes: map[string]attr.Type{"cpu": types.StringType, "memory": types.StringType, "ephemeral_storage": types.StringType, "storage": types.StringType}},
+					"bus_subscriber_type":                             types.StringType,
+					"default_replica_count":                           types.Int64Type,
+					"kafka_consumer_group_override":                   types.StringType,
+					"max_batch_size":                                  types.Int64Type,
+					"message_processing_concurrency":                  types.Int64Type,
+					"metadata_sql_ssl_ca_cert_secret":                 types.StringType,
+					"metadata_sql_ssl_client_cert_secret":             types.StringType,
+					"metadata_sql_ssl_client_key_secret":              types.StringType,
+					"metadata_sql_uri_secret":                         types.StringType,
+					"offline_store_inserter_db_type":                  types.StringType,
+					"storage_cache_prefix":                            types.StringType,
+					"results_writer_skip_producing_feature_metrics":   types.BoolType,
+					"query_table_write_drop_ratio":                    types.StringType,
+				},
+			})
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

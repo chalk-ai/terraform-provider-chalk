@@ -141,6 +141,7 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 			"specs_config_json": schema.StringAttribute{
 				MarkdownDescription: "Specs config JSON",
 				Optional:            true,
+				Computed:            true,
 			},
 			"service_url": schema.StringAttribute{
 				MarkdownDescription: "Service URL",
@@ -496,6 +497,19 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 			"source_bundle_bucket":  types.StringValue(e.EnvironmentBuckets.SourceBundleBucket),
 			"model_registry_bucket": types.StringValue(e.EnvironmentBuckets.ModelRegistryBucket),
 		}
+		// Convert empty strings to null
+		if e.EnvironmentBuckets.DatasetBucket == "" {
+			bucketsAttrs["dataset_bucket"] = types.StringNull()
+		}
+		if e.EnvironmentBuckets.PlanStagesBucket == "" {
+			bucketsAttrs["plan_stages_bucket"] = types.StringNull()
+		}
+		if e.EnvironmentBuckets.SourceBundleBucket == "" {
+			bucketsAttrs["source_bundle_bucket"] = types.StringNull()
+		}
+		if e.EnvironmentBuckets.ModelRegistryBucket == "" {
+			bucketsAttrs["model_registry_bucket"] = types.StringNull()
+		}
 		bucketsType := types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				"dataset_bucket":        types.StringType,
@@ -507,7 +521,11 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		data.EnvironmentBuckets = types.ObjectValueMust(bucketsType.AttrTypes, bucketsAttrs)
 	}
 
+	// Note: managed is a Terraform-only field that controls bootstrap behavior
+	// It is not returned by the server and is preserved from the existing state
+
 	// Note: specs_config_json is not directly available in the Environment message
+	// It is preserved from the existing state during Read operations
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
