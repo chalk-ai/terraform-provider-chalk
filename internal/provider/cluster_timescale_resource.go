@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -15,6 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -40,13 +43,18 @@ type ClusterTimescaleResourceModel struct {
 	EnvironmentIds types.List   `tfsdk:"environment_ids"`
 
 	// Primary Configurations
-	InstanceType            types.String `tfsdk:"instance_type"`
-	Nodepool                types.String `tfsdk:"nodepool"`
-	NodeSelector            types.Map    `tfsdk:"node_selector"`
-	DNSHostname             types.String `tfsdk:"dns_hostname"`
+	InstanceType types.String `tfsdk:"instance_type"`
+	Nodepool     types.String `tfsdk:"nodepool"`
+	NodeSelector types.Map    `tfsdk:"node_selector"`
+	DNSHostname  types.String `tfsdk:"dns_hostname"`
+	GatewayPort  types.Int64  `tfsdk:"gateway_port"`
+	GatewayId    types.String `tfsdk:"gateway_id"`
+
+	// Optional Configurations
 	BootstrapCloudResources types.Bool   `tfsdk:"bootstrap_cloud_resources"`
-	GatewayPort             types.Int64  `tfsdk:"gateway_port"`
-	GatewayId               types.String `tfsdk:"gateway_id"`
+	BackupBucket            types.String `tfsdk:"backup_bucket"`
+	BackupIamRoleArn        types.String `tfsdk:"backup_iam_role_arn"`
+	BackupGcpServiceAccount types.String `tfsdk:"backup_gcp_service_account"`
 
 	// Computed Defaults and Optional Configurations
 	TimescaleImage               types.String             `tfsdk:"timescale_image"`
@@ -59,13 +67,10 @@ type ClusterTimescaleResourceModel struct {
 	ConnectionPoolReplicas       types.Int64              `tfsdk:"connection_pool_replicas"`
 	ConnectionPoolMaxConnections types.String             `tfsdk:"connection_pool_max_connections"`
 	ConnectionPoolSize           types.String             `tfsdk:"connection_pool_size"`
-	BackupBucket                 types.String             `tfsdk:"backup_bucket"`
-	BackupIamRoleArn             types.String             `tfsdk:"backup_iam_role_arn"`
 	SecretName                   types.String             `tfsdk:"secret_name"`
 	Internal                     types.Bool               `tfsdk:"internal"`
 	ServiceType                  types.String             `tfsdk:"service_type"`
 	PostgresParameters           types.Map                `tfsdk:"postgres_parameters"`
-	BackupGcpServiceAccount      types.String             `tfsdk:"backup_gcp_service_account"`
 }
 
 func (r *ClusterTimescaleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -101,6 +106,9 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			"id": schema.StringAttribute{
 				MarkdownDescription: "TimescaleDB identifier",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"environment_id": schema.StringAttribute{
 				MarkdownDescription: "Environment ID for the TimescaleDB cluster",
@@ -169,6 +177,9 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 				Optional:            true,
 				Computed:            true,
 				Attributes:          kubeResourceConfigSchema.Attributes,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"connection_pool_replicas": schema.Int64Attribute{
 				MarkdownDescription: "Number of connection pool replicas",
@@ -197,20 +208,14 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			"backup_bucket": schema.StringAttribute{
 				MarkdownDescription: "S3/GCS bucket for backups",
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"backup_iam_role_arn": schema.StringAttribute{
 				MarkdownDescription: "IAM role ARN for backups",
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
-				},
+			},
+			"backup_gcp_service_account": schema.StringAttribute{
+				MarkdownDescription: "GCP service account for backups",
+				Optional:            true,
 			},
 			"secret_name": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes secret name for database credentials",
@@ -244,14 +249,8 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
-			},
-			"backup_gcp_service_account": schema.StringAttribute{
-				MarkdownDescription: "GCP service account for backups",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"instance_type": schema.StringAttribute{
@@ -314,17 +313,8 @@ func (r *ClusterTimescaleResource) Configure(ctx context.Context, req resource.C
 	r.client = client
 }
 
-func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data ClusterTimescaleResourceModel
-
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Create auth client first
-	// Create builder client
+// upsertClusterTimescale handles the common logic for both Create and Update operations
+func (r *ClusterTimescaleResource) upsertClusterTimescale(ctx context.Context, data *ClusterTimescaleResourceModel, diags *diag.Diagnostics) error {
 	bc := r.client.NewBuilderClient(ctx)
 
 	// Convert environment IDs
@@ -332,12 +322,12 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	if !data.EnvironmentId.IsNull() {
 		// Single environment ID provided
 		envIds = []string{data.EnvironmentId.ValueString()}
-	} else {
+	} else if !data.EnvironmentIds.IsNull() && !data.EnvironmentIds.IsUnknown() {
 		// List of environment IDs provided
-		diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		d := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
+		diags.Append(d...)
+		if diags.HasError() {
+			return fmt.Errorf("failed to convert environment IDs")
 		}
 	}
 
@@ -399,9 +389,18 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 		val := data.ServiceType.ValueString()
 		createReq.Specs.ServiceType = &val
 	}
+
+	// Handle backup config
+	if !data.BackupBucket.IsNull() {
+		createReq.Specs.BackupBucket = data.BackupBucket.ValueString()
+	}
+	if !data.BackupIamRoleArn.IsNull() {
+		createReq.Specs.BackupIamRoleArn = data.BackupIamRoleArn.ValueString()
+	}
 	if !data.BackupGcpServiceAccount.IsNull() {
 		createReq.Specs.BackupGcpServiceAccount = data.BackupGcpServiceAccount.ValueString()
 	}
+
 	if !data.InstanceType.IsNull() {
 		createReq.Specs.InstanceType = data.InstanceType.ValueString()
 	}
@@ -411,12 +410,6 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	if !data.DNSHostname.IsNull() {
 		val := data.DNSHostname.ValueString()
 		createReq.Specs.DnsHostname = &val
-	}
-	if !data.BackupBucket.IsNull() {
-		createReq.Specs.BackupBucket = data.BackupBucket.ValueString()
-	}
-	if !data.BackupIamRoleArn.IsNull() {
-		createReq.Specs.BackupIamRoleArn = data.BackupIamRoleArn.ValueString()
 	}
 	if !data.GatewayPort.IsNull() {
 		val := int32(data.GatewayPort.ValueInt64())
@@ -438,37 +431,33 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Convert postgres parameters
-	if !data.PostgresParameters.IsNull() {
+	if !data.PostgresParameters.IsNull() && !data.PostgresParameters.IsUnknown() {
 		params := make(map[string]string)
-		diags := data.PostgresParameters.ElementsAs(ctx, &params, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		d := data.PostgresParameters.ElementsAs(ctx, &params, false)
+		diags.Append(d...)
+		if diags.HasError() {
+			return fmt.Errorf("failed to convert postgres parameters")
 		}
 		createReq.Specs.PostgresParameters = params
 	}
 
 	// Convert node selector
-	if !data.NodeSelector.IsNull() {
+	if !data.NodeSelector.IsNull() && !data.NodeSelector.IsUnknown() {
 		selector := make(map[string]string)
-		diags := data.NodeSelector.ElementsAs(ctx, &selector, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		d := data.NodeSelector.ElementsAs(ctx, &selector, false)
+		diags.Append(d...)
+		if diags.HasError() {
+			return fmt.Errorf("failed to convert node selector")
 		}
 		createReq.Specs.NodeSelector = selector
 	}
 
 	metricsDb, err := bc.CreateClusterTimescaleDB(ctx, connect.NewRequest(createReq))
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Creating Chalk Cluster TimescaleDB",
-			fmt.Sprintf("Could not create cluster TimescaleDB: %v", err),
-		)
-		return
+		return err
 	}
 
-	// Update with created values
+	// Update with returned values
 	data.Id = types.StringValue(metricsDb.Msg.ClusterTimescaleId)
 	data.SecretName = types.StringValue(metricsDb.Msg.Specs.SecretName)
 	data.TimescaleImage = types.StringValue(metricsDb.Msg.Specs.TimescaleImage)
@@ -481,7 +470,7 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 	data.ConnectionPoolMaxConnections = types.StringValue(metricsDb.Msg.Specs.ConnectionPoolMaxConnections)
 	data.ConnectionPoolSize = types.StringValue(metricsDb.Msg.Specs.ConnectionPoolSize)
 
-	// Set computed backup fields
+	// Set backup config
 	if metricsDb.Msg.Specs.BackupBucket != "" {
 		data.BackupBucket = types.StringValue(metricsDb.Msg.Specs.BackupBucket)
 	} else {
@@ -537,6 +526,27 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 		data.PostgresParameters = types.MapNull(types.StringType)
 	}
 
+	return nil
+}
+
+func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data ClusterTimescaleResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.upsertClusterTimescale(ctx, &data, &resp.Diagnostics)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Creating Chalk Cluster TimescaleDB",
+			fmt.Sprintf("Could not create cluster TimescaleDB: %v", err),
+		)
+		return
+	}
+
 	tflog.Trace(ctx, "created a chalk_cluster_timescale resource")
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -559,12 +569,15 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 	// Track which form was used so we can preserve it
 	var envId string
 	var usedSingular bool
+	var preservedEnvIds types.List
 	if !data.EnvironmentId.IsNull() {
 		// Single environment ID provided
 		envId = data.EnvironmentId.ValueString()
 		usedSingular = true
-	} else {
+	} else if !data.EnvironmentIds.IsNull() && !data.EnvironmentIds.IsUnknown() {
 		// List of environment IDs provided
+		// Preserve the exact value from state
+		preservedEnvIds = data.EnvironmentIds
 		var envIds []string
 		diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
 		resp.Diagnostics.Append(diags...)
@@ -610,7 +623,8 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 			data.EnvironmentIds = types.ListNull(types.StringType)
 		} else {
 			// Keep environment_ids, clear environment_id
-			// environment_ids is already set in data
+			// Explicitly set the preserved value to avoid semantic equality issues
+			data.EnvironmentIds = preservedEnvIds
 			data.EnvironmentId = types.StringNull()
 		}
 
@@ -622,6 +636,8 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		data.ConnectionPoolReplicas = types.Int64Value(int64(specs.ConnectionPoolReplicas))
 		data.ConnectionPoolMaxConnections = types.StringValue(specs.ConnectionPoolMaxConnections)
 		data.ConnectionPoolSize = types.StringValue(specs.ConnectionPoolSize)
+
+		// Set backup config
 		if specs.BackupBucket != "" {
 			data.BackupBucket = types.StringValue(specs.BackupBucket)
 		} else {
@@ -632,14 +648,14 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		} else {
 			data.BackupIamRoleArn = types.StringNull()
 		}
-		data.BootstrapCloudResources = types.BoolValue(specs.BootstrapCloudResources)
-
-		data.SecretName = types.StringValue(specs.SecretName)
 		if specs.BackupGcpServiceAccount != "" {
 			data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
 		} else {
 			data.BackupGcpServiceAccount = types.StringNull()
 		}
+
+		data.BootstrapCloudResources = types.BoolValue(specs.BootstrapCloudResources)
+		data.SecretName = types.StringValue(specs.SecretName)
 		if specs.InstanceType != "" {
 			data.InstanceType = types.StringValue(specs.InstanceType)
 		} else {
@@ -738,13 +754,26 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 }
 
 func (r *ClusterTimescaleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Note: According to the proto definition, there's no UpdateClusterTimescaleDB method
-	// There is a MigrateClusterTimescaleDB method, but that's for migrations, not general updates
-	// For now, we'll return an error indicating updates are not supported
-	resp.Diagnostics.AddError(
-		"Update Not Supported",
-		"Cluster TimescaleDB updates are not supported by the Chalk API. Please recreate the resource if changes are needed.",
-	)
+	var data ClusterTimescaleResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.upsertClusterTimescale(ctx, &data, &resp.Diagnostics)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Updating Chalk Cluster TimescaleDB",
+			fmt.Sprintf("Could not update cluster TimescaleDB: %v", err),
+		)
+		return
+	}
+
+	tflog.Trace(ctx, "updated a chalk_cluster_timescale resource")
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *ClusterTimescaleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

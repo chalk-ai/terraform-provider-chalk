@@ -307,7 +307,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			updateMaskPaths = append(updateMaskPaths, "private_pip_repositories")
 		}
 
-		if !data.AdditionalEnvVars.IsNull() {
+		if !data.AdditionalEnvVars.IsNull() && !data.AdditionalEnvVars.IsUnknown() {
 			envVars := make(map[string]string)
 			diags := data.AdditionalEnvVars.ElementsAs(ctx, &envVars, false)
 			resp.Diagnostics.Append(diags...)
@@ -590,7 +590,7 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	if !data.AdditionalEnvVars.Equal(state.AdditionalEnvVars) {
-		if !data.AdditionalEnvVars.IsNull() {
+		if !data.AdditionalEnvVars.IsNull() && !data.AdditionalEnvVars.IsUnknown() {
 			envVars := make(map[string]string)
 			diags := data.AdditionalEnvVars.ElementsAs(ctx, &envVars, false)
 			resp.Diagnostics.Append(diags...)
