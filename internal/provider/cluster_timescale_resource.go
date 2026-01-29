@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -22,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -39,9 +36,8 @@ type ClusterTimescaleResource struct {
 }
 
 type ClusterTimescaleResourceModel struct {
-	Id             types.String `tfsdk:"id"`
-	EnvironmentId  types.String `tfsdk:"environment_id"`
-	EnvironmentIds types.List   `tfsdk:"environment_ids"`
+	Id            types.String `tfsdk:"id"`
+	EnvironmentId types.String `tfsdk:"environment_id"`
 
 	// Primary Configurations
 	InstanceType types.String `tfsdk:"instance_type"`
@@ -113,18 +109,7 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			},
 			"environment_id": schema.StringAttribute{
 				MarkdownDescription: "Environment ID for the TimescaleDB cluster",
-				Optional:            true,
-				Validators: []validator.String{
-					stringvalidator.ExactlyOneOf(path.MatchRoot("environment_ids")),
-				},
-			},
-			"environment_ids": schema.ListAttribute{
-				MarkdownDescription: "List of environment IDs for the TimescaleDB cluster",
-				Optional:            true,
-				ElementType:         types.StringType,
-				Validators: []validator.List{
-					listvalidator.ExactlyOneOf(path.MatchRoot("environment_id")),
-				},
+				Required:            true,
 			},
 			"timescale_image": schema.StringAttribute{
 				MarkdownDescription: "TimescaleDB Docker image",
@@ -318,19 +303,8 @@ func (r *ClusterTimescaleResource) Configure(ctx context.Context, req resource.C
 func (r *ClusterTimescaleResource) upsertClusterTimescale(ctx context.Context, data *ClusterTimescaleResourceModel, diags *diag.Diagnostics) error {
 	bc := r.client.NewBuilderClient(ctx)
 
-	// Convert environment IDs
-	var envIds []string
-	if !data.EnvironmentId.IsNull() {
-		// Single environment ID provided
-		envIds = []string{data.EnvironmentId.ValueString()}
-	} else if !data.EnvironmentIds.IsNull() && !data.EnvironmentIds.IsUnknown() {
-		// List of environment IDs provided
-		d := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-		diags.Append(d...)
-		if diags.HasError() {
-			return fmt.Errorf("failed to convert environment IDs")
-		}
-	}
+	// Convert environment_id to a list for the API
+	envIds := []string{data.EnvironmentId.ValueString()}
 
 	// Convert terraform model to proto request
 	createReq := &serverv1.CreateClusterTimescaleDBRequest{
@@ -585,35 +559,7 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 	bc := r.client.NewBuilderClient(ctx)
 
 	// Get the environment ID to query the TimescaleDB
-	// Track which form was used so we can preserve it
-	var envId string
-	var usedSingular bool
-	var preservedEnvIds types.List
-	if !data.EnvironmentId.IsNull() {
-		// Single environment ID provided
-		envId = data.EnvironmentId.ValueString()
-		usedSingular = true
-	} else if !data.EnvironmentIds.IsNull() && !data.EnvironmentIds.IsUnknown() {
-		// List of environment IDs provided
-		// Preserve the exact value from state
-		preservedEnvIds = data.EnvironmentIds
-		var envIds []string
-		diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		if len(envIds) == 0 {
-			resp.Diagnostics.AddError(
-				"No Environment IDs",
-				"No environment IDs found in state for reading cluster TimescaleDB",
-			)
-			return
-		}
-		envId = envIds[0]
-		usedSingular = false
-	}
+	envId := data.EnvironmentId.ValueString()
 
 	getReq := &serverv1.GetClusterTimescaleDBRequest{
 		EnvironmentId: envId,
@@ -634,18 +580,7 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		specs := timescale.Msg.Specs
 		data.Id = types.StringValue(timescale.Msg.Id)
 
-		// Preserve environment_id or environment_ids - keep whichever one was already set in state
-		// This prevents drift during reads and imports
-		if usedSingular {
-			// Keep environment_id, clear environment_ids
-			// environment_id is already set in data
-			data.EnvironmentIds = types.ListNull(types.StringType)
-		} else {
-			// Keep environment_ids, clear environment_id
-			// Explicitly set the preserved value to avoid semantic equality issues
-			data.EnvironmentIds = preservedEnvIds
-			data.EnvironmentId = types.StringNull()
-		}
+		// environment_id is already set in data, no need to update it
 
 		data.TimescaleImage = types.StringValue(specs.TimescaleImage)
 		data.DatabaseName = types.StringValue(specs.DatabaseName)
@@ -830,16 +765,8 @@ func (r *ClusterTimescaleResource) Delete(ctx context.Context, req resource.Dele
 
 func (r *ClusterTimescaleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Import ID is the environment_id
-	// Set it as environment_ids (plural) as a list with single element
-	// This matches the recommended config format and prevents drift
 	envId := req.ID
 
-	envIds, diags := types.ListValueFrom(ctx, types.StringType, []string{envId})
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Set environment_ids - Read will populate the rest including the actual resource ID
-	resp.State.SetAttribute(ctx, path.Root("environment_ids"), envIds)
+	// Set environment_id - Read will populate the rest including the actual resource ID
+	resp.State.SetAttribute(ctx, path.Root("environment_id"), envId)
 }

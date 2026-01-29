@@ -10,8 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -42,38 +41,30 @@ type TLSCertificateConfigModel struct {
 	SecretNamespace types.String `tfsdk:"secret_namespace"`
 }
 
-type GatewayProviderConfigModel struct {
-	TimeoutDuration types.String `tfsdk:"timeout_duration"`
-	DNSHostname     types.String `tfsdk:"dns_hostname"`
-	Replicas        types.Int64  `tfsdk:"replicas"`
-	MinAvailable    types.Int64  `tfsdk:"min_available"`
-	//Todo Add default
-	LetsencryptClusterIssuer types.String `tfsdk:"letsencrypt_cluster_issuer"`
-	AdditionalDNSNames       types.List   `tfsdk:"additional_dns_names"`
-}
-
 type ClusterGatewayResourceModel struct {
 	Id types.String `tfsdk:"id"`
 
-	// TODO remove this field
-	Namespace   types.String `tfsdk:"namespace"`
-	GatewayName types.String `tfsdk:"gateway_name"`
-	//TODO default this
-	GatewayClassName types.String                `tfsdk:"gateway_class_name"`
-	Listeners        types.List                  `tfsdk:"listeners"`
-	Config           *GatewayProviderConfigModel `tfsdk:"config"`
-	// TODO Remove this field
-	IncludeChalkNodeSelector types.Bool                 `tfsdk:"include_chalk_node_selector"`
-	IPAllowlist              types.List                 `tfsdk:"ip_allowlist"`
-	TLSCertificate           *TLSCertificateConfigModel `tfsdk:"tls_certificate"`
+	// Core gateway fields - optional and computed
+	Namespace        types.String `tfsdk:"namespace"`
+	GatewayName      types.String `tfsdk:"gateway_name"`
+	GatewayClassName types.String `tfsdk:"gateway_class_name"`
 
-	// TODO make this more opinionated
-	ServiceAnnotations types.Map `tfsdk:"service_annotations"`
+	// Flattened Envoy config fields
+	TimeoutDuration          types.String `tfsdk:"timeout_duration"`
+	DNSHostname              types.String `tfsdk:"dns_hostname"`
+	Replicas                 types.Int64  `tfsdk:"replicas"`
+	MinAvailable             types.Int64  `tfsdk:"min_available"`
+	LetsencryptClusterIssuer types.String `tfsdk:"letsencrypt_cluster_issuer"`
+	AdditionalDNSNames       types.List   `tfsdk:"additional_dns_names"`
 
-	// TODO default this
-	LoadBalancerClass types.String `tfsdk:"load_balancer_class"`
+	// Optional fields
+	IPAllowlist        types.List                 `tfsdk:"ip_allowlist"`
+	TLSCertificate     *TLSCertificateConfigModel `tfsdk:"tls_certificate"`
+	ServiceAnnotations types.Map                  `tfsdk:"service_annotations"`
+	Listeners          types.List                 `tfsdk:"listeners"`
+	Routing            types.String               `tfsdk:"routing"`
 
-	// TODO Require this
+	// Required field
 	KubeClusterId types.String `tfsdk:"kube_cluster_id"`
 }
 
@@ -95,22 +86,32 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 			},
 			"kube_cluster_id": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes cluster ID",
-				Optional:            true,
+				Required:            true,
 			},
 			"namespace": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes namespace for the gateway",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"gateway_name": schema.StringAttribute{
 				MarkdownDescription: "Name of the gateway",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"gateway_class_name": schema.StringAttribute{
 				MarkdownDescription: "Gateway class name",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"listeners": schema.ListNestedAttribute{
 				MarkdownDescription: "Gateway listeners configuration",
@@ -138,46 +139,50 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 					},
 				},
 			},
-			"config": schema.SingleNestedAttribute{
-				MarkdownDescription: "Gateway provider configuration",
-				Optional:            true,
-				Attributes: map[string]schema.Attribute{
-					"timeout_duration": schema.StringAttribute{
-						MarkdownDescription: "Timeout duration for Envoy gateway",
-						Optional:            true,
-					},
-					"dns_hostname": schema.StringAttribute{
-						MarkdownDescription: "DNS hostname",
-						Optional:            true,
-					},
-					"replicas": schema.Int64Attribute{
-						MarkdownDescription: "Number of replicas for Envoy gateway",
-						Optional:            true,
-						Computed:            true,
-						Default:             int64default.StaticInt64(2),
-					},
-					"min_available": schema.Int64Attribute{
-						MarkdownDescription: "Minimum available replicas for Envoy gateway",
-						Optional:            true,
-						Computed:            true,
-						Default:             int64default.StaticInt64(1),
-					},
-					"letsencrypt_cluster_issuer": schema.StringAttribute{
-						MarkdownDescription: "Let's Encrypt cluster issuer for Envoy gateway",
-						Optional:            true,
-					},
-					"additional_dns_names": schema.ListAttribute{
-						MarkdownDescription: "Additional DNS names for Envoy gateway",
-						Optional:            true,
-						ElementType:         types.StringType,
-					},
-				},
-			},
-			"include_chalk_node_selector": schema.BoolAttribute{
-				MarkdownDescription: "Whether to include chalk node selector",
+			"timeout_duration": schema.StringAttribute{
+				MarkdownDescription: "Timeout duration for Envoy gateway",
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"dns_hostname": schema.StringAttribute{
+				MarkdownDescription: "DNS hostname",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"replicas": schema.Int64Attribute{
+				MarkdownDescription: "Number of replicas for Envoy gateway",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
+			},
+			"min_available": schema.Int64Attribute{
+				MarkdownDescription: "Minimum available replicas for Envoy gateway",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
+			},
+			"letsencrypt_cluster_issuer": schema.StringAttribute{
+				MarkdownDescription: "Let's Encrypt cluster issuer for Envoy gateway",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"additional_dns_names": schema.ListAttribute{
+				MarkdownDescription: "Additional DNS names for Envoy gateway",
+				Optional:            true,
+				ElementType:         types.StringType,
 			},
 			"ip_allowlist": schema.ListAttribute{
 				MarkdownDescription: "IP allowlist for the gateway",
@@ -203,9 +208,14 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
-			"load_balancer_class": schema.StringAttribute{
-				MarkdownDescription: "Load balancer class",
+			"routing": schema.StringAttribute{
+				MarkdownDescription: "Routing type for the gateway (e.g., 'PUBLIC', 'PRIVATE', 'PRIVATELINK')",
 				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("PUBLIC"),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -246,69 +256,68 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 	// Convert terraform model to proto request
 	createReq := &serverv1.CreateClusterGatewayRequest{
 		Specs: &serverv1.EnvoyGatewaySpecs{
-			Namespace:                data.Namespace.ValueString(),
-			GatewayName:              data.GatewayName.ValueString(),
-			GatewayClassName:         data.GatewayClassName.ValueString(),
-			IncludeChalkNodeSelector: data.IncludeChalkNodeSelector.ValueBool(),
+			Namespace:        data.Namespace.ValueString(),
+			GatewayName:      data.GatewayName.ValueString(),
+			GatewayClassName: data.GatewayClassName.ValueString(),
 		},
 	}
 
 	// Convert listeners
-	var listeners []EnvoyGatewayListenerModel
-	diags := data.Listeners.ElementsAs(ctx, &listeners, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	if !data.Listeners.IsNull() {
+		var listeners []EnvoyGatewayListenerModel
+		diags := data.Listeners.ElementsAs(ctx, &listeners, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
-	for _, listener := range listeners {
-		protoListener := &serverv1.EnvoyGatewayListener{
-			Port:     int32(listener.Port.ValueInt64()),
-			Protocol: listener.Protocol.ValueString(),
-			Name:     listener.Name.ValueString(),
-			AllowedRoutes: &serverv1.EnvoyGatewayAllowedRoutes{
-				Namespaces: &serverv1.EnvoyGatewayAllowedNamespaces{
-					From: listener.From.ValueString(),
+		for _, listener := range listeners {
+			protoListener := &serverv1.EnvoyGatewayListener{
+				Port:     int32(listener.Port.ValueInt64()),
+				Protocol: listener.Protocol.ValueString(),
+				Name:     listener.Name.ValueString(),
+				AllowedRoutes: &serverv1.EnvoyGatewayAllowedRoutes{
+					Namespaces: &serverv1.EnvoyGatewayAllowedNamespaces{
+						From: listener.From.ValueString(),
+					},
 				},
-			},
+			}
+			createReq.Specs.Listeners = append(createReq.Specs.Listeners, protoListener)
 		}
-		createReq.Specs.Listeners = append(createReq.Specs.Listeners, protoListener)
 	}
 
-	// Convert provider config
-	if data.Config != nil {
-		envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
-		envoyConfig.TimeoutDuration = data.Config.TimeoutDuration.ValueStringPointer()
-		envoyConfig.DnsHostname = data.Config.DNSHostname.ValueStringPointer()
-		if !data.Config.Replicas.IsNull() {
-			val := int32(data.Config.Replicas.ValueInt64())
-			envoyConfig.Replicas = &val
+	// Convert flattened Envoy config
+	envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
+	envoyConfig.TimeoutDuration = data.TimeoutDuration.ValueStringPointer()
+	envoyConfig.DnsHostname = data.DNSHostname.ValueStringPointer()
+	if !data.Replicas.IsNull() {
+		val := int32(data.Replicas.ValueInt64())
+		envoyConfig.Replicas = &val
+	}
+	if !data.MinAvailable.IsNull() {
+		val := int32(data.MinAvailable.ValueInt64())
+		envoyConfig.MinAvailable = &val
+	}
+	envoyConfig.LetsencryptClusterIssuer = data.LetsencryptClusterIssuer.ValueStringPointer()
+	if !data.AdditionalDNSNames.IsNull() {
+		var dnsNames []string
+		diags := data.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
-		if !data.Config.MinAvailable.IsNull() {
-			val := int32(data.Config.MinAvailable.ValueInt64())
-			envoyConfig.MinAvailable = &val
-		}
-		envoyConfig.LetsencryptClusterIssuer = data.Config.LetsencryptClusterIssuer.ValueStringPointer()
-		if !data.Config.AdditionalDNSNames.IsNull() {
-			var dnsNames []string
-			diags = data.Config.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			envoyConfig.AdditionalDnsNames = dnsNames
-		}
-		createReq.Specs.Config = &serverv1.GatewayProviderConfig{
-			Config: &serverv1.GatewayProviderConfig_Envoy{
-				Envoy: envoyConfig,
-			},
-		}
+		envoyConfig.AdditionalDnsNames = dnsNames
+	}
+	createReq.Specs.Config = &serverv1.GatewayProviderConfig{
+		Config: &serverv1.GatewayProviderConfig_Envoy{
+			Envoy: envoyConfig,
+		},
 	}
 
 	// Convert IP allowlist
 	if !data.IPAllowlist.IsNull() {
 		var ipList []string
-		diags = data.IPAllowlist.ElementsAs(ctx, &ipList, false)
+		diags := data.IPAllowlist.ElementsAs(ctx, &ipList, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -331,7 +340,7 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 	// Convert service annotations
 	if !data.ServiceAnnotations.IsNull() {
 		annotations := make(map[string]string)
-		diags = data.ServiceAnnotations.ElementsAs(ctx, &annotations, false)
+		diags := data.ServiceAnnotations.ElementsAs(ctx, &annotations, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -339,8 +348,8 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 		createReq.Specs.ServiceAnnotations = annotations
 	}
 
-	// Set optional fields
-	createReq.Specs.LoadBalancerClass = data.LoadBalancerClass.ValueStringPointer()
+	// Set routing
+	createReq.Specs.Routing = data.Routing.ValueStringPointer()
 
 	if !data.Id.IsNull() {
 		createReq.Id = data.Id.ValueStringPointer()
@@ -396,7 +405,6 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 		data.Namespace = types.StringValue(specs.Namespace)
 		data.GatewayName = types.StringValue(specs.GatewayName)
 		data.GatewayClassName = types.StringValue(specs.GatewayClassName)
-		data.IncludeChalkNodeSelector = types.BoolValue(specs.IncludeChalkNodeSelector)
 
 		// Update listeners
 		if len(specs.Listeners) > 0 {
@@ -446,39 +454,38 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 			data.ServiceAnnotations = types.MapValueMust(types.StringType, annotations)
 		}
 
-		// Update config
+		// Update flattened Envoy config fields
 		if specs.Config != nil && specs.Config.GetEnvoy() != nil {
 			envoyConfig := specs.Config.GetEnvoy()
-			config := &GatewayProviderConfigModel{}
 
 			if envoyConfig.TimeoutDuration != nil {
-				config.TimeoutDuration = types.StringValue(*envoyConfig.TimeoutDuration)
+				data.TimeoutDuration = types.StringValue(*envoyConfig.TimeoutDuration)
 			} else {
-				config.TimeoutDuration = types.StringNull()
+				data.TimeoutDuration = types.StringNull()
 			}
 
 			if envoyConfig.DnsHostname != nil {
-				config.DNSHostname = types.StringValue(*envoyConfig.DnsHostname)
+				data.DNSHostname = types.StringValue(*envoyConfig.DnsHostname)
 			} else {
-				config.DNSHostname = types.StringNull()
+				data.DNSHostname = types.StringNull()
 			}
 
 			if envoyConfig.Replicas != nil {
-				config.Replicas = types.Int64Value(int64(*envoyConfig.Replicas))
+				data.Replicas = types.Int64Value(int64(*envoyConfig.Replicas))
 			} else {
-				config.Replicas = types.Int64Value(2) // default value
+				data.Replicas = types.Int64Null()
 			}
 
 			if envoyConfig.MinAvailable != nil {
-				config.MinAvailable = types.Int64Value(int64(*envoyConfig.MinAvailable))
+				data.MinAvailable = types.Int64Value(int64(*envoyConfig.MinAvailable))
 			} else {
-				config.MinAvailable = types.Int64Value(1) // default value
+				data.MinAvailable = types.Int64Null()
 			}
 
 			if envoyConfig.LetsencryptClusterIssuer != nil {
-				config.LetsencryptClusterIssuer = types.StringValue(*envoyConfig.LetsencryptClusterIssuer)
+				data.LetsencryptClusterIssuer = types.StringValue(*envoyConfig.LetsencryptClusterIssuer)
 			} else {
-				config.LetsencryptClusterIssuer = types.StringNull()
+				data.LetsencryptClusterIssuer = types.StringNull()
 			}
 
 			if len(envoyConfig.AdditionalDnsNames) > 0 {
@@ -486,12 +493,10 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 				for _, dns := range envoyConfig.AdditionalDnsNames {
 					dnsValues = append(dnsValues, types.StringValue(dns))
 				}
-				config.AdditionalDNSNames = types.ListValueMust(types.StringType, dnsValues)
+				data.AdditionalDNSNames = types.ListValueMust(types.StringType, dnsValues)
 			} else {
-				config.AdditionalDNSNames = types.ListNull(types.StringType)
+				data.AdditionalDNSNames = types.ListNull(types.StringType)
 			}
-
-			data.Config = config
 		}
 
 		// Update TLS certificate
@@ -503,9 +508,11 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 			}
 		}
 
-		// Update optional string fields
-		if specs.LoadBalancerClass != nil {
-			data.LoadBalancerClass = types.StringValue(*specs.LoadBalancerClass)
+		// Update routing
+		if specs.Routing != nil {
+			data.Routing = types.StringValue(*specs.Routing)
+		} else {
+			data.Routing = types.StringNull()
 		}
 	}
 
@@ -535,69 +542,68 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 	// Convert terraform model to proto request - reuse create logic since it's an upsert
 	createReq := &serverv1.CreateClusterGatewayRequest{
 		Specs: &serverv1.EnvoyGatewaySpecs{
-			Namespace:                data.Namespace.ValueString(),
-			GatewayName:              data.GatewayName.ValueString(),
-			GatewayClassName:         data.GatewayClassName.ValueString(),
-			IncludeChalkNodeSelector: data.IncludeChalkNodeSelector.ValueBool(),
+			Namespace:        data.Namespace.ValueString(),
+			GatewayName:      data.GatewayName.ValueString(),
+			GatewayClassName: data.GatewayClassName.ValueString(),
 		},
 	}
 
 	// Convert listeners
-	var listeners []EnvoyGatewayListenerModel
-	diags := data.Listeners.ElementsAs(ctx, &listeners, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	if !data.Listeners.IsNull() {
+		var listeners []EnvoyGatewayListenerModel
+		diags := data.Listeners.ElementsAs(ctx, &listeners, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
-	for _, listener := range listeners {
-		protoListener := &serverv1.EnvoyGatewayListener{
-			Port:     int32(listener.Port.ValueInt64()),
-			Protocol: listener.Protocol.ValueString(),
-			Name:     listener.Name.ValueString(),
-			AllowedRoutes: &serverv1.EnvoyGatewayAllowedRoutes{
-				Namespaces: &serverv1.EnvoyGatewayAllowedNamespaces{
-					From: listener.From.ValueString(),
+		for _, listener := range listeners {
+			protoListener := &serverv1.EnvoyGatewayListener{
+				Port:     int32(listener.Port.ValueInt64()),
+				Protocol: listener.Protocol.ValueString(),
+				Name:     listener.Name.ValueString(),
+				AllowedRoutes: &serverv1.EnvoyGatewayAllowedRoutes{
+					Namespaces: &serverv1.EnvoyGatewayAllowedNamespaces{
+						From: listener.From.ValueString(),
+					},
 				},
-			},
+			}
+			createReq.Specs.Listeners = append(createReq.Specs.Listeners, protoListener)
 		}
-		createReq.Specs.Listeners = append(createReq.Specs.Listeners, protoListener)
 	}
 
-	// Convert provider config
-	if data.Config != nil {
-		envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
-		envoyConfig.TimeoutDuration = data.Config.TimeoutDuration.ValueStringPointer()
-		envoyConfig.DnsHostname = data.Config.DNSHostname.ValueStringPointer()
-		if !data.Config.Replicas.IsNull() {
-			val := int32(data.Config.Replicas.ValueInt64())
-			envoyConfig.Replicas = &val
+	// Convert flattened Envoy config
+	envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
+	envoyConfig.TimeoutDuration = data.TimeoutDuration.ValueStringPointer()
+	envoyConfig.DnsHostname = data.DNSHostname.ValueStringPointer()
+	if !data.Replicas.IsNull() {
+		val := int32(data.Replicas.ValueInt64())
+		envoyConfig.Replicas = &val
+	}
+	if !data.MinAvailable.IsNull() {
+		val := int32(data.MinAvailable.ValueInt64())
+		envoyConfig.MinAvailable = &val
+	}
+	envoyConfig.LetsencryptClusterIssuer = data.LetsencryptClusterIssuer.ValueStringPointer()
+	if !data.AdditionalDNSNames.IsNull() {
+		var dnsNames []string
+		diags := data.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
-		if !data.Config.MinAvailable.IsNull() {
-			val := int32(data.Config.MinAvailable.ValueInt64())
-			envoyConfig.MinAvailable = &val
-		}
-		envoyConfig.LetsencryptClusterIssuer = data.Config.LetsencryptClusterIssuer.ValueStringPointer()
-		if !data.Config.AdditionalDNSNames.IsNull() {
-			var dnsNames []string
-			diags = data.Config.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			envoyConfig.AdditionalDnsNames = dnsNames
-		}
-		createReq.Specs.Config = &serverv1.GatewayProviderConfig{
-			Config: &serverv1.GatewayProviderConfig_Envoy{
-				Envoy: envoyConfig,
-			},
-		}
+		envoyConfig.AdditionalDnsNames = dnsNames
+	}
+	createReq.Specs.Config = &serverv1.GatewayProviderConfig{
+		Config: &serverv1.GatewayProviderConfig_Envoy{
+			Envoy: envoyConfig,
+		},
 	}
 
 	// Convert IP allowlist
 	if !data.IPAllowlist.IsNull() {
 		var ipList []string
-		diags = data.IPAllowlist.ElementsAs(ctx, &ipList, false)
+		diags := data.IPAllowlist.ElementsAs(ctx, &ipList, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -620,7 +626,7 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 	// Convert service annotations
 	if !data.ServiceAnnotations.IsNull() {
 		annotations := make(map[string]string)
-		diags = data.ServiceAnnotations.ElementsAs(ctx, &annotations, false)
+		diags := data.ServiceAnnotations.ElementsAs(ctx, &annotations, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -628,8 +634,8 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 		createReq.Specs.ServiceAnnotations = annotations
 	}
 
-	// Set optional fields
-	createReq.Specs.LoadBalancerClass = data.LoadBalancerClass.ValueStringPointer()
+	// Set routing
+	createReq.Specs.Routing = data.Routing.ValueStringPointer()
 
 	// Use the known ID from the current state for the upsert
 	createReq.Id = data.Id.ValueStringPointer()
