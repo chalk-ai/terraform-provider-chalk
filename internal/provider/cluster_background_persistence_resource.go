@@ -78,8 +78,6 @@ type ClusterBackgroundPersistenceResourceModel struct {
 	BusWriterImageBswl                   types.String `tfsdk:"bus_writer_image_bswl"`
 	BusWriterImageRust                   types.String `tfsdk:"bus_writer_image_rust"`
 	ServiceAccountName                   types.String `tfsdk:"service_account_name"`
-	BusBackend                           types.String `tfsdk:"bus_backend"`
-	SecretClient                         types.String `tfsdk:"secret_client"`
 	BigqueryParquetUploadSubscriptionId  types.String `tfsdk:"bigquery_parquet_upload_subscription_id"`
 	BigqueryStreamingWriteSubscriptionId types.String `tfsdk:"bigquery_streaming_write_subscription_id"`
 	BigqueryStreamingWriteTopic          types.String `tfsdk:"bigquery_streaming_write_topic"`
@@ -99,17 +97,11 @@ type ClusterBackgroundPersistenceResourceModel struct {
 	//TODO deprecate
 	IncludeChalkNodeSelector types.Bool `tfsdk:"include_chalk_node_selector"`
 
-	//TODO remove in favor of intrinsic default
 	ApiServerHost                   types.String `tfsdk:"api_server_host"`
 	KafkaSaslSecret                 types.String `tfsdk:"kafka_sasl_secret"`
-	MetadataProvider                types.String `tfsdk:"metadata_provider"`
 	KafkaBootstrapServers           types.String `tfsdk:"kafka_bootstrap_servers"`
-	KafkaSecurityProtocol           types.String `tfsdk:"kafka_security_protocol"`
-	KafkaSaslMechanism              types.String `tfsdk:"kafka_sasl_mechanism"`
-	RedisIsClustered                types.String `tfsdk:"redis_is_clustered"`
 	SnowflakeStorageIntegrationName types.String `tfsdk:"snowflake_storage_integration_name"`
 	RedisLightningSupportsHasMany   types.Bool   `tfsdk:"redis_lightning_supports_has_many"`
-	Insecure                        types.Bool   `tfsdk:"insecure"`
 	Writers                         types.List   `tfsdk:"writers"`
 	KubeClusterId                   types.String `tfsdk:"kube_cluster_id"`
 }
@@ -187,14 +179,6 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 				MarkdownDescription: "Service account name",
 				Required:            true,
 			},
-			"bus_backend": schema.StringAttribute{
-				MarkdownDescription: "Bus backend",
-				Required:            true,
-			},
-			"secret_client": schema.StringAttribute{
-				MarkdownDescription: "Secret client",
-				Required:            true,
-			},
 			"bigquery_parquet_upload_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "BigQuery parquet upload subscription ID",
 				Required:            true,
@@ -263,30 +247,14 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"api_server_host": schema.StringAttribute{
 				MarkdownDescription: "API server host",
-				Required:            true,
+				Optional:            true,
 			},
 			"kafka_sasl_secret": schema.StringAttribute{
 				MarkdownDescription: "Kafka SASL secret",
 				Optional:            true,
 			},
-			"metadata_provider": schema.StringAttribute{
-				MarkdownDescription: "Metadata provider",
-				Required:            true,
-			},
 			"kafka_bootstrap_servers": schema.StringAttribute{
 				MarkdownDescription: "Kafka bootstrap servers",
-				Optional:            true,
-			},
-			"kafka_security_protocol": schema.StringAttribute{
-				MarkdownDescription: "Kafka security protocol",
-				Optional:            true,
-			},
-			"kafka_sasl_mechanism": schema.StringAttribute{
-				MarkdownDescription: "Kafka SASL mechanism",
-				Optional:            true,
-			},
-			"redis_is_clustered": schema.StringAttribute{
-				MarkdownDescription: "Redis is clustered",
 				Optional:            true,
 			},
 			"snowflake_storage_integration_name": schema.StringAttribute{
@@ -295,12 +263,6 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"redis_lightning_supports_has_many": schema.BoolAttribute{
 				MarkdownDescription: "Redis lightning supports has many",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-			},
-			"insecure": schema.BoolAttribute{
-				MarkdownDescription: "Insecure mode",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
@@ -609,8 +571,6 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 	commonSpecs := &serverv1.BackgroundPersistenceCommonSpecs{
 		Namespace:                            data.Namespace.ValueString(),
 		ServiceAccountName:                   data.ServiceAccountName.ValueString(),
-		BusBackend:                           data.BusBackend.ValueString(),
-		SecretClient:                         data.SecretClient.ValueString(),
 		BigqueryParquetUploadSubscriptionId:  data.BigqueryParquetUploadSubscriptionId.ValueString(),
 		BigqueryStreamingWriteSubscriptionId: data.BigqueryStreamingWriteSubscriptionId.ValueString(),
 		BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
@@ -649,35 +609,24 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 
 	deploymentSpecs := &serverv1.BackgroundPersistenceDeploymentSpecs{
 		CommonPersistenceSpecs: commonSpecs,
-		ApiServerHost:          data.ApiServerHost.ValueString(),
-		MetadataProvider:       data.MetadataProvider.ValueString(),
 		Writers:                protoWriters,
 	}
 
 	// Handle optional deployment-level fields
+	if !data.ApiServerHost.IsNull() {
+		deploymentSpecs.ApiServerHost = data.ApiServerHost.ValueString()
+	}
 	if !data.KafkaSaslSecret.IsNull() {
 		deploymentSpecs.KafkaSaslSecret = data.KafkaSaslSecret.ValueString()
 	}
 	if !data.KafkaBootstrapServers.IsNull() {
 		deploymentSpecs.KafkaBootstrapServers = data.KafkaBootstrapServers.ValueString()
 	}
-	if !data.KafkaSecurityProtocol.IsNull() {
-		deploymentSpecs.KafkaSecurityProtocol = data.KafkaSecurityProtocol.ValueString()
-	}
-	if !data.KafkaSaslMechanism.IsNull() {
-		deploymentSpecs.KafkaSaslMechanism = data.KafkaSaslMechanism.ValueString()
-	}
-	if !data.RedisIsClustered.IsNull() {
-		deploymentSpecs.RedisIsClustered = data.RedisIsClustered.ValueString()
-	}
 	if !data.SnowflakeStorageIntegrationName.IsNull() {
 		deploymentSpecs.SnowflakeStorageIntegrationName = data.SnowflakeStorageIntegrationName.ValueString()
 	}
 	if !data.RedisLightningSupportsHasMany.IsNull() {
 		deploymentSpecs.RedisLightningSupportsHasMany = data.RedisLightningSupportsHasMany.ValueBool()
-	}
-	if !data.Insecure.IsNull() {
-		deploymentSpecs.Insecure = data.Insecure.ValueBool()
 	}
 
 	//create a deployment based on whether kube_cluster_id or environment_ids is provided
@@ -761,8 +710,6 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 		common := bg.Specs.CommonPersistenceSpecs
 		data.Namespace = types.StringValue(common.Namespace)
 		data.ServiceAccountName = types.StringValue(common.ServiceAccountName)
-		data.BusBackend = types.StringValue(common.BusBackend)
-		data.SecretClient = types.StringValue(common.SecretClient)
 		data.BigqueryParquetUploadSubscriptionId = types.StringValue(common.BigqueryParquetUploadSubscriptionId)
 		data.BigqueryStreamingWriteSubscriptionId = types.StringValue(common.BigqueryStreamingWriteSubscriptionId)
 		data.BigqueryStreamingWriteTopic = types.StringValue(common.BigqueryStreamingWriteTopic)
@@ -813,11 +760,12 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 			data.BusWriterImageRust = types.StringNull()
 		}
 
-		// Update deployment-level specs
-		data.ApiServerHost = types.StringValue(bg.Specs.ApiServerHost)
-		data.MetadataProvider = types.StringValue(bg.Specs.MetadataProvider)
-
 		// Handle optional deployment fields
+		if bg.Specs.ApiServerHost != "" {
+			data.ApiServerHost = types.StringValue(bg.Specs.ApiServerHost)
+		} else {
+			data.ApiServerHost = types.StringNull()
+		}
 		if bg.Specs.KafkaSaslSecret != "" {
 			data.KafkaSaslSecret = types.StringValue(bg.Specs.KafkaSaslSecret)
 		} else {
@@ -828,28 +776,12 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 		} else {
 			data.KafkaBootstrapServers = types.StringNull()
 		}
-		if bg.Specs.KafkaSecurityProtocol != "" {
-			data.KafkaSecurityProtocol = types.StringValue(bg.Specs.KafkaSecurityProtocol)
-		} else {
-			data.KafkaSecurityProtocol = types.StringNull()
-		}
-		if bg.Specs.KafkaSaslMechanism != "" {
-			data.KafkaSaslMechanism = types.StringValue(bg.Specs.KafkaSaslMechanism)
-		} else {
-			data.KafkaSaslMechanism = types.StringNull()
-		}
-		if bg.Specs.RedisIsClustered != "" {
-			data.RedisIsClustered = types.StringValue(bg.Specs.RedisIsClustered)
-		} else {
-			data.RedisIsClustered = types.StringNull()
-		}
 		if bg.Specs.SnowflakeStorageIntegrationName != "" {
 			data.SnowflakeStorageIntegrationName = types.StringValue(bg.Specs.SnowflakeStorageIntegrationName)
 		} else {
 			data.SnowflakeStorageIntegrationName = types.StringNull()
 		}
 		data.RedisLightningSupportsHasMany = types.BoolValue(bg.Specs.RedisLightningSupportsHasMany)
-		data.Insecure = types.BoolValue(bg.Specs.Insecure)
 
 		// Update writers - convert from proto back to terraform models
 		if len(bg.Specs.Writers) > 0 {
@@ -1233,8 +1165,6 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 	commonSpecs := &serverv1.BackgroundPersistenceCommonSpecs{
 		Namespace:                            data.Namespace.ValueString(),
 		ServiceAccountName:                   data.ServiceAccountName.ValueString(),
-		BusBackend:                           data.BusBackend.ValueString(),
-		SecretClient:                         data.SecretClient.ValueString(),
 		BigqueryParquetUploadSubscriptionId:  data.BigqueryParquetUploadSubscriptionId.ValueString(),
 		BigqueryStreamingWriteSubscriptionId: data.BigqueryStreamingWriteSubscriptionId.ValueString(),
 		BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
@@ -1273,35 +1203,24 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 
 	deploymentSpecs := &serverv1.BackgroundPersistenceDeploymentSpecs{
 		CommonPersistenceSpecs: commonSpecs,
-		ApiServerHost:          data.ApiServerHost.ValueString(),
-		MetadataProvider:       data.MetadataProvider.ValueString(),
 		Writers:                protoWriters,
 	}
 
 	// Handle optional deployment-level fields
+	if !data.ApiServerHost.IsNull() {
+		deploymentSpecs.ApiServerHost = data.ApiServerHost.ValueString()
+	}
 	if !data.KafkaSaslSecret.IsNull() {
 		deploymentSpecs.KafkaSaslSecret = data.KafkaSaslSecret.ValueString()
 	}
 	if !data.KafkaBootstrapServers.IsNull() {
 		deploymentSpecs.KafkaBootstrapServers = data.KafkaBootstrapServers.ValueString()
 	}
-	if !data.KafkaSecurityProtocol.IsNull() {
-		deploymentSpecs.KafkaSecurityProtocol = data.KafkaSecurityProtocol.ValueString()
-	}
-	if !data.KafkaSaslMechanism.IsNull() {
-		deploymentSpecs.KafkaSaslMechanism = data.KafkaSaslMechanism.ValueString()
-	}
-	if !data.RedisIsClustered.IsNull() {
-		deploymentSpecs.RedisIsClustered = data.RedisIsClustered.ValueString()
-	}
 	if !data.SnowflakeStorageIntegrationName.IsNull() {
 		deploymentSpecs.SnowflakeStorageIntegrationName = data.SnowflakeStorageIntegrationName.ValueString()
 	}
 	if !data.RedisLightningSupportsHasMany.IsNull() {
 		deploymentSpecs.RedisLightningSupportsHasMany = data.RedisLightningSupportsHasMany.ValueBool()
-	}
-	if !data.Insecure.IsNull() {
-		deploymentSpecs.Insecure = data.Insecure.ValueBool()
 	}
 
 	//create a deployment based on whether kube_cluster_id or environment_ids is provided

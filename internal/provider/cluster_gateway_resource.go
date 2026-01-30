@@ -7,6 +7,7 @@ import (
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -240,6 +241,126 @@ func (r *ClusterGatewayResource) Configure(ctx context.Context, req resource.Con
 	r.client = client
 }
 
+// updateModelFromSpecs updates the terraform model with values from the API response specs
+func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data *ClusterGatewayResourceModel, specs *serverv1.EnvoyGatewaySpecs, diags *diag.Diagnostics) {
+	if specs == nil {
+		return
+	}
+
+	data.Namespace = types.StringValue(specs.Namespace)
+	data.GatewayName = types.StringValue(specs.GatewayName)
+	data.GatewayClassName = types.StringValue(specs.GatewayClassName)
+
+	// Update listeners
+	if len(specs.Listeners) > 0 {
+		var listenerModels []attr.Value
+		for _, listener := range specs.Listeners {
+			listenerModel := map[string]attr.Value{
+				"port":     types.Int64Value(int64(listener.Port)),
+				"protocol": types.StringValue(listener.Protocol),
+				"name":     types.StringValue(listener.Name),
+				"from":     types.StringValue(listener.AllowedRoutes.Namespaces.From),
+			}
+			listenerModels = append(listenerModels, types.ObjectValueMust(
+				map[string]attr.Type{
+					"port":     types.Int64Type,
+					"protocol": types.StringType,
+					"name":     types.StringType,
+					"from":     types.StringType,
+				},
+				listenerModel,
+			))
+		}
+		data.Listeners = types.ListValueMust(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"port":     types.Int64Type,
+				"protocol": types.StringType,
+				"name":     types.StringType,
+				"from":     types.StringType,
+			},
+		}, listenerModels)
+	}
+
+	// Update IP allowlist
+	if len(specs.IpAllowlist) > 0 {
+		var ipValues []attr.Value
+		for _, ip := range specs.IpAllowlist {
+			ipValues = append(ipValues, types.StringValue(ip))
+		}
+		data.IPAllowlist = types.ListValueMust(types.StringType, ipValues)
+	}
+
+	// Update service annotations
+	if len(specs.ServiceAnnotations) > 0 {
+		annotations := make(map[string]attr.Value)
+		for k, v := range specs.ServiceAnnotations {
+			annotations[k] = types.StringValue(v)
+		}
+		data.ServiceAnnotations = types.MapValueMust(types.StringType, annotations)
+	}
+
+	// Update flattened Envoy config fields
+	if specs.Config != nil && specs.Config.GetEnvoy() != nil {
+		envoyConfig := specs.Config.GetEnvoy()
+
+		if envoyConfig.TimeoutDuration != nil {
+			data.TimeoutDuration = types.StringValue(*envoyConfig.TimeoutDuration)
+		} else {
+			data.TimeoutDuration = types.StringNull()
+		}
+
+		if envoyConfig.DnsHostname != nil {
+			data.DNSHostname = types.StringValue(*envoyConfig.DnsHostname)
+		} else {
+			data.DNSHostname = types.StringNull()
+		}
+
+		if envoyConfig.Replicas != nil {
+			data.Replicas = types.Int64Value(int64(*envoyConfig.Replicas))
+		} else {
+			data.Replicas = types.Int64Null()
+		}
+
+		if envoyConfig.MinAvailable != nil {
+			data.MinAvailable = types.Int64Value(int64(*envoyConfig.MinAvailable))
+		} else {
+			data.MinAvailable = types.Int64Null()
+		}
+
+		if envoyConfig.LetsencryptClusterIssuer != nil {
+			data.LetsencryptClusterIssuer = types.StringValue(*envoyConfig.LetsencryptClusterIssuer)
+		} else {
+			data.LetsencryptClusterIssuer = types.StringNull()
+		}
+
+		if len(envoyConfig.AdditionalDnsNames) > 0 {
+			var dnsValues []attr.Value
+			for _, dns := range envoyConfig.AdditionalDnsNames {
+				dnsValues = append(dnsValues, types.StringValue(dns))
+			}
+			data.AdditionalDNSNames = types.ListValueMust(types.StringType, dnsValues)
+		} else {
+			data.AdditionalDNSNames = types.ListNull(types.StringType)
+		}
+	}
+
+	// Update TLS certificate
+	if specs.TlsCertificate != nil && specs.TlsCertificate.GetManualCertificate() != nil {
+		manualCert := specs.TlsCertificate.GetManualCertificate()
+		data.TLSCertificate = &TLSCertificateConfigModel{
+			SecretName:      types.StringValue(manualCert.SecretName),
+			SecretNamespace: types.StringValue(manualCert.SecretNamespace),
+		}
+	}
+
+	// Update routing
+	if specs.Routing != nil {
+		data.Routing = types.StringValue(*specs.Routing)
+	} else {
+		data.Routing = types.StringNull()
+	}
+}
+
 func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data ClusterGatewayResourceModel
 
@@ -368,6 +489,12 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 
 	data.Id = types.StringValue(response.Msg.Id)
 
+	// Update the model with the returned specs (including computed/default values)
+	r.updateModelFromSpecs(ctx, &data, response.Msg.Specs, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	tflog.Trace(ctx, "created a chalk_cluster_gateway resource")
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -400,120 +527,9 @@ func (r *ClusterGatewayResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	// Update the model with the fetched data
-	specs := gateway.Msg.Specs
-	if specs != nil {
-		data.Namespace = types.StringValue(specs.Namespace)
-		data.GatewayName = types.StringValue(specs.GatewayName)
-		data.GatewayClassName = types.StringValue(specs.GatewayClassName)
-
-		// Update listeners
-		if len(specs.Listeners) > 0 {
-			var listenerModels []attr.Value
-			for _, listener := range specs.Listeners {
-				listenerModel := map[string]attr.Value{
-					"port":     types.Int64Value(int64(listener.Port)),
-					"protocol": types.StringValue(listener.Protocol),
-					"name":     types.StringValue(listener.Name),
-					"from":     types.StringValue(listener.AllowedRoutes.Namespaces.From),
-				}
-				listenerModels = append(listenerModels, types.ObjectValueMust(
-					map[string]attr.Type{
-						"port":     types.Int64Type,
-						"protocol": types.StringType,
-						"name":     types.StringType,
-						"from":     types.StringType,
-					},
-					listenerModel,
-				))
-			}
-			data.Listeners = types.ListValueMust(types.ObjectType{
-				AttrTypes: map[string]attr.Type{
-					"port":     types.Int64Type,
-					"protocol": types.StringType,
-					"name":     types.StringType,
-					"from":     types.StringType,
-				},
-			}, listenerModels)
-		}
-
-		// Update IP allowlist
-		if len(specs.IpAllowlist) > 0 {
-			var ipValues []attr.Value
-			for _, ip := range specs.IpAllowlist {
-				ipValues = append(ipValues, types.StringValue(ip))
-			}
-			data.IPAllowlist = types.ListValueMust(types.StringType, ipValues)
-		}
-
-		// Update service annotations
-		if len(specs.ServiceAnnotations) > 0 {
-			annotations := make(map[string]attr.Value)
-			for k, v := range specs.ServiceAnnotations {
-				annotations[k] = types.StringValue(v)
-			}
-			data.ServiceAnnotations = types.MapValueMust(types.StringType, annotations)
-		}
-
-		// Update flattened Envoy config fields
-		if specs.Config != nil && specs.Config.GetEnvoy() != nil {
-			envoyConfig := specs.Config.GetEnvoy()
-
-			if envoyConfig.TimeoutDuration != nil {
-				data.TimeoutDuration = types.StringValue(*envoyConfig.TimeoutDuration)
-			} else {
-				data.TimeoutDuration = types.StringNull()
-			}
-
-			if envoyConfig.DnsHostname != nil {
-				data.DNSHostname = types.StringValue(*envoyConfig.DnsHostname)
-			} else {
-				data.DNSHostname = types.StringNull()
-			}
-
-			if envoyConfig.Replicas != nil {
-				data.Replicas = types.Int64Value(int64(*envoyConfig.Replicas))
-			} else {
-				data.Replicas = types.Int64Null()
-			}
-
-			if envoyConfig.MinAvailable != nil {
-				data.MinAvailable = types.Int64Value(int64(*envoyConfig.MinAvailable))
-			} else {
-				data.MinAvailable = types.Int64Null()
-			}
-
-			if envoyConfig.LetsencryptClusterIssuer != nil {
-				data.LetsencryptClusterIssuer = types.StringValue(*envoyConfig.LetsencryptClusterIssuer)
-			} else {
-				data.LetsencryptClusterIssuer = types.StringNull()
-			}
-
-			if len(envoyConfig.AdditionalDnsNames) > 0 {
-				var dnsValues []attr.Value
-				for _, dns := range envoyConfig.AdditionalDnsNames {
-					dnsValues = append(dnsValues, types.StringValue(dns))
-				}
-				data.AdditionalDNSNames = types.ListValueMust(types.StringType, dnsValues)
-			} else {
-				data.AdditionalDNSNames = types.ListNull(types.StringType)
-			}
-		}
-
-		// Update TLS certificate
-		if specs.TlsCertificate != nil && specs.TlsCertificate.GetManualCertificate() != nil {
-			manualCert := specs.TlsCertificate.GetManualCertificate()
-			data.TLSCertificate = &TLSCertificateConfigModel{
-				SecretName:      types.StringValue(manualCert.SecretName),
-				SecretNamespace: types.StringValue(manualCert.SecretNamespace),
-			}
-		}
-
-		// Update routing
-		if specs.Routing != nil {
-			data.Routing = types.StringValue(*specs.Routing)
-		} else {
-			data.Routing = types.StringNull()
-		}
+	r.updateModelFromSpecs(ctx, &data, gateway.Msg.Specs, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// Update kube cluster ID
@@ -652,6 +668,13 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 	}
 
 	data.Id = types.StringValue(response.Msg.Id)
+
+	// Update the model with the returned specs (including computed/default values)
+	r.updateModelFromSpecs(ctx, &data, response.Msg.Specs, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	tflog.Trace(ctx, "updated a chalk_cluster_gateway resource")
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
