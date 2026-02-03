@@ -152,6 +152,7 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewCloudCredentialsResource,
 		NewAzureCloudCredentialsResource,
 		NewClusterGatewayBindingResource,
+		NewPrivateGatewayBindingResource,
 		NewClusterBackgroundPersistenceDeploymentBindingResource,
 		NewTelemetryResource,
 		NewTelemetryBindingResource,
