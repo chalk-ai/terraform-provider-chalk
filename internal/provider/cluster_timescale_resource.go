@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -21,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -54,20 +54,20 @@ type ClusterTimescaleResourceModel struct {
 	BackupGcpServiceAccount types.String `tfsdk:"backup_gcp_service_account"`
 
 	// Computed Defaults and Optional Configurations
-	TimescaleImage               types.String             `tfsdk:"timescale_image"`
-	DatabaseName                 types.String             `tfsdk:"database_name"`
-	DatabaseReplicas             types.Int64              `tfsdk:"database_replicas"`
+	TimescaleImage               types.String `tfsdk:"timescale_image"`
+	DatabaseName                 types.String `tfsdk:"database_name"`
+	DatabaseReplicas             types.Int64  `tfsdk:"database_replicas"`
 	Storage                      types.String `tfsdk:"storage"`
 	StorageClass                 types.String `tfsdk:"storage_class"`
 	Namespace                    types.String `tfsdk:"namespace"`
 	Request                      types.Object `tfsdk:"request"`
 	ConnectionPoolReplicas       types.Int64  `tfsdk:"connection_pool_replicas"`
-	ConnectionPoolMaxConnections types.String             `tfsdk:"connection_pool_max_connections"`
-	ConnectionPoolSize           types.String             `tfsdk:"connection_pool_size"`
-	SecretName                   types.String             `tfsdk:"secret_name"`
-	Internal                     types.Bool               `tfsdk:"internal"`
-	ServiceType                  types.String             `tfsdk:"service_type"`
-	PostgresParameters           types.Map                `tfsdk:"postgres_parameters"`
+	ConnectionPoolMaxConnections types.String `tfsdk:"connection_pool_max_connections"`
+	ConnectionPoolSize           types.String `tfsdk:"connection_pool_size"`
+	SecretName                   types.String `tfsdk:"secret_name"`
+	Internal                     types.Bool   `tfsdk:"internal"`
+	ServiceType                  types.String `tfsdk:"service_type"`
+	PostgresParameters           types.Map    `tfsdk:"postgres_parameters"`
 }
 
 func (r *ClusterTimescaleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
