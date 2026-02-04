@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
- 
+
 var _ resource.Resource = &ClusterBackgroundPersistenceResource{}
 var _ resource.ResourceWithImportState = &ClusterBackgroundPersistenceResource{}
 
