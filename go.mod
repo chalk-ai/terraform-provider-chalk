@@ -4,8 +4,8 @@ go 1.25.0
 
 require (
 	connectrpc.com/connect v1.19.1
-	github.com/chalk-ai/chalk-go v1.2.184
-	github.com/chalk-ai/chalk-go/gen v1.2.184
+	github.com/chalk-ai/chalk-go v1.2.185
+	github.com/chalk-ai/chalk-go/gen v1.2.185
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
 	github.com/hashicorp/terraform-plugin-framework-validators v0.18.0
 	github.com/hashicorp/terraform-plugin-go v0.26.0
@@ -70,5 +70,3 @@ require (
 	google.golang.org/grpc v1.78.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/chalk-ai/chalk-go => ../chalk-go
