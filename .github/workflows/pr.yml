@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: Build Provider
+    name: Build & Test Provider
     runs-on: ubuntu-latest
     
     steps:
