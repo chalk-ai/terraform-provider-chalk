@@ -417,7 +417,10 @@ func buildClusterTimescaleSpecs(ctx context.Context, data *ClusterTimescaleResou
 		if diags.HasError() {
 			return nil, fmt.Errorf("failed to convert postgres parameters")
 		}
-		specs.PostgresParameters = params
+		// Only set if the map is not empty
+		if len(params) > 0 {
+			specs.PostgresParameters = params
+		}
 	}
 
 	if !data.NodeSelector.IsNull() && !data.NodeSelector.IsUnknown() {
@@ -427,7 +430,10 @@ func buildClusterTimescaleSpecs(ctx context.Context, data *ClusterTimescaleResou
 		if diags.HasError() {
 			return nil, fmt.Errorf("failed to convert node selector")
 		}
-		specs.NodeSelector = selector
+		// Only set if the map is not empty
+		if len(selector) > 0 {
+			specs.NodeSelector = selector
+		}
 	}
 
 	return specs, nil
@@ -606,12 +612,14 @@ func buildTimescaleUpdateMask(data, state *ClusterTimescaleResourceModel) []stri
 	}
 
 	// Resources
-	if !data.Request.Equal(state.Request) {
+	// Skip if unknown (Terraform hasn't determined the value yet)
+	if !data.Request.IsUnknown() && !data.Request.Equal(state.Request) {
 		updateMaskPaths = append(updateMaskPaths, "request")
 	}
 
 	// Database Config
-	if !data.PostgresParameters.Equal(state.PostgresParameters) {
+	// Skip if unknown (Terraform hasn't determined the value yet)
+	if !data.PostgresParameters.IsUnknown() && !data.PostgresParameters.Equal(state.PostgresParameters) {
 		updateMaskPaths = append(updateMaskPaths, "postgres_parameters")
 	}
 
