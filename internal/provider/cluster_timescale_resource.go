@@ -22,10 +22,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 var _ resource.Resource = &ClusterTimescaleResource{}
 var _ resource.ResourceWithImportState = &ClusterTimescaleResource{}
+
+// kubeResourceConfigAttrTypes defines the attribute types for KubeResourceConfig objects
+var kubeResourceConfigAttrTypes = map[string]attr.Type{
+	"cpu":               types.StringType,
+	"memory":            types.StringType,
+	"ephemeral_storage": types.StringType,
+	"storage":           types.StringType,
+}
 
 func NewClusterTimescaleResource() resource.Resource {
 	return &ClusterTimescaleResource{}
@@ -194,14 +203,23 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 			"backup_bucket": schema.StringAttribute{
 				MarkdownDescription: "S3/GCS bucket for backups",
 				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"backup_iam_role_arn": schema.StringAttribute{
 				MarkdownDescription: "IAM role ARN for backups",
 				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"backup_gcp_service_account": schema.StringAttribute{
 				MarkdownDescription: "GCP service account for backups",
 				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"secret_name": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes secret name for database credentials",
@@ -299,111 +317,91 @@ func (r *ClusterTimescaleResource) Configure(ctx context.Context, req resource.C
 	r.client = client
 }
 
-// upsertClusterTimescale handles the common logic for both Create and Update operations
-func (r *ClusterTimescaleResource) upsertClusterTimescale(ctx context.Context, data *ClusterTimescaleResourceModel, diags *diag.Diagnostics) error {
-	bc := r.client.NewBuilderClient(ctx)
-
-	// Convert environment_id to a list for the API
-	envIds := []string{data.EnvironmentId.ValueString()}
-
-	// Convert terraform model to proto request
-	createReq := &serverv1.CreateClusterTimescaleDBRequest{
-		EnvironmentIds: envIds,
-		Specs: &serverv1.ClusterTimescaleSpecs{
-			DatabaseReplicas:        int32(data.DatabaseReplicas.ValueInt64()),
-			BootstrapCloudResources: data.BootstrapCloudResources.ValueBool(),
-		},
+// buildClusterTimescaleSpecs builds ClusterTimescaleSpecs proto from Terraform model
+func buildClusterTimescaleSpecs(ctx context.Context, data *ClusterTimescaleResourceModel, diags *diag.Diagnostics) (*serverv1.ClusterTimescaleSpecs, error) {
+	specs := &serverv1.ClusterTimescaleSpecs{
+		DatabaseReplicas:        int32(data.DatabaseReplicas.ValueInt64()),
+		BootstrapCloudResources: data.BootstrapCloudResources.ValueBool(),
 	}
 
-	// Handle optional timescale_image field
+	// Simple strings
 	if !data.TimescaleImage.IsNull() {
-		createReq.Specs.TimescaleImage = data.TimescaleImage.ValueString()
+		specs.TimescaleImage = data.TimescaleImage.ValueString()
 	}
-
-	// Handle optional database_name field
 	if !data.DatabaseName.IsNull() {
-		createReq.Specs.DatabaseName = data.DatabaseName.ValueString()
+		specs.DatabaseName = data.DatabaseName.ValueString()
 	}
-
-	// Handle optional namespace field
-	if !data.Namespace.IsNull() {
-		createReq.Specs.Namespace = data.Namespace.ValueString()
-	}
-
-	// Handle optional storage field
 	if !data.Storage.IsNull() {
-		createReq.Specs.Storage = data.Storage.ValueString()
+		specs.Storage = data.Storage.ValueString()
 	}
-
-	// Handle optional connection pool fields
-	if !data.ConnectionPoolReplicas.IsNull() {
-		createReq.Specs.ConnectionPoolReplicas = int32(data.ConnectionPoolReplicas.ValueInt64())
+	if !data.Namespace.IsNull() {
+		specs.Namespace = data.Namespace.ValueString()
 	}
 	if !data.ConnectionPoolMaxConnections.IsNull() {
-		createReq.Specs.ConnectionPoolMaxConnections = data.ConnectionPoolMaxConnections.ValueString()
+		specs.ConnectionPoolMaxConnections = data.ConnectionPoolMaxConnections.ValueString()
 	}
 	if !data.ConnectionPoolSize.IsNull() {
-		createReq.Specs.ConnectionPoolSize = data.ConnectionPoolSize.ValueString()
+		specs.ConnectionPoolSize = data.ConnectionPoolSize.ValueString()
 	}
-
-	// Handle optional secret_name field
+	if !data.BackupBucket.IsNull() {
+		specs.BackupBucket = data.BackupBucket.ValueString()
+	}
+	if !data.BackupIamRoleArn.IsNull() {
+		specs.BackupIamRoleArn = data.BackupIamRoleArn.ValueString()
+	}
+	if !data.BackupGcpServiceAccount.IsNull() {
+		specs.BackupGcpServiceAccount = data.BackupGcpServiceAccount.ValueString()
+	}
+	if !data.InstanceType.IsNull() {
+		specs.InstanceType = data.InstanceType.ValueString()
+	}
+	if !data.Nodepool.IsNull() {
+		specs.Nodepool = data.Nodepool.ValueString()
+	}
 	if !data.SecretName.IsNull() {
-		createReq.Specs.SecretName = data.SecretName.ValueString()
+		specs.SecretName = data.SecretName.ValueString()
 	}
 
-	// Set optional fields
+	// Integers
+	if !data.ConnectionPoolReplicas.IsNull() {
+		specs.ConnectionPoolReplicas = int32(data.ConnectionPoolReplicas.ValueInt64())
+	}
+
+	// Optional pointers
 	if !data.StorageClass.IsNull() {
 		val := data.StorageClass.ValueString()
-		createReq.Specs.StorageClass = &val
+		specs.StorageClass = &val
 	}
 	if !data.Internal.IsNull() {
 		val := data.Internal.ValueBool()
-		createReq.Specs.Internal = &val
+		specs.Internal = &val
 	}
 	if !data.ServiceType.IsNull() {
 		val := data.ServiceType.ValueString()
-		createReq.Specs.ServiceType = &val
-	}
-
-	// Handle backup config
-	if !data.BackupBucket.IsNull() {
-		createReq.Specs.BackupBucket = data.BackupBucket.ValueString()
-	}
-	if !data.BackupIamRoleArn.IsNull() {
-		createReq.Specs.BackupIamRoleArn = data.BackupIamRoleArn.ValueString()
-	}
-	if !data.BackupGcpServiceAccount.IsNull() {
-		createReq.Specs.BackupGcpServiceAccount = data.BackupGcpServiceAccount.ValueString()
-	}
-
-	if !data.InstanceType.IsNull() {
-		createReq.Specs.InstanceType = data.InstanceType.ValueString()
-	}
-	if !data.Nodepool.IsNull() {
-		createReq.Specs.Nodepool = data.Nodepool.ValueString()
+		specs.ServiceType = &val
 	}
 	if !data.DNSHostname.IsNull() {
 		val := data.DNSHostname.ValueString()
-		createReq.Specs.DnsHostname = &val
+		specs.DnsHostname = &val
 	}
 	if !data.GatewayPort.IsNull() {
 		val := int32(data.GatewayPort.ValueInt64())
-		createReq.Specs.GatewayPort = &val
+		specs.GatewayPort = &val
 	}
 	if !data.GatewayId.IsNull() {
 		val := data.GatewayId.ValueString()
-		createReq.Specs.GatewayId = &val
+		specs.GatewayId = &val
 	}
 
-	// Convert resource configs
+	// Complex object - Request
 	if !data.Request.IsNull() && !data.Request.IsUnknown() {
 		var request KubeResourceConfigModel
 		d := data.Request.As(ctx, &request, basetypes.ObjectAsOptions{})
 		diags.Append(d...)
 		if diags.HasError() {
-			return fmt.Errorf("failed to convert request config")
+			return nil, fmt.Errorf("failed to convert request config")
 		}
-		createReq.Specs.Request = &serverv1.KubeResourceConfig{
+		specs.Request = &serverv1.KubeResourceConfig{
 			Cpu:              request.CPU.ValueString(),
 			Memory:           request.Memory.ValueString(),
 			EphemeralStorage: request.EphemeralStorage.ValueString(),
@@ -411,107 +409,137 @@ func (r *ClusterTimescaleResource) upsertClusterTimescale(ctx context.Context, d
 		}
 	}
 
-	// Convert postgres parameters
+	// Maps
 	if !data.PostgresParameters.IsNull() && !data.PostgresParameters.IsUnknown() {
 		params := make(map[string]string)
 		d := data.PostgresParameters.ElementsAs(ctx, &params, false)
 		diags.Append(d...)
 		if diags.HasError() {
-			return fmt.Errorf("failed to convert postgres parameters")
+			return nil, fmt.Errorf("failed to convert postgres parameters")
 		}
-		createReq.Specs.PostgresParameters = params
+		specs.PostgresParameters = params
 	}
 
-	// Convert node selector
 	if !data.NodeSelector.IsNull() && !data.NodeSelector.IsUnknown() {
 		selector := make(map[string]string)
 		d := data.NodeSelector.ElementsAs(ctx, &selector, false)
 		diags.Append(d...)
 		if diags.HasError() {
-			return fmt.Errorf("failed to convert node selector")
+			return nil, fmt.Errorf("failed to convert node selector")
 		}
-		createReq.Specs.NodeSelector = selector
+		specs.NodeSelector = selector
 	}
 
-	metricsDb, err := bc.CreateClusterTimescaleDB(ctx, connect.NewRequest(createReq))
-	if err != nil {
-		return err
+	return specs, nil
+}
+
+// updateStateFromSpecs updates Terraform model from ClusterTimescaleSpecs proto response
+func updateStateFromSpecs(data *ClusterTimescaleResourceModel, specs *serverv1.ClusterTimescaleSpecs) error {
+	// Simple strings
+	data.TimescaleImage = types.StringValue(specs.TimescaleImage)
+	data.DatabaseName = types.StringValue(specs.DatabaseName)
+	data.Storage = types.StringValue(specs.Storage)
+	data.Namespace = types.StringValue(specs.Namespace)
+	data.ConnectionPoolMaxConnections = types.StringValue(specs.ConnectionPoolMaxConnections)
+	data.ConnectionPoolSize = types.StringValue(specs.ConnectionPoolSize)
+	data.SecretName = types.StringValue(specs.SecretName)
+
+	if specs.InstanceType != "" {
+		data.InstanceType = types.StringValue(specs.InstanceType)
+	} else {
+		data.InstanceType = types.StringNull()
+	}
+	if specs.Nodepool != "" {
+		data.Nodepool = types.StringValue(specs.Nodepool)
+	} else {
+		data.Nodepool = types.StringNull()
 	}
 
-	// Update with returned values
-	data.Id = types.StringValue(metricsDb.Msg.ClusterTimescaleId)
-	data.SecretName = types.StringValue(metricsDb.Msg.Specs.SecretName)
-	data.TimescaleImage = types.StringValue(metricsDb.Msg.Specs.TimescaleImage)
-	data.DatabaseName = types.StringValue(metricsDb.Msg.Specs.DatabaseName)
-	data.Namespace = types.StringValue(metricsDb.Msg.Specs.Namespace)
-	data.Storage = types.StringValue(metricsDb.Msg.Specs.Storage)
+	// Integers
+	data.DatabaseReplicas = types.Int64Value(int64(specs.DatabaseReplicas))
+	data.ConnectionPoolReplicas = types.Int64Value(int64(specs.ConnectionPoolReplicas))
 
-	// Set computed connection pool fields
-	data.ConnectionPoolReplicas = types.Int64Value(int64(metricsDb.Msg.Specs.ConnectionPoolReplicas))
-	data.ConnectionPoolMaxConnections = types.StringValue(metricsDb.Msg.Specs.ConnectionPoolMaxConnections)
-	data.ConnectionPoolSize = types.StringValue(metricsDb.Msg.Specs.ConnectionPoolSize)
+	// Boolean
+	data.BootstrapCloudResources = types.BoolValue(specs.BootstrapCloudResources)
 
-	// Set backup config
-	if metricsDb.Msg.Specs.BackupBucket != "" {
-		data.BackupBucket = types.StringValue(metricsDb.Msg.Specs.BackupBucket)
+	// Backup fields
+	if specs.BackupBucket != "" {
+		data.BackupBucket = types.StringValue(specs.BackupBucket)
 	} else {
 		data.BackupBucket = types.StringNull()
 	}
-	if metricsDb.Msg.Specs.BackupIamRoleArn != "" {
-		data.BackupIamRoleArn = types.StringValue(metricsDb.Msg.Specs.BackupIamRoleArn)
+	if specs.BackupIamRoleArn != "" {
+		data.BackupIamRoleArn = types.StringValue(specs.BackupIamRoleArn)
 	} else {
 		data.BackupIamRoleArn = types.StringNull()
 	}
-	if metricsDb.Msg.Specs.BackupGcpServiceAccount != "" {
-		data.BackupGcpServiceAccount = types.StringValue(metricsDb.Msg.Specs.BackupGcpServiceAccount)
+	if specs.BackupGcpServiceAccount != "" {
+		data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
 	} else {
 		data.BackupGcpServiceAccount = types.StringNull()
 	}
 
-	// Set computed resource configs
-	if metricsDb.Msg.Specs.Request != nil {
+	// Optional pointers
+	if specs.StorageClass != nil {
+		data.StorageClass = types.StringValue(*specs.StorageClass)
+	} else {
+		data.StorageClass = types.StringNull()
+	}
+	if specs.Internal != nil {
+		data.Internal = types.BoolValue(*specs.Internal)
+	} else {
+		data.Internal = types.BoolNull()
+	}
+	if specs.ServiceType != nil {
+		data.ServiceType = types.StringValue(*specs.ServiceType)
+	} else {
+		data.ServiceType = types.StringNull()
+	}
+	if specs.DnsHostname != nil {
+		data.DNSHostname = types.StringValue(*specs.DnsHostname)
+	} else {
+		data.DNSHostname = types.StringNull()
+	}
+	if specs.GatewayPort != nil {
+		data.GatewayPort = types.Int64Value(int64(*specs.GatewayPort))
+	} else {
+		data.GatewayPort = types.Int64Null()
+	}
+	if specs.GatewayId != nil {
+		data.GatewayId = types.StringValue(*specs.GatewayId)
+	} else {
+		data.GatewayId = types.StringNull()
+	}
+
+	// Request object
+	if specs.Request != nil {
 		requestAttrs := map[string]attr.Value{
 			"cpu":               types.StringNull(),
 			"memory":            types.StringNull(),
 			"ephemeral_storage": types.StringNull(),
 			"storage":           types.StringNull(),
 		}
-		if metricsDb.Msg.Specs.Request.Cpu != "" {
-			requestAttrs["cpu"] = types.StringValue(metricsDb.Msg.Specs.Request.Cpu)
+		if specs.Request.Cpu != "" {
+			requestAttrs["cpu"] = types.StringValue(specs.Request.Cpu)
 		}
-		if metricsDb.Msg.Specs.Request.Memory != "" {
-			requestAttrs["memory"] = types.StringValue(metricsDb.Msg.Specs.Request.Memory)
+		if specs.Request.Memory != "" {
+			requestAttrs["memory"] = types.StringValue(specs.Request.Memory)
 		}
-		if metricsDb.Msg.Specs.Request.EphemeralStorage != "" {
-			requestAttrs["ephemeral_storage"] = types.StringValue(metricsDb.Msg.Specs.Request.EphemeralStorage)
+		if specs.Request.EphemeralStorage != "" {
+			requestAttrs["ephemeral_storage"] = types.StringValue(specs.Request.EphemeralStorage)
 		}
-		if metricsDb.Msg.Specs.Request.Storage != "" {
-			requestAttrs["storage"] = types.StringValue(metricsDb.Msg.Specs.Request.Storage)
+		if specs.Request.Storage != "" {
+			requestAttrs["storage"] = types.StringValue(specs.Request.Storage)
 		}
-		data.Request, _ = types.ObjectValue(
-			map[string]attr.Type{
-				"cpu":               types.StringType,
-				"memory":            types.StringType,
-				"ephemeral_storage": types.StringType,
-				"storage":           types.StringType,
-			},
-			requestAttrs,
-		)
+		data.Request, _ = types.ObjectValue(kubeResourceConfigAttrTypes, requestAttrs)
 	} else {
-		data.Request = types.ObjectNull(
-			map[string]attr.Type{
-				"cpu":               types.StringType,
-				"memory":            types.StringType,
-				"ephemeral_storage": types.StringType,
-				"storage":           types.StringType,
-			},
-		)
+		data.Request = types.ObjectNull(kubeResourceConfigAttrTypes)
 	}
 
-	// Set computed postgres parameters
-	if len(metricsDb.Msg.Specs.PostgresParameters) > 0 {
+	// Maps
+	if len(specs.PostgresParameters) > 0 {
 		params := make(map[string]attr.Value)
-		for k, v := range metricsDb.Msg.Specs.PostgresParameters {
+		for k, v := range specs.PostgresParameters {
 			params[k] = types.StringValue(v)
 		}
 		data.PostgresParameters = types.MapValueMust(types.StringType, params)
@@ -519,19 +547,104 @@ func (r *ClusterTimescaleResource) upsertClusterTimescale(ctx context.Context, d
 		data.PostgresParameters = types.MapNull(types.StringType)
 	}
 
+	if len(specs.NodeSelector) > 0 {
+		selector := make(map[string]attr.Value)
+		for k, v := range specs.NodeSelector {
+			selector[k] = types.StringValue(v)
+		}
+		data.NodeSelector = types.MapValueMust(types.StringType, selector)
+	} else {
+		data.NodeSelector = types.MapNull(types.StringType)
+	}
+
 	return nil
+}
+
+// buildTimescaleUpdateMask compares plan and state to determine which fields changed
+func buildTimescaleUpdateMask(data, state *ClusterTimescaleResourceModel) []string {
+	var updateMaskPaths []string
+
+	// Core Database fields
+	if !data.TimescaleImage.Equal(state.TimescaleImage) {
+		updateMaskPaths = append(updateMaskPaths, "timescale_image")
+	}
+	if !data.Storage.Equal(state.Storage) {
+		updateMaskPaths = append(updateMaskPaths, "storage")
+	}
+	if !data.DatabaseReplicas.Equal(state.DatabaseReplicas) {
+		updateMaskPaths = append(updateMaskPaths, "database_replicas")
+	}
+
+	// Connection Pool fields
+	if !data.ConnectionPoolReplicas.Equal(state.ConnectionPoolReplicas) {
+		updateMaskPaths = append(updateMaskPaths, "connection_pool_replicas")
+	}
+	if !data.ConnectionPoolMaxConnections.Equal(state.ConnectionPoolMaxConnections) {
+		updateMaskPaths = append(updateMaskPaths, "connection_pool_max_connections")
+	}
+	if !data.ConnectionPoolSize.Equal(state.ConnectionPoolSize) {
+		updateMaskPaths = append(updateMaskPaths, "connection_pool_size")
+	}
+
+	// Infrastructure fields
+	if !data.InstanceType.Equal(state.InstanceType) {
+		updateMaskPaths = append(updateMaskPaths, "instance_type")
+	}
+	if !data.Nodepool.Equal(state.Nodepool) {
+		updateMaskPaths = append(updateMaskPaths, "nodepool")
+	}
+	if !data.NodeSelector.Equal(state.NodeSelector) {
+		updateMaskPaths = append(updateMaskPaths, "node_selector")
+	}
+
+	// Gateway fields
+	if !data.GatewayPort.Equal(state.GatewayPort) {
+		updateMaskPaths = append(updateMaskPaths, "gateway_port")
+	}
+	if !data.GatewayId.Equal(state.GatewayId) {
+		updateMaskPaths = append(updateMaskPaths, "gateway_id")
+	}
+
+	// Resources
+	if !data.Request.Equal(state.Request) {
+		updateMaskPaths = append(updateMaskPaths, "request")
+	}
+
+	// Database Config
+	if !data.PostgresParameters.Equal(state.PostgresParameters) {
+		updateMaskPaths = append(updateMaskPaths, "postgres_parameters")
+	}
+
+	return updateMaskPaths
 }
 
 func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data ClusterTimescaleResourceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.upsertClusterTimescale(ctx, &data, &resp.Diagnostics)
+	bc := r.client.NewBuilderClient(ctx)
+
+	// Build specs from plan
+	specs, err := buildClusterTimescaleSpecs(ctx, &data, &resp.Diagnostics)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Configuration Error",
+			fmt.Sprintf("Failed to build TimescaleDB specification: %v", err),
+		)
+		return
+	}
+
+	// Create request
+	createReq := &serverv1.CreateClusterTimescaleDBRequest{
+		EnvironmentIds: []string{data.EnvironmentId.ValueString()},
+		Specs:          specs,
+	}
+
+	// Call Create RPC
+	response, err := bc.CreateClusterTimescaleDB(ctx, connect.NewRequest(createReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Chalk Cluster TimescaleDB",
@@ -540,8 +653,17 @@ func (r *ClusterTimescaleResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	tflog.Trace(ctx, "created a chalk_cluster_timescale resource")
+	// Update model with response
+	data.Id = types.StringValue(response.Msg.ClusterTimescaleId)
+	if err := updateStateFromSpecs(&data, response.Msg.Specs); err != nil {
+		resp.Diagnostics.AddError(
+			"Error Processing Response",
+			fmt.Sprintf("Could not process create response: %v", err),
+		)
+		return
+	}
 
+	tflog.Trace(ctx, "created a chalk_cluster_timescale resource")
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -554,8 +676,6 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	// Create auth client first
-	// Create builder client
 	bc := r.client.NewBuilderClient(ctx)
 
 	// Get the environment ID to query the TimescaleDB
@@ -575,144 +695,14 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	// Update the model with the fetched data
-	// Update specs if available
 	if timescale.Msg.Specs != nil {
-		specs := timescale.Msg.Specs
 		data.Id = types.StringValue(timescale.Msg.Id)
-
-		// environment_id is already set in data, no need to update it
-
-		data.TimescaleImage = types.StringValue(specs.TimescaleImage)
-		data.DatabaseName = types.StringValue(specs.DatabaseName)
-		data.DatabaseReplicas = types.Int64Value(int64(specs.DatabaseReplicas))
-		data.Storage = types.StringValue(specs.Storage)
-		data.Namespace = types.StringValue(specs.Namespace)
-		data.ConnectionPoolReplicas = types.Int64Value(int64(specs.ConnectionPoolReplicas))
-		data.ConnectionPoolMaxConnections = types.StringValue(specs.ConnectionPoolMaxConnections)
-		data.ConnectionPoolSize = types.StringValue(specs.ConnectionPoolSize)
-
-		// Set backup config
-		if specs.BackupBucket != "" {
-			data.BackupBucket = types.StringValue(specs.BackupBucket)
-		} else {
-			data.BackupBucket = types.StringNull()
-		}
-		if specs.BackupIamRoleArn != "" {
-			data.BackupIamRoleArn = types.StringValue(specs.BackupIamRoleArn)
-		} else {
-			data.BackupIamRoleArn = types.StringNull()
-		}
-		if specs.BackupGcpServiceAccount != "" {
-			data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
-		} else {
-			data.BackupGcpServiceAccount = types.StringNull()
-		}
-
-		data.BootstrapCloudResources = types.BoolValue(specs.BootstrapCloudResources)
-		data.SecretName = types.StringValue(specs.SecretName)
-		if specs.InstanceType != "" {
-			data.InstanceType = types.StringValue(specs.InstanceType)
-		} else {
-			data.InstanceType = types.StringNull()
-		}
-		if specs.Nodepool != "" {
-			data.Nodepool = types.StringValue(specs.Nodepool)
-		} else {
-			data.Nodepool = types.StringNull()
-		}
-
-		// Update optional fields
-		if specs.StorageClass != nil {
-			data.StorageClass = types.StringValue(*specs.StorageClass)
-		} else {
-			data.StorageClass = types.StringNull()
-		}
-		if specs.Internal != nil {
-			data.Internal = types.BoolValue(*specs.Internal)
-		} else {
-			data.Internal = types.BoolNull()
-		}
-		if specs.ServiceType != nil {
-			data.ServiceType = types.StringValue(*specs.ServiceType)
-		} else {
-			data.ServiceType = types.StringNull()
-		}
-		if specs.DnsHostname != nil {
-			data.DNSHostname = types.StringValue(*specs.DnsHostname)
-		} else {
-			data.DNSHostname = types.StringNull()
-		}
-		if specs.GatewayPort != nil {
-			data.GatewayPort = types.Int64Value(int64(*specs.GatewayPort))
-		} else {
-			data.GatewayPort = types.Int64Null()
-		}
-		if specs.GatewayId != nil {
-			data.GatewayId = types.StringValue(*specs.GatewayId)
-		} else {
-			data.GatewayId = types.StringNull()
-		}
-
-		// Update postgres parameters
-		if len(specs.PostgresParameters) > 0 {
-			params := make(map[string]attr.Value)
-			for k, v := range specs.PostgresParameters {
-				params[k] = types.StringValue(v)
-			}
-			data.PostgresParameters = types.MapValueMust(types.StringType, params)
-		} else {
-			data.PostgresParameters = types.MapNull(types.StringType)
-		}
-
-		// Update node selector
-		if len(specs.NodeSelector) > 0 {
-			selector := make(map[string]attr.Value)
-			for k, v := range specs.NodeSelector {
-				selector[k] = types.StringValue(v)
-			}
-			data.NodeSelector = types.MapValueMust(types.StringType, selector)
-		} else {
-			data.NodeSelector = types.MapNull(types.StringType)
-		}
-
-		// Update resource configs
-		if specs.Request != nil {
-			requestAttrs := map[string]attr.Value{
-				"cpu":               types.StringNull(),
-				"memory":            types.StringNull(),
-				"ephemeral_storage": types.StringNull(),
-				"storage":           types.StringNull(),
-			}
-			if specs.Request.Cpu != "" {
-				requestAttrs["cpu"] = types.StringValue(specs.Request.Cpu)
-			}
-			if specs.Request.Memory != "" {
-				requestAttrs["memory"] = types.StringValue(specs.Request.Memory)
-			}
-			if specs.Request.EphemeralStorage != "" {
-				requestAttrs["ephemeral_storage"] = types.StringValue(specs.Request.EphemeralStorage)
-			}
-			if specs.Request.Storage != "" {
-				requestAttrs["storage"] = types.StringValue(specs.Request.Storage)
-			}
-			data.Request, _ = types.ObjectValue(
-				map[string]attr.Type{
-					"cpu":               types.StringType,
-					"memory":            types.StringType,
-					"ephemeral_storage": types.StringType,
-					"storage":           types.StringType,
-				},
-				requestAttrs,
+		if err := updateStateFromSpecs(&data, timescale.Msg.Specs); err != nil {
+			resp.Diagnostics.AddError(
+				"Error Processing Response",
+				fmt.Sprintf("Could not process read response: %v", err),
 			)
-		} else {
-			data.Request = types.ObjectNull(
-				map[string]attr.Type{
-					"cpu":               types.StringType,
-					"memory":            types.StringType,
-					"ephemeral_storage": types.StringType,
-					"storage":           types.StringType,
-				},
-			)
+			return
 		}
 	}
 
@@ -721,35 +711,70 @@ func (r *ClusterTimescaleResource) Read(ctx context.Context, req resource.ReadRe
 
 func (r *ClusterTimescaleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data ClusterTimescaleResourceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.upsertClusterTimescale(ctx, &data, &resp.Diagnostics)
+	// Get current state to compare
+	var state ClusterTimescaleResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	bc := r.client.NewBuilderClient(ctx)
+
+	// Build specs from plan
+	specs, err := buildClusterTimescaleSpecs(ctx, &data, &resp.Diagnostics)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Updating Chalk Cluster TimescaleDB",
-			fmt.Sprintf("Could not update cluster TimescaleDB: %v", err),
+			"Configuration Error",
+			fmt.Sprintf("Failed to build TimescaleDB specification: %v", err),
 		)
 		return
 	}
 
-	tflog.Trace(ctx, "updated a chalk_cluster_timescale resource")
+	// Build field mask by comparing plan and state
+	updateMaskPaths := buildTimescaleUpdateMask(&data, &state)
 
+	// Only make RPC call if there are changes
+	if len(updateMaskPaths) > 0 {
+		updateReq := &serverv1.UpdateClusterTimescaleDBRequest{
+			ClusterTimescaleId: data.Id.ValueString(),
+			Specs:              specs,
+			UpdateMask: &fieldmaskpb.FieldMask{
+				Paths: updateMaskPaths,
+			},
+		}
+
+		response, err := bc.UpdateClusterTimescaleDB(ctx, connect.NewRequest(updateReq))
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Updating Chalk Cluster TimescaleDB",
+				fmt.Sprintf("Could not update cluster TimescaleDB: %v", err),
+			)
+			return
+		}
+
+		// Update model with response
+		if err := updateStateFromSpecs(&data, response.Msg.Specs); err != nil {
+			resp.Diagnostics.AddError(
+				"Error Processing Response",
+				fmt.Sprintf("Could not process update response: %v", err),
+			)
+			return
+		}
+	}
+
+	tflog.Trace(ctx, "updated a chalk_cluster_timescale resource")
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *ClusterTimescaleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// Note: According to the proto definition, there's no DeleteClusterTimescaleDB method
-	// This means the TimescaleDB lifecycle might be managed differently
-	// For now, we'll just remove it from Terraform state
 	data := ClusterTimescaleResourceModel{}
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
-	// Create builder client
 	bc := r.client.NewBuilderClient(ctx)
 
 	_, err := bc.DeleteClusterTimescaleDB(ctx, connect.NewRequest(&serverv1.DeleteClusterTimescaleDBRequest{
