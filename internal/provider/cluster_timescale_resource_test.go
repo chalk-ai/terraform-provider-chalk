@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"errors"
 	"os"
+	"regexp"
 	"testing"
 
+	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/chalk-go/testserver"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -29,11 +32,20 @@ import (
 //
 // We use resource.Test() because it catches real integration bugs (e.g., computed
 // field handling, state management) that wouldn't be found in simple unit tests.
-// However, since these use mocks and have no external dependencies, they don't
-// fit the traditional "acceptance test" pattern that TF_ACC is meant to gate.
 func TestMain(m *testing.M) {
 	os.Setenv("TF_ACC", "1")
 	os.Exit(m.Run())
+}
+
+func setupTestEnv(t *testing.T, serverURL string) {
+	os.Setenv("CHALK_API_SERVER", serverURL)
+	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
+	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
+	t.Cleanup(func() {
+		os.Unsetenv("CHALK_API_SERVER")
+		os.Unsetenv("CHALK_CLIENT_ID")
+		os.Unsetenv("CHALK_CLIENT_SECRET")
+	})
 }
 
 // testProtoV6ProviderFactories configures the provider to use a mock server.
@@ -151,15 +163,7 @@ func mockClusterTimescaleSpecs(overrides map[string]interface{}) *serverv1.Clust
 func TestClusterTimescaleResourceCreate(t *testing.T) {
 	server := setupMockBuilderServer(t)
 
-	// Set environment variables for provider
-	os.Setenv("CHALK_API_SERVER", server.URL)
-	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
-	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
-	t.Cleanup(func() {
-		os.Unsetenv("CHALK_API_SERVER")
-		os.Unsetenv("CHALK_CLIENT_ID")
-		os.Unsetenv("CHALK_CLIENT_SECRET")
-	})
+	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
@@ -201,15 +205,7 @@ resource "chalk_cluster_timescale" "test" {
 func TestClusterTimescaleResourceUpdate(t *testing.T) {
 	server := setupMockBuilderServer(t)
 
-	// Set environment variables
-	os.Setenv("CHALK_API_SERVER", server.URL)
-	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
-	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
-	t.Cleanup(func() {
-		os.Unsetenv("CHALK_API_SERVER")
-		os.Unsetenv("CHALK_CLIENT_ID")
-		os.Unsetenv("CHALK_CLIENT_SECRET")
-	})
+	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
@@ -253,15 +249,7 @@ resource "chalk_cluster_timescale" "test" {
 func TestClusterTimescaleResourceUpdateFieldMask(t *testing.T) {
 	server := setupMockBuilderServer(t)
 
-	// Set environment variables
-	os.Setenv("CHALK_API_SERVER", server.URL)
-	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
-	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
-	t.Cleanup(func() {
-		os.Unsetenv("CHALK_API_SERVER")
-		os.Unsetenv("CHALK_CLIENT_ID")
-		os.Unsetenv("CHALK_CLIENT_SECRET")
-	})
+	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
@@ -306,15 +294,7 @@ resource "chalk_cluster_timescale" "test" {
 func TestClusterTimescaleResourceUpdateMultipleFields(t *testing.T) {
 	server := setupMockBuilderServer(t)
 
-	// Set environment variables
-	os.Setenv("CHALK_API_SERVER", server.URL)
-	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
-	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
-	t.Cleanup(func() {
-		os.Unsetenv("CHALK_API_SERVER")
-		os.Unsetenv("CHALK_CLIENT_ID")
-		os.Unsetenv("CHALK_CLIENT_SECRET")
-	})
+	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
@@ -385,15 +365,7 @@ func TestClusterTimescaleResourceNoOpUpdate(t *testing.T) {
 		}),
 	})
 
-	// Set environment variables
-	os.Setenv("CHALK_API_SERVER", server.URL)
-	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
-	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
-	t.Cleanup(func() {
-		os.Unsetenv("CHALK_API_SERVER")
-		os.Unsetenv("CHALK_CLIENT_ID")
-		os.Unsetenv("CHALK_CLIENT_SECRET")
-	})
+	setupTestEnv(t, server.URL)
 
 	config := `
 resource "chalk_cluster_timescale" "test" {
@@ -433,15 +405,7 @@ resource "chalk_cluster_timescale" "test" {
 func TestClusterTimescaleResourceUpdateMapFields(t *testing.T) {
 	server := setupMockBuilderServer(t)
 
-	// Set environment variables
-	os.Setenv("CHALK_API_SERVER", server.URL)
-	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
-	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
-	t.Cleanup(func() {
-		os.Unsetenv("CHALK_API_SERVER")
-		os.Unsetenv("CHALK_CLIENT_ID")
-		os.Unsetenv("CHALK_CLIENT_SECRET")
-	})
+	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
@@ -488,15 +452,7 @@ resource "chalk_cluster_timescale" "test" {
 func TestClusterTimescaleResourceUpdateObjectField(t *testing.T) {
 	server := setupMockBuilderServer(t)
 
-	// Set environment variables
-	os.Setenv("CHALK_API_SERVER", server.URL)
-	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
-	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
-	t.Cleanup(func() {
-		os.Unsetenv("CHALK_API_SERVER")
-		os.Unsetenv("CHALK_CLIENT_ID")
-		os.Unsetenv("CHALK_CLIENT_SECRET")
-	})
+	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
@@ -537,6 +493,85 @@ resource "chalk_cluster_timescale" "test" {
 						return nil
 					},
 				),
+			},
+		},
+	})
+}
+
+// TestClusterTimescaleResourceCreateError verifies proper error handling when Create RPC fails.
+func TestClusterTimescaleResourceCreateError(t *testing.T) {
+	server := setupMockBuilderServer(t)
+	setupTestEnv(t, server.URL)
+
+	// Reset and configure Create to return an error
+	server.Reset()
+	server.OnCreateClusterTimescaleDB().ReturnError(
+		connect.NewError(connect.CodeInvalidArgument, errors.New("invalid storage size")))
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "chalk_cluster_timescale" "test" {
+  environment_id    = "test-env-id"
+  storage           = "invalid"
+  database_replicas = 1
+}
+`,
+				ExpectError: regexp.MustCompile("invalid storage size"),
+			},
+		},
+	})
+}
+
+// TestClusterTimescaleResourceUpdateError verifies proper error handling when Update RPC fails.
+func TestClusterTimescaleResourceUpdateError(t *testing.T) {
+	server := setupMockBuilderServer(t)
+	setupTestEnv(t, server.URL)
+
+	// Reset and configure responses - Create succeeds, Update fails
+	server.Reset()
+	server.OnCreateClusterTimescaleDB().Return(&serverv1.CreateClusterTimescaleDBResponse{
+		ClusterTimescaleId: "test-cluster-id",
+		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+			"storage":           "30Gi",
+			"database_replicas": int32(1),
+		}),
+	})
+	server.OnGetClusterTimescaleDB().Return(&serverv1.GetClusterTimescaleDBResponse{
+		Id: "test-cluster-id",
+		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+			"storage":           "30Gi",
+			"database_replicas": int32(1),
+		}),
+	})
+	server.OnUpdateClusterTimescaleDB().ReturnError(
+		connect.NewError(connect.CodeResourceExhausted, errors.New("quota exceeded")))
+	// Configure Delete handler so destroy step works after update error
+	server.OnDeleteClusterTimescaleDB().Return(&serverv1.DeleteClusterTimescaleDBResponse{})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "chalk_cluster_timescale" "test" {
+  environment_id    = "test-env-id"
+  storage           = "30Gi"
+  database_replicas = 1
+}
+`,
+			},
+			{
+				Config: `
+resource "chalk_cluster_timescale" "test" {
+  environment_id    = "test-env-id"
+  storage           = "100Gi"
+  database_replicas = 1
+}
+`,
+				ExpectError: regexp.MustCompile("quota exceeded"),
 			},
 		},
 	})
