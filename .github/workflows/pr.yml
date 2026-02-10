@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: Build Provider
+    name: Build & Test Provider
     runs-on: ubuntu-latest
     
     steps:
@@ -43,3 +43,6 @@ jobs:
           gofmt -s -d .
           exit 1
         fi
+
+    - name: Run tests
+      run: go test -v ./internal/provider -timeout 5m
