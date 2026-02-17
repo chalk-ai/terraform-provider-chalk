@@ -44,11 +44,18 @@ func (cm *ClientManager) GetHTTPClient() *http.Client {
 	return cm.httpClient
 }
 
+// makeAuthInterceptor returns the appropriate authentication interceptor based on available credentials
+func (cm *ClientManager) makeAuthInterceptor(ctx context.Context) connect.Interceptor {
+	if cm.chalkClient.JWT != "" {
+		return MakeJWTInterceptor(cm.chalkClient.JWT)
+	}
+	authClient := cm.GetAuthClient(ctx)
+	return MakeTokenInjectionInterceptor(authClient, cm.chalkClient.ClientID, cm.chalkClient.ClientSecret)
+}
+
 // NewTeamClient creates a TeamServiceClient with standard headers and auth
 // If envId is provided (non-empty string), adds x-chalk-env-id header
 func (cm *ClientManager) NewTeamClient(ctx context.Context, envId ...string) serverv1connect.TeamServiceClient {
-	authClient := cm.GetAuthClient(ctx)
-
 	interceptors := []connect.Interceptor{}
 
 	// Add x-chalk-env-id header if envId is provided
@@ -56,10 +63,10 @@ func (cm *ClientManager) NewTeamClient(ctx context.Context, envId ...string) ser
 		interceptors = append(interceptors, MakeApiServerHeaderInterceptor("x-chalk-env-id", envId[0]))
 	}
 
-	// Add standard headers
+	// Add standard headers and authentication
 	interceptors = append(interceptors,
 		MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-		MakeTokenInjectionInterceptor(authClient, cm.chalkClient.ClientID, cm.chalkClient.ClientSecret),
+		cm.makeAuthInterceptor(ctx),
 	)
 
 	return NewTeamClient(ctx, &GrpcClientOptions{
@@ -71,42 +78,36 @@ func (cm *ClientManager) NewTeamClient(ctx context.Context, envId ...string) ser
 
 // NewBuilderClient creates a BuilderServiceClient with standard headers and auth
 func (cm *ClientManager) NewBuilderClient(ctx context.Context) serverv1connect.BuilderServiceClient {
-	authClient := cm.GetAuthClient(ctx)
-
 	return NewBuilderClient(ctx, &GrpcClientOptions{
 		httpClient: cm.httpClient,
 		host:       cm.chalkClient.ApiServer,
 		interceptors: []connect.Interceptor{
 			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, cm.chalkClient.ClientID, cm.chalkClient.ClientSecret),
+			cm.makeAuthInterceptor(ctx),
 		},
 	})
 }
 
 // NewCloudComponentsClient creates a CloudComponentsServiceClient with standard headers and auth
 func (cm *ClientManager) NewCloudComponentsClient(ctx context.Context) serverv1connect.CloudComponentsServiceClient {
-	authClient := cm.GetAuthClient(ctx)
-
 	return NewCloudComponentsClient(ctx, &GrpcClientOptions{
 		httpClient: cm.httpClient,
 		host:       cm.chalkClient.ApiServer,
 		interceptors: []connect.Interceptor{
 			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, cm.chalkClient.ClientID, cm.chalkClient.ClientSecret),
+			cm.makeAuthInterceptor(ctx),
 		},
 	})
 }
 
 // NewCloudAccountCredentialsClient creates a CloudAccountCredentialsServiceClient with standard headers and auth
 func (cm *ClientManager) NewCloudAccountCredentialsClient(ctx context.Context) serverv1connect.CloudAccountCredentialsServiceClient {
-	authClient := cm.GetAuthClient(ctx)
-
 	return NewCloudAccountCredentialsClient(ctx, &GrpcClientOptions{
 		httpClient: cm.httpClient,
 		host:       cm.chalkClient.ApiServer,
 		interceptors: []connect.Interceptor{
 			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, cm.chalkClient.ClientID, cm.chalkClient.ClientSecret),
+			cm.makeAuthInterceptor(ctx),
 		},
 	})
 }
@@ -158,14 +159,12 @@ func (cm *ClientManager) GetTeamClient(ctx context.Context) serverv1connect.Team
 		return cm.teamClient
 	}
 
-	authClient := cm.GetAuthClient(ctx)
-
 	cm.teamClient = NewTeamClient(ctx, &GrpcClientOptions{
 		httpClient: cm.httpClient,
 		host:       cm.chalkClient.ApiServer,
 		interceptors: []connect.Interceptor{
 			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, cm.chalkClient.ClientID, cm.chalkClient.ClientSecret),
+			cm.makeAuthInterceptor(ctx),
 		},
 	})
 
@@ -190,14 +189,12 @@ func (cm *ClientManager) GetBuilderClient(ctx context.Context) serverv1connect.B
 		return cm.builderClient
 	}
 
-	authClient := cm.GetAuthClient(ctx)
-
 	cm.builderClient = NewBuilderClient(ctx, &GrpcClientOptions{
 		httpClient: cm.httpClient,
 		host:       cm.chalkClient.ApiServer,
 		interceptors: []connect.Interceptor{
 			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, cm.chalkClient.ClientID, cm.chalkClient.ClientSecret),
+			cm.makeAuthInterceptor(ctx),
 		},
 	})
 
@@ -222,14 +219,12 @@ func (cm *ClientManager) GetCloudComponentsClient(ctx context.Context) serverv1c
 		return cm.cloudComponentsClient
 	}
 
-	authClient := cm.GetAuthClient(ctx)
-
 	cm.cloudComponentsClient = NewCloudComponentsClient(ctx, &GrpcClientOptions{
 		httpClient: cm.httpClient,
 		host:       cm.chalkClient.ApiServer,
 		interceptors: []connect.Interceptor{
 			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, cm.chalkClient.ClientID, cm.chalkClient.ClientSecret),
+			cm.makeAuthInterceptor(ctx),
 		},
 	})
 
@@ -254,14 +249,12 @@ func (cm *ClientManager) GetCloudAccountCredentialsClient(ctx context.Context) s
 		return cm.credentialsClient
 	}
 
-	authClient := cm.GetAuthClient(ctx)
-
 	cm.credentialsClient = NewCloudAccountCredentialsClient(ctx, &GrpcClientOptions{
 		httpClient: cm.httpClient,
 		host:       cm.chalkClient.ApiServer,
 		interceptors: []connect.Interceptor{
 			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			MakeTokenInjectionInterceptor(authClient, cm.chalkClient.ClientID, cm.chalkClient.ClientSecret),
+			cm.makeAuthInterceptor(ctx),
 		},
 	})
 

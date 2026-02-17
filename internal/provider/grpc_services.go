@@ -40,6 +40,15 @@ func MakeTokenInjectionInterceptor(authService serverv1connect.AuthServiceClient
 	}
 }
 
+func MakeJWTInterceptor(jwt string) connect.UnaryInterceptorFunc {
+	return func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			req.Header().Set("Authorization", "Bearer "+jwt)
+			return next(ctx, req)
+		}
+	}
+}
+
 func NewTeamClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.TeamServiceClient {
 	return serverv1connect.NewTeamServiceClient(
 		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
