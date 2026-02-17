@@ -23,11 +23,11 @@ type ChalkProvider struct {
 }
 
 type ChalkProviderModel struct {
-	ClientID           types.String `tfsdk:"client_id"`
-	ClientSecret       types.String `tfsdk:"client_secret"`
-	JWT                types.String `tfsdk:"jwt"`
-	JWTCommandProcess  types.String `tfsdk:"jwt_command_process"`
-	ApiServer          types.String `tfsdk:"api_server"`
+	ClientID          types.String `tfsdk:"client_id"`
+	ClientSecret      types.String `tfsdk:"client_secret"`
+	JWT               types.String `tfsdk:"jwt"`
+	JWTCommandProcess types.String `tfsdk:"jwt_command_process"`
+	ApiServer         types.String `tfsdk:"api_server"`
 }
 
 func New(version string) func() provider.Provider {
