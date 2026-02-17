@@ -51,12 +51,14 @@ type ClusterGatewayResourceModel struct {
 	GatewayClassName types.String `tfsdk:"gateway_class_name"`
 
 	// Flattened Envoy config fields
-	TimeoutDuration          types.String `tfsdk:"timeout_duration"`
-	DNSHostname              types.String `tfsdk:"dns_hostname"`
-	Replicas                 types.Int64  `tfsdk:"replicas"`
-	MinAvailable             types.Int64  `tfsdk:"min_available"`
-	LetsencryptClusterIssuer types.String `tfsdk:"letsencrypt_cluster_issuer"`
-	AdditionalDNSNames       types.List   `tfsdk:"additional_dns_names"`
+	TimeoutDuration                    types.String `tfsdk:"timeout_duration"`
+	DNSHostname                        types.String `tfsdk:"dns_hostname"`
+	Replicas                           types.Int64  `tfsdk:"replicas"`
+	MinAvailable                       types.Int64  `tfsdk:"min_available"`
+	LetsencryptClusterIssuer           types.String `tfsdk:"letsencrypt_cluster_issuer"`
+	AdditionalDNSNames                 types.List   `tfsdk:"additional_dns_names"`
+	Nodepool                           types.String `tfsdk:"nodepool"`
+	AllowCollocationWithChalkWorkloads types.Bool   `tfsdk:"allow_collocation_with_chalk_workloads"`
 
 	// Optional fields
 	IPAllowlist        types.List                 `tfsdk:"ip_allowlist"`
@@ -184,6 +186,14 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				MarkdownDescription: "Additional DNS names for Envoy gateway",
 				Optional:            true,
 				ElementType:         types.StringType,
+			},
+			"nodepool": schema.StringAttribute{
+				MarkdownDescription: "Nodepool for the gateway",
+				Optional:            true,
+			},
+			"allow_collocation_with_chalk_workloads": schema.BoolAttribute{
+				MarkdownDescription: "Allow collocation with Chalk workloads",
+				Optional:            true,
 			},
 			"ip_allowlist": schema.ListAttribute{
 				MarkdownDescription: "IP allowlist for the gateway",
@@ -342,6 +352,19 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 		} else {
 			data.AdditionalDNSNames = types.ListNull(types.StringType)
 		}
+
+		if envoyConfig.Nodepool != "" {
+			data.Nodepool = types.StringValue(envoyConfig.Nodepool)
+		} else {
+			data.Nodepool = types.StringNull()
+		}
+
+		// Only set if true, leave unset if false
+		if envoyConfig.AllowColocationWithChalkWorkloads {
+			data.AllowCollocationWithChalkWorkloads = types.BoolValue(true)
+		} else {
+			data.AllowCollocationWithChalkWorkloads = types.BoolNull()
+		}
 	}
 
 	// Update TLS certificate
@@ -428,6 +451,13 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 			return
 		}
 		envoyConfig.AdditionalDnsNames = dnsNames
+	}
+	if !data.Nodepool.IsNull() {
+		envoyConfig.Nodepool = data.Nodepool.ValueString()
+	}
+	// Only set if explicitly true, leave unset (default false) otherwise
+	if !data.AllowCollocationWithChalkWorkloads.IsNull() && data.AllowCollocationWithChalkWorkloads.ValueBool() {
+		envoyConfig.AllowColocationWithChalkWorkloads = true
 	}
 	createReq.Specs.Config = &serverv1.GatewayProviderConfig{
 		Config: &serverv1.GatewayProviderConfig_Envoy{
@@ -609,6 +639,13 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 			return
 		}
 		envoyConfig.AdditionalDnsNames = dnsNames
+	}
+	if !data.Nodepool.IsNull() {
+		envoyConfig.Nodepool = data.Nodepool.ValueString()
+	}
+	// Only set if explicitly true, leave unset (default false) otherwise
+	if !data.AllowCollocationWithChalkWorkloads.IsNull() && data.AllowCollocationWithChalkWorkloads.ValueBool() {
+		envoyConfig.AllowColocationWithChalkWorkloads = true
 	}
 	createReq.Specs.Config = &serverv1.GatewayProviderConfig{
 		Config: &serverv1.GatewayProviderConfig_Envoy{

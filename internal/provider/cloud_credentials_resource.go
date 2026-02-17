@@ -110,6 +110,7 @@ func (r *CloudCredentialsResource) Schema(ctx context.Context, req resource.Sche
 			"aws_external_id": schema.StringAttribute{
 				MarkdownDescription: "AWS external ID for role assumption",
 				Optional:            true,
+				Computed:            true,
 			},
 
 			// GCP Configuration
@@ -315,7 +316,21 @@ func (r *CloudCredentialsResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Update with created values
-	data.Id = types.StringValue(creds.Msg.Credentials.Id)
+	c := creds.Msg.Credentials
+	data.Id = types.StringValue(c.Id)
+
+	// Extract configuration from response to ensure all computed fields are populated
+	if c.Spec != nil && c.Spec.Config != nil {
+		switch config := c.Spec.Config.(type) {
+		case *serverv1.CloudConfig_Aws:
+			aws := config.Aws
+			if aws.ExternalId != nil {
+				data.AWSExternalId = types.StringValue(*aws.ExternalId)
+			} else {
+				data.AWSExternalId = types.StringNull()
+			}
+		}
+	}
 
 	tflog.Trace(ctx, "created a chalk_cloud_credentials resource")
 
@@ -360,6 +375,8 @@ func (r *CloudCredentialsResource) Read(ctx context.Context, req resource.ReadRe
 			data.AWSRegion = types.StringValue(aws.Region)
 			if aws.ExternalId != nil {
 				data.AWSExternalId = types.StringValue(*aws.ExternalId)
+			} else {
+				data.AWSExternalId = types.StringNull()
 			}
 
 			// Extract Docker build config if present
