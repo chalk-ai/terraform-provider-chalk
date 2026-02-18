@@ -2,6 +2,11 @@ module github.com/chalk-ai/terraform-provider-chalk
 
 go 1.26.0
 
+replace (
+	github.com/chalk-ai/chalk-go => ../chalk-go
+	github.com/chalk-ai/chalk-go/gen => ../chalk-go/gen
+)
+
 require (
 	connectrpc.com/connect v1.19.1
 	github.com/chalk-ai/chalk-go v1.2.189
