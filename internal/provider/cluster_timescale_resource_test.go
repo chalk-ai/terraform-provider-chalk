@@ -108,7 +108,7 @@ func setupMockBuilderServer(t *testing.T) *testserver.MockServer {
 }
 
 // mockClusterTimescaleSpecs creates a ClusterTimescaleSpecs with default values.
-func mockClusterTimescaleSpecs(overrides map[string]interface{}) *serverv1.ClusterTimescaleSpecs {
+func mockClusterTimescaleSpecs(overrides map[string]any) *serverv1.ClusterTimescaleSpecs {
 	internal := false
 	serviceType := "load-balancer"
 	specs := &serverv1.ClusterTimescaleSpecs{
@@ -350,7 +350,7 @@ func TestClusterTimescaleResourceNoOpUpdate(t *testing.T) {
 	// Configure Create response
 	server.OnCreateClusterTimescaleDB().Return(&serverv1.CreateClusterTimescaleDBResponse{
 		ClusterTimescaleId: "test-cluster-id",
-		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+		Specs: mockClusterTimescaleSpecs(map[string]any{
 			"storage":           "30Gi",
 			"database_replicas": int32(1),
 		}),
@@ -359,7 +359,7 @@ func TestClusterTimescaleResourceNoOpUpdate(t *testing.T) {
 	// Configure Update response (should not be called)
 	server.OnUpdateClusterTimescaleDB().Return(&serverv1.UpdateClusterTimescaleDBResponse{
 		ClusterTimescaleId: "test-cluster-id",
-		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+		Specs: mockClusterTimescaleSpecs(map[string]any{
 			"storage":           "30Gi",
 			"database_replicas": int32(1),
 		}),
@@ -534,14 +534,14 @@ func TestClusterTimescaleResourceUpdateError(t *testing.T) {
 	server.Reset()
 	server.OnCreateClusterTimescaleDB().Return(&serverv1.CreateClusterTimescaleDBResponse{
 		ClusterTimescaleId: "test-cluster-id",
-		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+		Specs: mockClusterTimescaleSpecs(map[string]any{
 			"storage":           "30Gi",
 			"database_replicas": int32(1),
 		}),
 	})
 	server.OnGetClusterTimescaleDB().Return(&serverv1.GetClusterTimescaleDBResponse{
 		Id: "test-cluster-id",
-		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+		Specs: mockClusterTimescaleSpecs(map[string]any{
 			"storage":           "30Gi",
 			"database_replicas": int32(1),
 		}),
