@@ -112,6 +112,21 @@ func (cm *ClientManager) NewCloudAccountCredentialsClient(ctx context.Context) s
 	})
 }
 
+// NewIntegrationsClient creates an IntegrationsServiceClient with standard headers and auth.
+// The envId parameter sets the x-chalk-env-id header to scope to a specific environment.
+func (cm *ClientManager) NewIntegrationsClient(ctx context.Context, envId string) serverv1connect.IntegrationsServiceClient {
+	interceptors := []connect.Interceptor{
+		MakeApiServerHeaderInterceptor("x-chalk-env-id", envId),
+		MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+		cm.makeAuthInterceptor(ctx),
+	}
+	return NewIntegrationsClient(ctx, &GrpcClientOptions{
+		httpClient:   cm.httpClient,
+		host:         cm.chalkClient.ApiServer,
+		interceptors: interceptors,
+	})
+}
+
 // GetAuthClient returns the AuthServiceClient, creating it if necessary
 func (cm *ClientManager) GetAuthClient(ctx context.Context) serverv1connect.AuthServiceClient {
 	cm.mu.RLock()

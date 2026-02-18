@@ -218,6 +218,7 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewManagedAWSVPCResource,
 		NewManagedGCPVPCResource,
 		NewManagedAzureVPCResource,
+		NewDatasourceResource,
 	}
 }
 
