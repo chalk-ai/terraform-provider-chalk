@@ -71,3 +71,8 @@ require (
 	google.golang.org/grpc v1.78.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace (
+	github.com/chalk-ai/chalk-go => ../chalk-go
+	github.com/chalk-ai/chalk-go/gen => ../chalk-go/gen
+)

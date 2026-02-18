@@ -73,3 +73,8 @@ func NewCloudComponentsClient(ctx context.Context, options *GrpcClientOptions) s
 	return serverv1connect.NewCloudComponentsServiceClient(
 		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
 }
+
+func NewIntegrationsClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.IntegrationsServiceClient {
+	return serverv1connect.NewIntegrationsServiceClient(
+		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+}

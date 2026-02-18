@@ -15,10 +15,6 @@ github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew
 github.com/apparentlymart/go-textseg/v15 v15.0.0/go.mod h1:K8XmNZdhEBkdlyDdvbmmsvpAG721bKi0joRfFdHIWJ4=
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=
 github.com/bufbuild/protocompile v0.14.1/go.mod h1:ppVdAIhbr2H8asPk6k4pY7t9zB1OU5DoEw9xY/FUi1c=
-github.com/chalk-ai/chalk-go v1.2.189 h1:htbbc3kVUrfBjABpGNOCwqkyOVB/XmYlXv5FFYkrrxc=
-github.com/chalk-ai/chalk-go v1.2.189/go.mod h1:sTC2XoEKmwDrUgiK4iHDLXT18BSVGvgWpmGDtpVYpWo=
-github.com/chalk-ai/chalk-go/gen v1.2.189 h1:ZoLg4rWs3L4rKl5FawBMJdVb5aR3Wny2paySAwaff8k=
-github.com/chalk-ai/chalk-go/gen v1.2.189/go.mod h1:Md+dTw8uJtZTN4JWFIV1Kp9mXdUEJpL2z7fnM8O/3yI=
 github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
 github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
 github.com/cyphar/filepath-securejoin v0.4.1 h1:JyxxyPEaktOD+GAnqIqTf9A8tHyAG22rowi7HkoSU1s=
