@@ -257,6 +257,59 @@ resource "chalk_telemetry" "test" {
 	})
 }
 
+// TestTelemetryResourceUpdateAggregatorFieldMask verifies that only "aggregator" is in the mask when aggregator changes.
+func TestTelemetryResourceUpdateAggregatorFieldMask(t *testing.T) {
+	server := setupMockBuilderServerTelemetry(t)
+	setupTestEnv(t, server.URL)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+  clickhouse_deployment_spec = {
+    version = "23.8"
+  }
+  aggregator_spec = {
+    image_version = "1.0.0"
+  }
+}
+`,
+			},
+			{
+				Config: `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+  clickhouse_deployment_spec = {
+    version = "23.8"
+  }
+  aggregator_spec = {
+    image_version = "1.1.0"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
+						require.NotEmpty(t, captured, "Expected at least one UpdateTelemetryDeployment call")
+
+						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
+						assert.NotNil(t, req.UpdateMask, "Expected UpdateMask to be set")
+						assert.Equal(t, []string{"aggregator"}, req.UpdateMask.Paths,
+							"Expected only 'aggregator' in field mask")
+						require.NotNil(t, req.Spec.Aggregator)
+						assert.Equal(t, "1.1.0", req.Spec.Aggregator.ImageVersion)
+
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
 // TestTelemetryResourceNoOpUpdate verifies no RPC call is made when no fields change.
 func TestTelemetryResourceNoOpUpdate(t *testing.T) {
 	server := setupMockBuilderServerTelemetry(t)

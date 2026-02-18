@@ -46,12 +46,18 @@ type OtelCollectorSpecModel struct {
 	Limit   *KubeResourceConfigModel `tfsdk:"limit"`
 }
 
+type AggregatorSpecModel struct {
+	ImageVersion types.String             `tfsdk:"image_version"`
+	Request      *KubeResourceConfigModel `tfsdk:"request"`
+}
+
 type TelemetryResourceModel struct {
 	Id                       types.String                   `tfsdk:"id"`
 	Namespace                types.String                   `tfsdk:"namespace"`
 	KubeClusterId            types.String                   `tfsdk:"kube_cluster_id"`
 	OtelCollectorSpec        *OtelCollectorSpecModel        `tfsdk:"otel_collector_spec"`
 	ClickhouseDeploymentSpec *ClickhouseDeploymentSpecModel `tfsdk:"clickhouse_deployment_spec"`
+	AggregatorSpec           *AggregatorSpecModel           `tfsdk:"aggregator_spec"`
 }
 
 func (r *TelemetryResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -140,6 +146,20 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 	}
 
+	aggregatorSpecSchema := schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"image_version": schema.StringAttribute{
+				MarkdownDescription: "Aggregator image version",
+				Required:            true,
+			},
+			"request": schema.SingleNestedAttribute{
+				MarkdownDescription: "Request resource specification",
+				Optional:            true,
+				Attributes:          kubeResourceConfigSchema.Attributes,
+			},
+		},
+	}
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Chalk telemetry resource",
 
@@ -175,6 +195,11 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "Clickhouse deployment specification",
 				Optional:            true,
 				Attributes:          clickhouseDeploymentSchema.Attributes,
+			},
+			"aggregator_spec": schema.SingleNestedAttribute{
+				MarkdownDescription: "Aggregator specification",
+				Optional:            true,
+				Attributes:          aggregatorSpecSchema.Attributes,
 			},
 		},
 	}
@@ -260,6 +285,21 @@ func buildTelemetryDeploymentSpec(data *TelemetryResourceModel) *serverv1.Teleme
 		spec.Otel = otel
 	}
 
+	if data.AggregatorSpec != nil {
+		agg := &serverv1.AggregatorSpec{
+			ImageVersion: data.AggregatorSpec.ImageVersion.ValueString(),
+		}
+		if data.AggregatorSpec.Request != nil {
+			agg.Request = &serverv1.KubeResourceConfig{
+				Cpu:              data.AggregatorSpec.Request.CPU.ValueString(),
+				Memory:           data.AggregatorSpec.Request.Memory.ValueString(),
+				EphemeralStorage: data.AggregatorSpec.Request.EphemeralStorage.ValueString(),
+				Storage:          data.AggregatorSpec.Request.Storage.ValueString(),
+			}
+		}
+		spec.Aggregator = agg
+	}
+
 	return spec
 }
 
@@ -333,6 +373,24 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 	} else {
 		data.OtelCollectorSpec = nil
 	}
+
+	if spec.Aggregator != nil {
+		agg := spec.Aggregator
+		aggModel := &AggregatorSpecModel{
+			ImageVersion: types.StringValue(agg.ImageVersion),
+		}
+		if agg.Request != nil {
+			aggModel.Request = &KubeResourceConfigModel{
+				CPU:              optionalStringValue(agg.Request.Cpu),
+				Memory:           optionalStringValue(agg.Request.Memory),
+				EphemeralStorage: optionalStringValue(agg.Request.EphemeralStorage),
+				Storage:          optionalStringValue(agg.Request.Storage),
+			}
+		}
+		data.AggregatorSpec = aggModel
+	} else {
+		data.AggregatorSpec = nil
+	}
 }
 
 // buildTelemetryUpdateMask compares plan and state to determine which top-level spec fields changed.
@@ -368,6 +426,20 @@ func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
 			kubeResourceChanged(plan.Request, st.Request) ||
 			kubeResourceChanged(plan.Limit, st.Limit) {
 			paths = append(paths, "otel")
+		}
+	}
+
+	// Compare aggregator block
+	planHasAgg := data.AggregatorSpec != nil
+	stateHasAgg := state.AggregatorSpec != nil
+	if planHasAgg != stateHasAgg {
+		paths = append(paths, "aggregator")
+	} else if planHasAgg && stateHasAgg {
+		plan := data.AggregatorSpec
+		st := state.AggregatorSpec
+		if !plan.ImageVersion.Equal(st.ImageVersion) ||
+			kubeResourceChanged(plan.Request, st.Request) {
+			paths = append(paths, "aggregator")
 		}
 	}
 
