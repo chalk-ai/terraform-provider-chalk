@@ -346,6 +346,66 @@ resource "chalk_telemetry" "test" {
 	})
 }
 
+// TestTelemetryResourceServerDefaults verifies that when the server returns defaults for unconfigured
+// specs, the provider does not show drift on subsequent plans (the original bug).
+func TestTelemetryResourceServerDefaults(t *testing.T) {
+	server := testserver.NewMockBuilderServer(t)
+	t.Cleanup(func() { server.Close() })
+	setupTestEnv(t, server.URL)
+
+	const deploymentID = "test-telemetry-id"
+	const clusterID = "test-cluster-id"
+
+	// Server always returns all three specs with defaults, regardless of what was sent.
+	serverDefaultSpec := &serverv1.TelemetryDeploymentSpec{
+		ClickHouse: &serverv1.ClickHouseSpec{
+			ClickHouseVersion: "23.8",
+		},
+		Otel: &serverv1.OtelCollectorSpec{
+			OtelCollectorVersion: "0.88.0",
+		},
+		Aggregator: &serverv1.AggregatorSpec{
+			ImageVersion: "1.0.0",
+		},
+	}
+
+	server.OnCreateTelemetryDeployment().Return(&serverv1.CreateTelemetryDeploymentResponse{
+		TelemetryDeploymentId: deploymentID,
+	})
+	server.OnGetTelemetryDeployment().Return(&serverv1.GetTelemetryDeploymentResponse{
+		Deployment: &serverv1.TelemetryDeployment{
+			Id:        deploymentID,
+			ClusterId: clusterID,
+			Spec:      serverDefaultSpec,
+		},
+	})
+	server.OnDeleteTelemetryDeployment().Return(&serverv1.DeleteTelemetryDeploymentResponse{})
+
+	// User only configures clickhouse; server fills in otel and aggregator as defaults.
+	config := `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+  clickhouse_deployment_spec = {
+    version = "23.8"
+  }
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			// Step 1: apply should succeed (no "inconsistent result after apply" error).
+			{Config: config},
+			// Step 2: re-plan with same config should show no changes despite server returning defaults.
+			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 // TestTelemetryResourceCreateError verifies proper error handling when Create RPC fails.
 func TestTelemetryResourceCreateError(t *testing.T) {
 	server := testserver.NewMockBuilderServer(t)

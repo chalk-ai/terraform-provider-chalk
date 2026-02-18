@@ -6,18 +6,47 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 var _ resource.Resource = &TelemetryResource{}
 var _ resource.ResourceWithImportState = &TelemetryResource{}
+
+// Attribute type maps used to construct types.Object values and null objects.
+var kubePVCAttrTypes = map[string]attr.Type{
+	"storage":            types.StringType,
+	"storage_class_name": types.StringType,
+}
+
+var otelCollectorSpecAttrTypes = map[string]attr.Type{
+	"version": types.StringType,
+	"request": types.ObjectType{AttrTypes: kubeResourceConfigAttrTypes},
+	"limit":   types.ObjectType{AttrTypes: kubeResourceConfigAttrTypes},
+}
+
+var aggregatorSpecAttrTypes = map[string]attr.Type{
+	"image_version": types.StringType,
+	"request":       types.ObjectType{AttrTypes: kubeResourceConfigAttrTypes},
+}
+
+var clickhouseDeploymentSpecAttrTypes = map[string]attr.Type{
+	"version":    types.StringType,
+	"request":    types.ObjectType{AttrTypes: kubeResourceConfigAttrTypes},
+	"limit":      types.ObjectType{AttrTypes: kubeResourceConfigAttrTypes},
+	"storage":    types.ObjectType{AttrTypes: kubePVCAttrTypes},
+	"gateway_id": types.StringType,
+}
 
 func NewTelemetryResource() resource.Resource {
 	return &TelemetryResource{}
@@ -27,6 +56,7 @@ type TelemetryResource struct {
 	client *ClientManager
 }
 
+// Intermediate structs used only for .As() deserialization within buildTelemetryDeploymentSpec.
 type KubePersistentVolumeClaimModel struct {
 	Storage          types.String `tfsdk:"storage"`
 	StorageClassName types.String `tfsdk:"storage_class_name"`
@@ -52,12 +82,12 @@ type AggregatorSpecModel struct {
 }
 
 type TelemetryResourceModel struct {
-	Id                       types.String                   `tfsdk:"id"`
-	Namespace                types.String                   `tfsdk:"namespace"`
-	KubeClusterId            types.String                   `tfsdk:"kube_cluster_id"`
-	OtelCollectorSpec        *OtelCollectorSpecModel        `tfsdk:"otel_collector_spec"`
-	ClickhouseDeploymentSpec *ClickhouseDeploymentSpecModel `tfsdk:"clickhouse_deployment_spec"`
-	AggregatorSpec           *AggregatorSpecModel           `tfsdk:"aggregator_spec"`
+	Id                       types.String `tfsdk:"id"`
+	Namespace                types.String `tfsdk:"namespace"`
+	KubeClusterId            types.String `tfsdk:"kube_cluster_id"`
+	OtelCollectorSpec        types.Object `tfsdk:"otel_collector_spec"`
+	ClickhouseDeploymentSpec types.Object `tfsdk:"clickhouse_deployment_spec"`
+	AggregatorSpec           types.Object `tfsdk:"aggregator_spec"`
 }
 
 func (r *TelemetryResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -189,17 +219,29 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 			"otel_collector_spec": schema.SingleNestedAttribute{
 				MarkdownDescription: "Otel collector specification",
 				Optional:            true,
+				Computed:            true,
 				Attributes:          otelCollectorSpecSchema.Attributes,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"clickhouse_deployment_spec": schema.SingleNestedAttribute{
 				MarkdownDescription: "Clickhouse deployment specification",
 				Optional:            true,
+				Computed:            true,
 				Attributes:          clickhouseDeploymentSchema.Attributes,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"aggregator_spec": schema.SingleNestedAttribute{
 				MarkdownDescription: "Aggregator specification",
 				Optional:            true,
+				Computed:            true,
 				Attributes:          aggregatorSpecSchema.Attributes,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -224,77 +266,116 @@ func (r *TelemetryResource) Configure(ctx context.Context, req resource.Configur
 	r.client = client
 }
 
+// kubeResourceConfigObject converts a KubeResourceConfig proto to a types.Object.
+func kubeResourceConfigObject(rc *serverv1.KubeResourceConfig) types.Object {
+	if rc == nil {
+		return types.ObjectNull(kubeResourceConfigAttrTypes)
+	}
+	return types.ObjectValueMust(kubeResourceConfigAttrTypes, map[string]attr.Value{
+		"cpu":               optionalStringValue(rc.Cpu),
+		"memory":            optionalStringValue(rc.Memory),
+		"ephemeral_storage": optionalStringValue(rc.EphemeralStorage),
+		"storage":           optionalStringValue(rc.Storage),
+	})
+}
+
+// kubePVCObject converts a KubePersistentVolumeClaim proto to a types.Object.
+func kubePVCObject(pvc *serverv1.KubePersistentVolumeClaim) types.Object {
+	if pvc == nil {
+		return types.ObjectNull(kubePVCAttrTypes)
+	}
+	return types.ObjectValueMust(kubePVCAttrTypes, map[string]attr.Value{
+		"storage":            optionalStringValue(pvc.Storage),
+		"storage_class_name": optionalStringValue(pvc.StorageClassName),
+	})
+}
+
 // buildTelemetryDeploymentSpec builds a TelemetryDeploymentSpec proto from a Terraform model.
-func buildTelemetryDeploymentSpec(data *TelemetryResourceModel) *serverv1.TelemetryDeploymentSpec {
+func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceModel, diags *diag.Diagnostics) *serverv1.TelemetryDeploymentSpec {
 	spec := &serverv1.TelemetryDeploymentSpec{
 		Namespace: data.Namespace.ValueStringPointer(),
 	}
 
-	if data.ClickhouseDeploymentSpec != nil {
+	if !data.ClickhouseDeploymentSpec.IsNull() && !data.ClickhouseDeploymentSpec.IsUnknown() {
+		var chModel ClickhouseDeploymentSpecModel
+		diags.Append(data.ClickhouseDeploymentSpec.As(ctx, &chModel, basetypes.ObjectAsOptions{})...)
+		if diags.HasError() {
+			return nil
+		}
 		ch := &serverv1.ClickHouseSpec{
-			ClickHouseVersion: data.ClickhouseDeploymentSpec.Version.ValueString(),
+			ClickHouseVersion: chModel.Version.ValueString(),
 		}
-		if !data.ClickhouseDeploymentSpec.GatewayId.IsNull() {
-			ch.GatewayId = data.ClickhouseDeploymentSpec.GatewayId.ValueStringPointer()
+		if !chModel.GatewayId.IsNull() {
+			ch.GatewayId = chModel.GatewayId.ValueStringPointer()
 		}
-		if data.ClickhouseDeploymentSpec.Storage != nil {
+		if chModel.Storage != nil {
 			ch.Storage = &serverv1.KubePersistentVolumeClaim{
-				Storage:          data.ClickhouseDeploymentSpec.Storage.Storage.ValueString(),
-				StorageClassName: data.ClickhouseDeploymentSpec.Storage.StorageClassName.ValueString(),
+				Storage:          chModel.Storage.Storage.ValueString(),
+				StorageClassName: chModel.Storage.StorageClassName.ValueString(),
 			}
 		}
-		if data.ClickhouseDeploymentSpec.Request != nil {
+		if chModel.Request != nil {
 			ch.Request = &serverv1.KubeResourceConfig{
-				Cpu:              data.ClickhouseDeploymentSpec.Request.CPU.ValueString(),
-				Memory:           data.ClickhouseDeploymentSpec.Request.Memory.ValueString(),
-				EphemeralStorage: data.ClickhouseDeploymentSpec.Request.EphemeralStorage.ValueString(),
-				Storage:          data.ClickhouseDeploymentSpec.Request.Storage.ValueString(),
+				Cpu:              chModel.Request.CPU.ValueString(),
+				Memory:           chModel.Request.Memory.ValueString(),
+				EphemeralStorage: chModel.Request.EphemeralStorage.ValueString(),
+				Storage:          chModel.Request.Storage.ValueString(),
 			}
 		}
-		if data.ClickhouseDeploymentSpec.Limit != nil {
+		if chModel.Limit != nil {
 			ch.Limit = &serverv1.KubeResourceConfig{
-				Cpu:              data.ClickhouseDeploymentSpec.Limit.CPU.ValueString(),
-				Memory:           data.ClickhouseDeploymentSpec.Limit.Memory.ValueString(),
-				EphemeralStorage: data.ClickhouseDeploymentSpec.Limit.EphemeralStorage.ValueString(),
-				Storage:          data.ClickhouseDeploymentSpec.Limit.Storage.ValueString(),
+				Cpu:              chModel.Limit.CPU.ValueString(),
+				Memory:           chModel.Limit.Memory.ValueString(),
+				EphemeralStorage: chModel.Limit.EphemeralStorage.ValueString(),
+				Storage:          chModel.Limit.Storage.ValueString(),
 			}
 		}
 		spec.ClickHouse = ch
 	}
 
-	if data.OtelCollectorSpec != nil {
-		otel := &serverv1.OtelCollectorSpec{
-			OtelCollectorVersion: data.OtelCollectorSpec.Version.ValueString(),
+	if !data.OtelCollectorSpec.IsNull() && !data.OtelCollectorSpec.IsUnknown() {
+		var otelModel OtelCollectorSpecModel
+		diags.Append(data.OtelCollectorSpec.As(ctx, &otelModel, basetypes.ObjectAsOptions{})...)
+		if diags.HasError() {
+			return nil
 		}
-		if data.OtelCollectorSpec.Request != nil {
+		otel := &serverv1.OtelCollectorSpec{
+			OtelCollectorVersion: otelModel.Version.ValueString(),
+		}
+		if otelModel.Request != nil {
 			otel.Request = &serverv1.KubeResourceConfig{
-				Cpu:              data.OtelCollectorSpec.Request.CPU.ValueString(),
-				Memory:           data.OtelCollectorSpec.Request.Memory.ValueString(),
-				EphemeralStorage: data.OtelCollectorSpec.Request.EphemeralStorage.ValueString(),
-				Storage:          data.OtelCollectorSpec.Request.Storage.ValueString(),
+				Cpu:              otelModel.Request.CPU.ValueString(),
+				Memory:           otelModel.Request.Memory.ValueString(),
+				EphemeralStorage: otelModel.Request.EphemeralStorage.ValueString(),
+				Storage:          otelModel.Request.Storage.ValueString(),
 			}
 		}
-		if data.OtelCollectorSpec.Limit != nil {
+		if otelModel.Limit != nil {
 			otel.Limit = &serverv1.KubeResourceConfig{
-				Cpu:              data.OtelCollectorSpec.Limit.CPU.ValueString(),
-				Memory:           data.OtelCollectorSpec.Limit.Memory.ValueString(),
-				EphemeralStorage: data.OtelCollectorSpec.Limit.EphemeralStorage.ValueString(),
-				Storage:          data.OtelCollectorSpec.Limit.Storage.ValueString(),
+				Cpu:              otelModel.Limit.CPU.ValueString(),
+				Memory:           otelModel.Limit.Memory.ValueString(),
+				EphemeralStorage: otelModel.Limit.EphemeralStorage.ValueString(),
+				Storage:          otelModel.Limit.Storage.ValueString(),
 			}
 		}
 		spec.Otel = otel
 	}
 
-	if data.AggregatorSpec != nil {
-		agg := &serverv1.AggregatorSpec{
-			ImageVersion: data.AggregatorSpec.ImageVersion.ValueString(),
+	if !data.AggregatorSpec.IsNull() && !data.AggregatorSpec.IsUnknown() {
+		var aggModel AggregatorSpecModel
+		diags.Append(data.AggregatorSpec.As(ctx, &aggModel, basetypes.ObjectAsOptions{})...)
+		if diags.HasError() {
+			return nil
 		}
-		if data.AggregatorSpec.Request != nil {
+		agg := &serverv1.AggregatorSpec{
+			ImageVersion: aggModel.ImageVersion.ValueString(),
+		}
+		if aggModel.Request != nil {
 			agg.Request = &serverv1.KubeResourceConfig{
-				Cpu:              data.AggregatorSpec.Request.CPU.ValueString(),
-				Memory:           data.AggregatorSpec.Request.Memory.ValueString(),
-				EphemeralStorage: data.AggregatorSpec.Request.EphemeralStorage.ValueString(),
-				Storage:          data.AggregatorSpec.Request.Storage.ValueString(),
+				Cpu:              aggModel.Request.CPU.ValueString(),
+				Memory:           aggModel.Request.Memory.ValueString(),
+				EphemeralStorage: aggModel.Request.EphemeralStorage.ValueString(),
+				Storage:          aggModel.Request.Storage.ValueString(),
 			}
 		}
 		spec.Aggregator = agg
@@ -313,136 +394,56 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 
 	if spec.ClickHouse != nil {
 		ch := spec.ClickHouse
-		chModel := &ClickhouseDeploymentSpecModel{
-			Version: types.StringValue(ch.ClickHouseVersion),
-		}
+		gatewayId := types.StringNull()
 		if ch.GatewayId != nil {
-			chModel.GatewayId = types.StringPointerValue(ch.GatewayId)
-		} else {
-			chModel.GatewayId = types.StringNull()
+			gatewayId = types.StringPointerValue(ch.GatewayId)
 		}
-		if ch.Storage != nil {
-			chModel.Storage = &KubePersistentVolumeClaimModel{
-				Storage:          optionalStringValue(ch.Storage.Storage),
-				StorageClassName: optionalStringValue(ch.Storage.StorageClassName),
-			}
-		}
-		if ch.Request != nil {
-			chModel.Request = &KubeResourceConfigModel{
-				CPU:              optionalStringValue(ch.Request.Cpu),
-				Memory:           optionalStringValue(ch.Request.Memory),
-				EphemeralStorage: optionalStringValue(ch.Request.EphemeralStorage),
-				Storage:          optionalStringValue(ch.Request.Storage),
-			}
-		}
-		if ch.Limit != nil {
-			chModel.Limit = &KubeResourceConfigModel{
-				CPU:              optionalStringValue(ch.Limit.Cpu),
-				Memory:           optionalStringValue(ch.Limit.Memory),
-				EphemeralStorage: optionalStringValue(ch.Limit.EphemeralStorage),
-				Storage:          optionalStringValue(ch.Limit.Storage),
-			}
-		}
-		data.ClickhouseDeploymentSpec = chModel
+		data.ClickhouseDeploymentSpec = types.ObjectValueMust(clickhouseDeploymentSpecAttrTypes, map[string]attr.Value{
+			"version":    types.StringValue(ch.ClickHouseVersion),
+			"gateway_id": gatewayId,
+			"request":    kubeResourceConfigObject(ch.Request),
+			"limit":      kubeResourceConfigObject(ch.Limit),
+			"storage":    kubePVCObject(ch.Storage),
+		})
 	} else {
-		data.ClickhouseDeploymentSpec = nil
+		data.ClickhouseDeploymentSpec = types.ObjectNull(clickhouseDeploymentSpecAttrTypes)
 	}
 
 	if spec.Otel != nil {
 		otel := spec.Otel
-		otelModel := &OtelCollectorSpecModel{
-			Version: types.StringValue(otel.OtelCollectorVersion),
-		}
-		if otel.Request != nil {
-			otelModel.Request = &KubeResourceConfigModel{
-				CPU:              optionalStringValue(otel.Request.Cpu),
-				Memory:           optionalStringValue(otel.Request.Memory),
-				EphemeralStorage: optionalStringValue(otel.Request.EphemeralStorage),
-				Storage:          optionalStringValue(otel.Request.Storage),
-			}
-		}
-		if otel.Limit != nil {
-			otelModel.Limit = &KubeResourceConfigModel{
-				CPU:              optionalStringValue(otel.Limit.Cpu),
-				Memory:           optionalStringValue(otel.Limit.Memory),
-				EphemeralStorage: optionalStringValue(otel.Limit.EphemeralStorage),
-				Storage:          optionalStringValue(otel.Limit.Storage),
-			}
-		}
-		data.OtelCollectorSpec = otelModel
+		data.OtelCollectorSpec = types.ObjectValueMust(otelCollectorSpecAttrTypes, map[string]attr.Value{
+			"version": types.StringValue(otel.OtelCollectorVersion),
+			"request": kubeResourceConfigObject(otel.Request),
+			"limit":   kubeResourceConfigObject(otel.Limit),
+		})
 	} else {
-		data.OtelCollectorSpec = nil
+		data.OtelCollectorSpec = types.ObjectNull(otelCollectorSpecAttrTypes)
 	}
 
 	if spec.Aggregator != nil {
 		agg := spec.Aggregator
-		aggModel := &AggregatorSpecModel{
-			ImageVersion: types.StringValue(agg.ImageVersion),
-		}
-		if agg.Request != nil {
-			aggModel.Request = &KubeResourceConfigModel{
-				CPU:              optionalStringValue(agg.Request.Cpu),
-				Memory:           optionalStringValue(agg.Request.Memory),
-				EphemeralStorage: optionalStringValue(agg.Request.EphemeralStorage),
-				Storage:          optionalStringValue(agg.Request.Storage),
-			}
-		}
-		data.AggregatorSpec = aggModel
+		data.AggregatorSpec = types.ObjectValueMust(aggregatorSpecAttrTypes, map[string]attr.Value{
+			"image_version": types.StringValue(agg.ImageVersion),
+			"request":       kubeResourceConfigObject(agg.Request),
+		})
 	} else {
-		data.AggregatorSpec = nil
+		data.AggregatorSpec = types.ObjectNull(aggregatorSpecAttrTypes)
 	}
 }
 
 // buildTelemetryUpdateMask compares plan and state to determine which top-level spec fields changed.
 func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
 	var paths []string
-
-	// Compare click_house block: any change triggers the whole top-level field
-	planHasCH := data.ClickhouseDeploymentSpec != nil
-	stateHasCH := state.ClickhouseDeploymentSpec != nil
-	if planHasCH != stateHasCH {
+	// Skip Unknown plan values — Terraform hasn't determined them yet (Computed field with no prior state).
+	if !data.ClickhouseDeploymentSpec.IsUnknown() && !data.ClickhouseDeploymentSpec.Equal(state.ClickhouseDeploymentSpec) {
 		paths = append(paths, "click_house")
-	} else if planHasCH && stateHasCH {
-		plan := data.ClickhouseDeploymentSpec
-		st := state.ClickhouseDeploymentSpec
-		if !plan.Version.Equal(st.Version) ||
-			!plan.GatewayId.Equal(st.GatewayId) ||
-			clickhouseStorageChanged(plan.Storage, st.Storage) ||
-			kubeResourceChanged(plan.Request, st.Request) ||
-			kubeResourceChanged(plan.Limit, st.Limit) {
-			paths = append(paths, "click_house")
-		}
 	}
-
-	// Compare otel block
-	planHasOtel := data.OtelCollectorSpec != nil
-	stateHasOtel := state.OtelCollectorSpec != nil
-	if planHasOtel != stateHasOtel {
+	if !data.OtelCollectorSpec.IsUnknown() && !data.OtelCollectorSpec.Equal(state.OtelCollectorSpec) {
 		paths = append(paths, "otel")
-	} else if planHasOtel && stateHasOtel {
-		plan := data.OtelCollectorSpec
-		st := state.OtelCollectorSpec
-		if !plan.Version.Equal(st.Version) ||
-			kubeResourceChanged(plan.Request, st.Request) ||
-			kubeResourceChanged(plan.Limit, st.Limit) {
-			paths = append(paths, "otel")
-		}
 	}
-
-	// Compare aggregator block
-	planHasAgg := data.AggregatorSpec != nil
-	stateHasAgg := state.AggregatorSpec != nil
-	if planHasAgg != stateHasAgg {
+	if !data.AggregatorSpec.IsUnknown() && !data.AggregatorSpec.Equal(state.AggregatorSpec) {
 		paths = append(paths, "aggregator")
-	} else if planHasAgg && stateHasAgg {
-		plan := data.AggregatorSpec
-		st := state.AggregatorSpec
-		if !plan.ImageVersion.Equal(st.ImageVersion) ||
-			kubeResourceChanged(plan.Request, st.Request) {
-			paths = append(paths, "aggregator")
-		}
 	}
-
 	return paths
 }
 
@@ -456,29 +457,6 @@ func optionalStringValue(s string) types.String {
 	return types.StringValue(s)
 }
 
-func clickhouseStorageChanged(plan, state *KubePersistentVolumeClaimModel) bool {
-	if (plan == nil) != (state == nil) {
-		return true
-	}
-	if plan == nil {
-		return false
-	}
-	return !plan.Storage.Equal(state.Storage) || !plan.StorageClassName.Equal(state.StorageClassName)
-}
-
-func kubeResourceChanged(plan, state *KubeResourceConfigModel) bool {
-	if (plan == nil) != (state == nil) {
-		return true
-	}
-	if plan == nil {
-		return false
-	}
-	return !plan.CPU.Equal(state.CPU) ||
-		!plan.Memory.Equal(state.Memory) ||
-		!plan.EphemeralStorage.Equal(state.EphemeralStorage) ||
-		!plan.Storage.Equal(state.Storage)
-}
-
 func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data TelemetryResourceModel
 
@@ -490,9 +468,14 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 
 	bc := r.client.NewBuilderClient(ctx)
 
+	spec := buildTelemetryDeploymentSpec(ctx, &data, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	createReq := &serverv1.CreateTelemetryDeploymentRequest{
 		ClusterId: data.KubeClusterId.ValueString(),
-		Spec:      buildTelemetryDeploymentSpec(&data),
+		Spec:      spec,
 	}
 
 	createResp, err := bc.CreateTelemetryDeployment(ctx, connect.NewRequest(createReq))
@@ -505,6 +488,19 @@ func (r *TelemetryResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	data.Id = types.StringValue(createResp.Msg.GetTelemetryDeploymentId())
+
+	// The Create response only returns an ID, not the full spec. Resolve any Unknown
+	// computed spec fields to null so state is concrete. Read will populate them from
+	// the server on the next plan.
+	if data.OtelCollectorSpec.IsUnknown() {
+		data.OtelCollectorSpec = types.ObjectNull(otelCollectorSpecAttrTypes)
+	}
+	if data.ClickhouseDeploymentSpec.IsUnknown() {
+		data.ClickhouseDeploymentSpec = types.ObjectNull(clickhouseDeploymentSpecAttrTypes)
+	}
+	if data.AggregatorSpec.IsUnknown() {
+		data.AggregatorSpec = types.ObjectNull(aggregatorSpecAttrTypes)
+	}
 
 	tflog.Trace(ctx, "created a chalk_cluster_telemetry resource")
 
@@ -564,9 +560,14 @@ func (r *TelemetryResource) Update(ctx context.Context, req resource.UpdateReque
 	updateMaskPaths := buildTelemetryUpdateMask(&data, &state)
 
 	if len(updateMaskPaths) > 0 {
+		spec := buildTelemetryDeploymentSpec(ctx, &data, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
 		updateReq := &serverv1.UpdateTelemetryDeploymentRequest{
 			TelemetryDeploymentId: data.Id.ValueString(),
-			Spec:                  buildTelemetryDeploymentSpec(&data),
+			Spec:                  spec,
 			UpdateMask: &fieldmaskpb.FieldMask{
 				Paths: updateMaskPaths,
 			},
