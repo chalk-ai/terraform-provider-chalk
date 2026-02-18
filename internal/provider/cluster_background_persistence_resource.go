@@ -181,23 +181,23 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"bigquery_parquet_upload_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "BigQuery parquet upload subscription ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"bigquery_streaming_write_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "BigQuery streaming write subscription ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"bigquery_streaming_write_topic": schema.StringAttribute{
 				MarkdownDescription: "BigQuery streaming write topic",
-				Required:            true,
+				Optional:            true,
 			},
 			"bq_upload_bucket": schema.StringAttribute{
 				MarkdownDescription: "BigQuery upload bucket",
-				Required:            true,
+				Optional:            true,
 			},
 			"bq_upload_topic": schema.StringAttribute{
 				MarkdownDescription: "BigQuery upload topic",
-				Required:            true,
+				Optional:            true,
 			},
 			"google_cloud_project": schema.StringAttribute{
 				MarkdownDescription: "Google Cloud project",
@@ -209,35 +209,35 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			},
 			"metrics_bus_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "Metrics bus subscription ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"metrics_bus_topic_id": schema.StringAttribute{
 				MarkdownDescription: "Metrics bus topic ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"operation_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "Operation subscription ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"query_log_result_topic": schema.StringAttribute{
 				MarkdownDescription: "Query log result topic",
-				Required:            true,
+				Optional:            true,
 			},
 			"query_log_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "Query log subscription ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"result_bus_offline_store_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "Result bus offline store subscription ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"result_bus_online_store_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "Result bus online store subscription ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"result_bus_topic_id": schema.StringAttribute{
 				MarkdownDescription: "Result bus topic ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"include_chalk_node_selector": schema.BoolAttribute{
 				MarkdownDescription: "Whether to include chalk node selector",
@@ -569,22 +569,50 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 
 	// Convert terraform model to proto request
 	commonSpecs := &serverv1.BackgroundPersistenceCommonSpecs{
-		Namespace:                            data.Namespace.ValueString(),
-		ServiceAccountName:                   data.ServiceAccountName.ValueString(),
-		BigqueryParquetUploadSubscriptionId:  data.BigqueryParquetUploadSubscriptionId.ValueString(),
-		BigqueryStreamingWriteSubscriptionId: data.BigqueryStreamingWriteSubscriptionId.ValueString(),
-		BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
-		BqUploadBucket:                       data.BqUploadBucket.ValueString(),
-		BqUploadTopic:                        data.BqUploadTopic.ValueString(),
-		MetricsBusSubscriptionId:             data.MetricsBusSubscriptionId.ValueString(),
-		MetricsBusTopicId:                    data.MetricsBusTopicId.ValueString(),
-		OperationSubscriptionId:              data.OperationSubscriptionId.ValueString(),
-		QueryLogResultTopic:                  data.QueryLogResultTopic.ValueString(),
-		QueryLogSubscriptionId:               data.QueryLogSubscriptionId.ValueString(),
-		ResultBusOfflineStoreSubscriptionId:  data.ResultBusOfflineStoreSubscriptionId.ValueString(),
-		ResultBusOnlineStoreSubscriptionId:   data.ResultBusOnlineStoreSubscriptionId.ValueString(),
-		ResultBusTopicId:                     data.ResultBusTopicId.ValueString(),
-		IncludeChalkNodeSelector:             data.IncludeChalkNodeSelector.ValueBool(),
+		Namespace:                data.Namespace.ValueString(),
+		ServiceAccountName:       data.ServiceAccountName.ValueString(),
+		IncludeChalkNodeSelector: data.IncludeChalkNodeSelector.ValueBool(),
+	}
+
+	// Handle optional subscription and topic fields
+	if !data.BigqueryParquetUploadSubscriptionId.IsNull() {
+		commonSpecs.BigqueryParquetUploadSubscriptionId = data.BigqueryParquetUploadSubscriptionId.ValueString()
+	}
+	if !data.BigqueryStreamingWriteSubscriptionId.IsNull() {
+		commonSpecs.BigqueryStreamingWriteSubscriptionId = data.BigqueryStreamingWriteSubscriptionId.ValueString()
+	}
+	if !data.BigqueryStreamingWriteTopic.IsNull() {
+		commonSpecs.BigqueryStreamingWriteTopic = data.BigqueryStreamingWriteTopic.ValueString()
+	}
+	if !data.BqUploadBucket.IsNull() {
+		commonSpecs.BqUploadBucket = data.BqUploadBucket.ValueString()
+	}
+	if !data.BqUploadTopic.IsNull() {
+		commonSpecs.BqUploadTopic = data.BqUploadTopic.ValueString()
+	}
+	if !data.MetricsBusSubscriptionId.IsNull() {
+		commonSpecs.MetricsBusSubscriptionId = data.MetricsBusSubscriptionId.ValueString()
+	}
+	if !data.MetricsBusTopicId.IsNull() {
+		commonSpecs.MetricsBusTopicId = data.MetricsBusTopicId.ValueString()
+	}
+	if !data.OperationSubscriptionId.IsNull() {
+		commonSpecs.OperationSubscriptionId = data.OperationSubscriptionId.ValueString()
+	}
+	if !data.QueryLogResultTopic.IsNull() {
+		commonSpecs.QueryLogResultTopic = data.QueryLogResultTopic.ValueString()
+	}
+	if !data.QueryLogSubscriptionId.IsNull() {
+		commonSpecs.QueryLogSubscriptionId = data.QueryLogSubscriptionId.ValueString()
+	}
+	if !data.ResultBusOfflineStoreSubscriptionId.IsNull() {
+		commonSpecs.ResultBusOfflineStoreSubscriptionId = data.ResultBusOfflineStoreSubscriptionId.ValueString()
+	}
+	if !data.ResultBusOnlineStoreSubscriptionId.IsNull() {
+		commonSpecs.ResultBusOnlineStoreSubscriptionId = data.ResultBusOnlineStoreSubscriptionId.ValueString()
+	}
+	if !data.ResultBusTopicId.IsNull() {
+		commonSpecs.ResultBusTopicId = data.ResultBusTopicId.ValueString()
 	}
 
 	// Handle optional google_cloud_project field
@@ -710,20 +738,74 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 		common := bg.Specs.CommonPersistenceSpecs
 		data.Namespace = types.StringValue(common.Namespace)
 		data.ServiceAccountName = types.StringValue(common.ServiceAccountName)
-		data.BigqueryParquetUploadSubscriptionId = types.StringValue(common.BigqueryParquetUploadSubscriptionId)
-		data.BigqueryStreamingWriteSubscriptionId = types.StringValue(common.BigqueryStreamingWriteSubscriptionId)
-		data.BigqueryStreamingWriteTopic = types.StringValue(common.BigqueryStreamingWriteTopic)
-		data.BqUploadBucket = types.StringValue(common.BqUploadBucket)
-		data.BqUploadTopic = types.StringValue(common.BqUploadTopic)
-		data.MetricsBusSubscriptionId = types.StringValue(common.MetricsBusSubscriptionId)
-		data.MetricsBusTopicId = types.StringValue(common.MetricsBusTopicId)
-		data.OperationSubscriptionId = types.StringValue(common.OperationSubscriptionId)
-		data.QueryLogResultTopic = types.StringValue(common.QueryLogResultTopic)
-		data.QueryLogSubscriptionId = types.StringValue(common.QueryLogSubscriptionId)
-		data.ResultBusOfflineStoreSubscriptionId = types.StringValue(common.ResultBusOfflineStoreSubscriptionId)
-		data.ResultBusOnlineStoreSubscriptionId = types.StringValue(common.ResultBusOnlineStoreSubscriptionId)
-		data.ResultBusTopicId = types.StringValue(common.ResultBusTopicId)
 		data.IncludeChalkNodeSelector = types.BoolValue(common.IncludeChalkNodeSelector)
+
+		// Handle optional subscription and topic fields
+		if common.BigqueryParquetUploadSubscriptionId != "" {
+			data.BigqueryParquetUploadSubscriptionId = types.StringValue(common.BigqueryParquetUploadSubscriptionId)
+		} else {
+			data.BigqueryParquetUploadSubscriptionId = types.StringNull()
+		}
+		if common.BigqueryStreamingWriteSubscriptionId != "" {
+			data.BigqueryStreamingWriteSubscriptionId = types.StringValue(common.BigqueryStreamingWriteSubscriptionId)
+		} else {
+			data.BigqueryStreamingWriteSubscriptionId = types.StringNull()
+		}
+		if common.BigqueryStreamingWriteTopic != "" {
+			data.BigqueryStreamingWriteTopic = types.StringValue(common.BigqueryStreamingWriteTopic)
+		} else {
+			data.BigqueryStreamingWriteTopic = types.StringNull()
+		}
+		if common.BqUploadBucket != "" {
+			data.BqUploadBucket = types.StringValue(common.BqUploadBucket)
+		} else {
+			data.BqUploadBucket = types.StringNull()
+		}
+		if common.BqUploadTopic != "" {
+			data.BqUploadTopic = types.StringValue(common.BqUploadTopic)
+		} else {
+			data.BqUploadTopic = types.StringNull()
+		}
+		if common.MetricsBusSubscriptionId != "" {
+			data.MetricsBusSubscriptionId = types.StringValue(common.MetricsBusSubscriptionId)
+		} else {
+			data.MetricsBusSubscriptionId = types.StringNull()
+		}
+		if common.MetricsBusTopicId != "" {
+			data.MetricsBusTopicId = types.StringValue(common.MetricsBusTopicId)
+		} else {
+			data.MetricsBusTopicId = types.StringNull()
+		}
+		if common.OperationSubscriptionId != "" {
+			data.OperationSubscriptionId = types.StringValue(common.OperationSubscriptionId)
+		} else {
+			data.OperationSubscriptionId = types.StringNull()
+		}
+		if common.QueryLogResultTopic != "" {
+			data.QueryLogResultTopic = types.StringValue(common.QueryLogResultTopic)
+		} else {
+			data.QueryLogResultTopic = types.StringNull()
+		}
+		if common.QueryLogSubscriptionId != "" {
+			data.QueryLogSubscriptionId = types.StringValue(common.QueryLogSubscriptionId)
+		} else {
+			data.QueryLogSubscriptionId = types.StringNull()
+		}
+		if common.ResultBusOfflineStoreSubscriptionId != "" {
+			data.ResultBusOfflineStoreSubscriptionId = types.StringValue(common.ResultBusOfflineStoreSubscriptionId)
+		} else {
+			data.ResultBusOfflineStoreSubscriptionId = types.StringNull()
+		}
+		if common.ResultBusOnlineStoreSubscriptionId != "" {
+			data.ResultBusOnlineStoreSubscriptionId = types.StringValue(common.ResultBusOnlineStoreSubscriptionId)
+		} else {
+			data.ResultBusOnlineStoreSubscriptionId = types.StringNull()
+		}
+		if common.ResultBusTopicId != "" {
+			data.ResultBusTopicId = types.StringValue(common.ResultBusTopicId)
+		} else {
+			data.ResultBusTopicId = types.StringNull()
+		}
 
 		if common.KafkaDlqTopic != "" {
 			data.KafkaDlqTopic = types.StringValue(common.KafkaDlqTopic)
@@ -1163,22 +1245,50 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 
 	// Convert terraform model to proto request - reuse create logic since it's an upsert
 	commonSpecs := &serverv1.BackgroundPersistenceCommonSpecs{
-		Namespace:                            data.Namespace.ValueString(),
-		ServiceAccountName:                   data.ServiceAccountName.ValueString(),
-		BigqueryParquetUploadSubscriptionId:  data.BigqueryParquetUploadSubscriptionId.ValueString(),
-		BigqueryStreamingWriteSubscriptionId: data.BigqueryStreamingWriteSubscriptionId.ValueString(),
-		BigqueryStreamingWriteTopic:          data.BigqueryStreamingWriteTopic.ValueString(),
-		BqUploadBucket:                       data.BqUploadBucket.ValueString(),
-		BqUploadTopic:                        data.BqUploadTopic.ValueString(),
-		MetricsBusSubscriptionId:             data.MetricsBusSubscriptionId.ValueString(),
-		MetricsBusTopicId:                    data.MetricsBusTopicId.ValueString(),
-		OperationSubscriptionId:              data.OperationSubscriptionId.ValueString(),
-		QueryLogResultTopic:                  data.QueryLogResultTopic.ValueString(),
-		QueryLogSubscriptionId:               data.QueryLogSubscriptionId.ValueString(),
-		ResultBusOfflineStoreSubscriptionId:  data.ResultBusOfflineStoreSubscriptionId.ValueString(),
-		ResultBusOnlineStoreSubscriptionId:   data.ResultBusOnlineStoreSubscriptionId.ValueString(),
-		ResultBusTopicId:                     data.ResultBusTopicId.ValueString(),
-		IncludeChalkNodeSelector:             data.IncludeChalkNodeSelector.ValueBool(),
+		Namespace:                data.Namespace.ValueString(),
+		ServiceAccountName:       data.ServiceAccountName.ValueString(),
+		IncludeChalkNodeSelector: data.IncludeChalkNodeSelector.ValueBool(),
+	}
+
+	// Handle optional subscription and topic fields
+	if !data.BigqueryParquetUploadSubscriptionId.IsNull() {
+		commonSpecs.BigqueryParquetUploadSubscriptionId = data.BigqueryParquetUploadSubscriptionId.ValueString()
+	}
+	if !data.BigqueryStreamingWriteSubscriptionId.IsNull() {
+		commonSpecs.BigqueryStreamingWriteSubscriptionId = data.BigqueryStreamingWriteSubscriptionId.ValueString()
+	}
+	if !data.BigqueryStreamingWriteTopic.IsNull() {
+		commonSpecs.BigqueryStreamingWriteTopic = data.BigqueryStreamingWriteTopic.ValueString()
+	}
+	if !data.BqUploadBucket.IsNull() {
+		commonSpecs.BqUploadBucket = data.BqUploadBucket.ValueString()
+	}
+	if !data.BqUploadTopic.IsNull() {
+		commonSpecs.BqUploadTopic = data.BqUploadTopic.ValueString()
+	}
+	if !data.MetricsBusSubscriptionId.IsNull() {
+		commonSpecs.MetricsBusSubscriptionId = data.MetricsBusSubscriptionId.ValueString()
+	}
+	if !data.MetricsBusTopicId.IsNull() {
+		commonSpecs.MetricsBusTopicId = data.MetricsBusTopicId.ValueString()
+	}
+	if !data.OperationSubscriptionId.IsNull() {
+		commonSpecs.OperationSubscriptionId = data.OperationSubscriptionId.ValueString()
+	}
+	if !data.QueryLogResultTopic.IsNull() {
+		commonSpecs.QueryLogResultTopic = data.QueryLogResultTopic.ValueString()
+	}
+	if !data.QueryLogSubscriptionId.IsNull() {
+		commonSpecs.QueryLogSubscriptionId = data.QueryLogSubscriptionId.ValueString()
+	}
+	if !data.ResultBusOfflineStoreSubscriptionId.IsNull() {
+		commonSpecs.ResultBusOfflineStoreSubscriptionId = data.ResultBusOfflineStoreSubscriptionId.ValueString()
+	}
+	if !data.ResultBusOnlineStoreSubscriptionId.IsNull() {
+		commonSpecs.ResultBusOnlineStoreSubscriptionId = data.ResultBusOnlineStoreSubscriptionId.ValueString()
+	}
+	if !data.ResultBusTopicId.IsNull() {
+		commonSpecs.ResultBusTopicId = data.ResultBusTopicId.ValueString()
 	}
 
 	// Handle optional google_cloud_project field
