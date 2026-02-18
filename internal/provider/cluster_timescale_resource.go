@@ -450,16 +450,8 @@ func updateStateFromSpecs(data *ClusterTimescaleResourceModel, specs *serverv1.C
 	data.ConnectionPoolSize = types.StringValue(specs.ConnectionPoolSize)
 	data.SecretName = types.StringValue(specs.SecretName)
 
-	if specs.InstanceType != "" {
-		data.InstanceType = types.StringValue(specs.InstanceType)
-	} else {
-		data.InstanceType = types.StringNull()
-	}
-	if specs.Nodepool != "" {
-		data.Nodepool = types.StringValue(specs.Nodepool)
-	} else {
-		data.Nodepool = types.StringNull()
-	}
+	data.InstanceType = optionalStringValue(specs.InstanceType)
+	data.Nodepool = optionalStringValue(specs.Nodepool)
 
 	// Integers
 	data.DatabaseReplicas = types.Int64Value(int64(specs.DatabaseReplicas))
@@ -469,21 +461,9 @@ func updateStateFromSpecs(data *ClusterTimescaleResourceModel, specs *serverv1.C
 	data.BootstrapCloudResources = types.BoolValue(specs.BootstrapCloudResources)
 
 	// Backup fields
-	if specs.BackupBucket != "" {
-		data.BackupBucket = types.StringValue(specs.BackupBucket)
-	} else {
-		data.BackupBucket = types.StringNull()
-	}
-	if specs.BackupIamRoleArn != "" {
-		data.BackupIamRoleArn = types.StringValue(specs.BackupIamRoleArn)
-	} else {
-		data.BackupIamRoleArn = types.StringNull()
-	}
-	if specs.BackupGcpServiceAccount != "" {
-		data.BackupGcpServiceAccount = types.StringValue(specs.BackupGcpServiceAccount)
-	} else {
-		data.BackupGcpServiceAccount = types.StringNull()
-	}
+	data.BackupBucket = optionalStringValue(specs.BackupBucket)
+	data.BackupIamRoleArn = optionalStringValue(specs.BackupIamRoleArn)
+	data.BackupGcpServiceAccount = optionalStringValue(specs.BackupGcpServiceAccount)
 
 	// Optional pointers
 	if specs.StorageClass != nil {
@@ -518,29 +498,7 @@ func updateStateFromSpecs(data *ClusterTimescaleResourceModel, specs *serverv1.C
 	}
 
 	// Request object
-	if specs.Request != nil {
-		requestAttrs := map[string]attr.Value{
-			"cpu":               types.StringNull(),
-			"memory":            types.StringNull(),
-			"ephemeral_storage": types.StringNull(),
-			"storage":           types.StringNull(),
-		}
-		if specs.Request.Cpu != "" {
-			requestAttrs["cpu"] = types.StringValue(specs.Request.Cpu)
-		}
-		if specs.Request.Memory != "" {
-			requestAttrs["memory"] = types.StringValue(specs.Request.Memory)
-		}
-		if specs.Request.EphemeralStorage != "" {
-			requestAttrs["ephemeral_storage"] = types.StringValue(specs.Request.EphemeralStorage)
-		}
-		if specs.Request.Storage != "" {
-			requestAttrs["storage"] = types.StringValue(specs.Request.Storage)
-		}
-		data.Request, _ = types.ObjectValue(kubeResourceConfigAttrTypes, requestAttrs)
-	} else {
-		data.Request = types.ObjectNull(kubeResourceConfigAttrTypes)
-	}
+	data.Request = kubeResourceConfigObject(specs.Request)
 
 	// Maps
 	if len(specs.PostgresParameters) > 0 {
