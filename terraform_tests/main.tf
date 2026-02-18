@@ -15,8 +15,7 @@ provider "chalk" {
   api_server    = "http://localhost:8080"
 }
 
-resource "chalk_cloud_credentials" "creds" {
-  kind                    = "aws"
+resource "chalk_aws_cloud_credentials" "creds" {
   name                    = "creds-remote-dev-ari-chalk-ai"
   aws_account_id          = "009160067517"
   aws_management_role_arn = "arn:aws:iam::009160067517:role/chalk-cicd-test-Chalk-Api-Management"
@@ -40,12 +39,12 @@ resource "chalk_cloud_credentials" "creds" {
 #   kubernetes_version  = "1.32"
 #   managed             = false
 #   name                = "chalk-cicd-test-eks-cluster"
-#   cloud_credential_id = chalk_cloud_credentials.creds.id
+#   cloud_credential_id = chalk_aws_cloud_credentials.creds.id
 # }
 
 resource "chalk_managed_aws_vpc" "vpc" {
   cidr_block          = "10.100.0.0/16"
-  cloud_credential_id = chalk_cloud_credentials.creds.id
+  cloud_credential_id = chalk_aws_cloud_credentials.creds.id
   subnets = [
     {
       name               = "subnet-1"
@@ -67,7 +66,7 @@ resource "chalk_managed_aws_vpc" "vpc" {
 }
 
 resource "chalk_managed_cluster" "cluster" {
-  cloud_credential_id = chalk_cloud_credentials.creds.id
+  cloud_credential_id = chalk_aws_cloud_credentials.creds.id
   vpc_id              = "foobar"
 }
 #
@@ -215,8 +214,7 @@ resource "chalk_managed_cluster" "cluster" {
 # }
 #
 # # FOR CROSS CLUSTER RESOURCES
-# # resource "chalk_cloud_credentials" "creds2" {
-# #   kind                    = "aws"
+# # resource "chalk_aws_cloud_credentials" "creds2" {
 # #   name                    = "creds-staging-${local.sanitized_email}"
 # #   aws_account_id          = "742213191973"
 # #   aws_management_role_arn = "arn:aws:iam::742213191973:role/chalk-stag-stage-scoped-api-management"
@@ -235,7 +233,7 @@ resource "chalk_managed_cluster" "cluster" {
 # #   kubernetes_version  = "1.32"
 # #   managed             = false
 # #   name                = "chalk-stag-stage-eks-cluster"
-# #   cloud_credential_id = chalk_cloud_credentials.creds2.id
+# #   cloud_credential_id = chalk_aws_cloud_credentials.creds2.id
 # # }
 # #
 # # output "stag_id" {

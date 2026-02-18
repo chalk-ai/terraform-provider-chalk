@@ -15,10 +15,10 @@ github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew
 github.com/apparentlymart/go-textseg/v15 v15.0.0/go.mod h1:K8XmNZdhEBkdlyDdvbmmsvpAG721bKi0joRfFdHIWJ4=
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=
 github.com/bufbuild/protocompile v0.14.1/go.mod h1:ppVdAIhbr2H8asPk6k4pY7t9zB1OU5DoEw9xY/FUi1c=
-github.com/chalk-ai/chalk-go v1.2.191 h1:Pj6/5HSxem8T0NrWREE0VwcaHEWzWDTjwgAnyufWh5w=
-github.com/chalk-ai/chalk-go v1.2.191/go.mod h1:znjerHGNk5Et8XLXCk85d/B4I7NuTRUWCk09Js36lKg=
-github.com/chalk-ai/chalk-go/gen v1.2.191 h1:ydTX7IrC0syCkjYI8h8v9MV2ljN9ILI3rgS2589p074=
-github.com/chalk-ai/chalk-go/gen v1.2.191/go.mod h1:7PRwtgDX+0SCdFQqTjmPoLnJPhSOB1guweA+ANV01KI=
+github.com/chalk-ai/chalk-go v1.2.192 h1:7odFPKjyWgdo98m8z6VupantucD6UFHFtnIuMybmwhw=
+github.com/chalk-ai/chalk-go v1.2.192/go.mod h1:znjerHGNk5Et8XLXCk85d/B4I7NuTRUWCk09Js36lKg=
+github.com/chalk-ai/chalk-go/gen v1.2.192 h1:bR7cBiDjGXs53xOtE9jwnLt4H/1nU00s6fRQ2fy8Ltg=
+github.com/chalk-ai/chalk-go/gen v1.2.192/go.mod h1:7PRwtgDX+0SCdFQqTjmPoLnJPhSOB1guweA+ANV01KI=
 github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
 github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
 github.com/cyphar/filepath-securejoin v0.4.1 h1:JyxxyPEaktOD+GAnqIqTf9A8tHyAG22rowi7HkoSU1s=

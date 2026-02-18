@@ -2,16 +2,12 @@ package provider
 
 import (
 	"errors"
-	"os"
 	"regexp"
 	"testing"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/chalk-go/testserver"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stretchr/testify/assert"
@@ -19,47 +15,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// TestMain sets up the test environment for all tests in this package.
-// We set TF_ACC=1 to enable the Terraform testing framework (resource.Test).
-//
-// Note: These are NOT traditional acceptance tests that require real infrastructure.
-// They are integration tests that:
-//   - Use mock servers (chalk-go/testserver) instead of real APIs
-//   - Test the full Terraform lifecycle (plan/apply/refresh/destroy)
-//   - Verify RPC calls, field masks, and state management
-//   - Are fast, safe, and require no credentials
-//   - Should run on every `go test` invocation
-//
-// We use resource.Test() because it catches real integration bugs (e.g., computed
-// field handling, state management) that wouldn't be found in simple unit tests.
-func TestMain(m *testing.M) {
-	os.Setenv("TF_ACC", "1")
-	os.Exit(m.Run())
-}
-
-func setupTestEnv(t *testing.T, serverURL string) {
-	os.Setenv("CHALK_API_SERVER", serverURL)
-	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
-	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
-	t.Cleanup(func() {
-		os.Unsetenv("CHALK_API_SERVER")
-		os.Unsetenv("CHALK_CLIENT_ID")
-		os.Unsetenv("CHALK_CLIENT_SECRET")
-	})
-}
-
-// testProtoV6ProviderFactories configures the provider to use a mock server.
-func testProtoV6ProviderFactories(mockServerURL string) map[string]func() (tfprotov6.ProviderServer, error) {
-	return map[string]func() (tfprotov6.ProviderServer, error){
-		"chalk": providerserver.NewProtocol6WithError(func() provider.Provider {
-			return &ChalkProvider{version: "test"}
-		}()),
-	}
-}
-
-// setupMockBuilderServer creates and configures a mock server for testing.
+// setupMockBuilderServerTimescale creates and configures a mock server for testing.
 // It creates a stateful mock that tracks specs across Create/Update/Get operations.
-func setupMockBuilderServer(t *testing.T) *testserver.MockServer {
+func setupMockBuilderServerTimescale(t *testing.T) *testserver.MockServer {
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
@@ -108,7 +66,7 @@ func setupMockBuilderServer(t *testing.T) *testserver.MockServer {
 }
 
 // mockClusterTimescaleSpecs creates a ClusterTimescaleSpecs with default values.
-func mockClusterTimescaleSpecs(overrides map[string]interface{}) *serverv1.ClusterTimescaleSpecs {
+func mockClusterTimescaleSpecs(overrides map[string]any) *serverv1.ClusterTimescaleSpecs {
 	internal := false
 	serviceType := "load-balancer"
 	specs := &serverv1.ClusterTimescaleSpecs{
@@ -161,7 +119,7 @@ func mockClusterTimescaleSpecs(overrides map[string]interface{}) *serverv1.Clust
 
 // TestClusterTimescaleResourceCreate verifies that CreateClusterTimescaleDB is called with correct specs.
 func TestClusterTimescaleResourceCreate(t *testing.T) {
-	server := setupMockBuilderServer(t)
+	server := setupMockBuilderServerTimescale(t)
 
 	setupTestEnv(t, server.URL)
 
@@ -203,7 +161,7 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdate verifies that UpdateClusterTimescaleDB is called for updates.
 func TestClusterTimescaleResourceUpdate(t *testing.T) {
-	server := setupMockBuilderServer(t)
+	server := setupMockBuilderServerTimescale(t)
 
 	setupTestEnv(t, server.URL)
 
@@ -247,7 +205,7 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateFieldMask verifies that field mask contains only changed fields.
 func TestClusterTimescaleResourceUpdateFieldMask(t *testing.T) {
-	server := setupMockBuilderServer(t)
+	server := setupMockBuilderServerTimescale(t)
 
 	setupTestEnv(t, server.URL)
 
@@ -292,7 +250,7 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateMultipleFields verifies that field mask includes all changed fields.
 func TestClusterTimescaleResourceUpdateMultipleFields(t *testing.T) {
-	server := setupMockBuilderServer(t)
+	server := setupMockBuilderServerTimescale(t)
 
 	setupTestEnv(t, server.URL)
 
@@ -345,12 +303,12 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceNoOpUpdate verifies no RPC call when no fields change.
 func TestClusterTimescaleResourceNoOpUpdate(t *testing.T) {
-	server := setupMockBuilderServer(t)
+	server := setupMockBuilderServerTimescale(t)
 
 	// Configure Create response
 	server.OnCreateClusterTimescaleDB().Return(&serverv1.CreateClusterTimescaleDBResponse{
 		ClusterTimescaleId: "test-cluster-id",
-		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+		Specs: mockClusterTimescaleSpecs(map[string]any{
 			"storage":           "30Gi",
 			"database_replicas": int32(1),
 		}),
@@ -359,7 +317,7 @@ func TestClusterTimescaleResourceNoOpUpdate(t *testing.T) {
 	// Configure Update response (should not be called)
 	server.OnUpdateClusterTimescaleDB().Return(&serverv1.UpdateClusterTimescaleDBResponse{
 		ClusterTimescaleId: "test-cluster-id",
-		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+		Specs: mockClusterTimescaleSpecs(map[string]any{
 			"storage":           "30Gi",
 			"database_replicas": int32(1),
 		}),
@@ -403,7 +361,7 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateMapFields verifies map field updates trigger correct field mask.
 func TestClusterTimescaleResourceUpdateMapFields(t *testing.T) {
-	server := setupMockBuilderServer(t)
+	server := setupMockBuilderServerTimescale(t)
 
 	setupTestEnv(t, server.URL)
 
@@ -450,7 +408,7 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateObjectField verifies object field updates trigger correct field mask.
 func TestClusterTimescaleResourceUpdateObjectField(t *testing.T) {
-	server := setupMockBuilderServer(t)
+	server := setupMockBuilderServerTimescale(t)
 
 	setupTestEnv(t, server.URL)
 
@@ -500,7 +458,7 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceCreateError verifies proper error handling when Create RPC fails.
 func TestClusterTimescaleResourceCreateError(t *testing.T) {
-	server := setupMockBuilderServer(t)
+	server := setupMockBuilderServerTimescale(t)
 	setupTestEnv(t, server.URL)
 
 	// Reset and configure Create to return an error
@@ -527,21 +485,21 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateError verifies proper error handling when Update RPC fails.
 func TestClusterTimescaleResourceUpdateError(t *testing.T) {
-	server := setupMockBuilderServer(t)
+	server := setupMockBuilderServerTimescale(t)
 	setupTestEnv(t, server.URL)
 
 	// Reset and configure responses - Create succeeds, Update fails
 	server.Reset()
 	server.OnCreateClusterTimescaleDB().Return(&serverv1.CreateClusterTimescaleDBResponse{
 		ClusterTimescaleId: "test-cluster-id",
-		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+		Specs: mockClusterTimescaleSpecs(map[string]any{
 			"storage":           "30Gi",
 			"database_replicas": int32(1),
 		}),
 	})
 	server.OnGetClusterTimescaleDB().Return(&serverv1.GetClusterTimescaleDBResponse{
 		Id: "test-cluster-id",
-		Specs: mockClusterTimescaleSpecs(map[string]interface{}{
+		Specs: mockClusterTimescaleSpecs(map[string]any{
 			"storage":           "30Gi",
 			"database_replicas": int32(1),
 		}),

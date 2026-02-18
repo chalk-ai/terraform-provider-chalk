@@ -361,7 +361,7 @@ func (d *EnvironmentDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	tflog.Trace(ctx, "read chalk_environment data source", map[string]interface{}{
+	tflog.Trace(ctx, "read chalk_environment data source", map[string]any{
 		"id": data.Id.ValueString(),
 	})
 
@@ -695,7 +695,7 @@ func (d *EnvironmentDataSource) Read(ctx context.Context, req datasource.ReadReq
 		data.DashboardUrl = types.StringNull()
 	}
 
-	tflog.Trace(ctx, "read chalk_environment data source complete", map[string]interface{}{
+	tflog.Trace(ctx, "read chalk_environment data source complete", map[string]any{
 		"id": data.Id.ValueString(),
 	})
 
