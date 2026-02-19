@@ -371,6 +371,56 @@ resource "chalk_datasource" "test" {
 	})
 }
 
+func TestDatasourceResourceConfigBothSet(t *testing.T) {
+	server := setupMockIntegrationsServer(t)
+	setupTestEnv(t, server.URL)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "chalk_datasource" "test" {
+  name           = "my-postgres"
+  kind           = "postgresql"
+  environment_id = "test-env-id"
+
+  config = {
+    PGHOST = { literal = "db.example.com", secret_id = "some-secret" }
+  }
+}
+`,
+				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
+			},
+		},
+	})
+}
+
+func TestDatasourceResourceConfigNeitherSet(t *testing.T) {
+	server := setupMockIntegrationsServer(t)
+	setupTestEnv(t, server.URL)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "chalk_datasource" "test" {
+  name           = "my-postgres"
+  kind           = "postgresql"
+  environment_id = "test-env-id"
+
+  config = {
+    PGHOST = {}
+  }
+}
+`,
+				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
+			},
+		},
+	})
+}
+
 func TestDatasourceResourceCreateError(t *testing.T) {
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })

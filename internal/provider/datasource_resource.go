@@ -7,11 +7,13 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -84,10 +86,20 @@ func (r *DatasourceResource) Schema(ctx context.Context, req resource.SchemaRequ
 							MarkdownDescription: "A plain-text value for this configuration key.",
 							Optional:            true,
 							Sensitive:           true,
+							Validators: []validator.String{
+								stringvalidator.ExactlyOneOf(
+									path.MatchRelative().AtParent().AtName("secret_id"),
+								),
+							},
 						},
 						"secret_id": schema.StringAttribute{
 							MarkdownDescription: "The ID of an existing Chalk secret to use for this configuration key.",
 							Optional:            true,
+							Validators: []validator.String{
+								stringvalidator.ExactlyOneOf(
+									path.MatchRelative().AtParent().AtName("literal"),
+								),
+							},
 						},
 					},
 				},
@@ -179,6 +191,13 @@ func (r *DatasourceResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
+	if response.Msg.Integration == nil {
+		resp.Diagnostics.AddError(
+			"Error Creating Chalk Datasource",
+			"Server returned an empty integration response.",
+		)
+		return
+	}
 	data.Id = types.StringValue(response.Msg.Integration.Id)
 
 	tflog.Trace(ctx, "created a chalk_datasource resource")
@@ -236,7 +255,7 @@ func (r *DatasourceResource) Read(ctx context.Context, req resource.ReadRequest,
 
 		newConfig := make(map[string]DatasourceConfigValue, len(data.Config))
 		for key, stateVal := range data.Config {
-			if !stateVal.SecretId.IsNull() {
+			if !stateVal.SecretId.IsNull() && !stateVal.SecretId.IsUnknown() {
 				newConfig[key] = stateVal
 				continue
 			}
