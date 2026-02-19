@@ -219,6 +219,7 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewManagedGCPVPCResource,
 		NewManagedAzureVPCResource,
 		NewDatasourceResource,
+		NewDatasourcePostgresqlResource,
 	}
 }
 
