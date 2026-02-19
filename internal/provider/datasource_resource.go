@@ -190,16 +190,53 @@ func (r *DatasourceResource) Read(ctx context.Context, req resource.ReadRequest,
 	data.Kind = types.StringValue(integrationKindToString(integration.Kind))
 	data.EnvironmentId = types.StringValue(integration.EnvironmentId)
 
-	// Reconstruct environment_variables from secrets
-	if len(iws.Secrets) > 0 {
-		envVarAttrs := make(map[string]attr.Value, len(iws.Secrets))
-		for _, secret := range iws.Secrets {
-			if secret.Value != nil {
-				envVarAttrs[secret.Name] = types.StringValue(*secret.Value)
+	// Reconstruct environment_variables: use what GetIntegration returns directly,
+	// and call GetIntegrationValue for any state keys that weren't included in
+	// the response (e.g. passwords that the server withholds from bulk reads).
+	// On first import the state map is null, so there are no keys to fetch —
+	// the first apply will reconcile the missing values.
+	returnedSecrets := make(map[string]string, len(iws.Secrets))
+	for _, secret := range iws.Secrets {
+		if secret.Value != nil {
+			returnedSecrets[secret.Name] = *secret.Value
+		} else {
+			returnedSecrets[secret.Name] = ""
+		}
+	}
+
+	currentEnvVarKeys := make(map[string]string)
+	if !data.EnvironmentVariables.IsNull() && !data.EnvironmentVariables.IsUnknown() {
+		resp.Diagnostics.Append(data.EnvironmentVariables.ElementsAs(ctx, &currentEnvVarKeys, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	envVarAttrs := make(map[string]attr.Value, len(currentEnvVarKeys))
+	for key := range currentEnvVarKeys {
+		if val, ok := returnedSecrets[key]; ok {
+			envVarAttrs[key] = types.StringValue(val)
+		} else {
+			valResp, err := ic.GetIntegrationValue(ctx, connect.NewRequest(&serverv1.GetIntegrationValueRequest{
+				IntegrationId: data.Id.ValueString(),
+				SecretName:    key,
+			}))
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error Reading Chalk Datasource Secret",
+					fmt.Sprintf("Could not read secret %q for datasource %s: %v", key, data.Id.ValueString(), err),
+				)
+				return
+			}
+			if valResp.Msg.Secretvalue != nil {
+				envVarAttrs[key] = types.StringValue(valResp.Msg.Secretvalue.Value)
 			} else {
-				envVarAttrs[secret.Name] = types.StringValue("")
+				envVarAttrs[key] = types.StringValue("")
 			}
 		}
+	}
+
+	if len(envVarAttrs) > 0 {
 		data.EnvironmentVariables = types.MapValueMust(types.StringType, envVarAttrs)
 	}
 

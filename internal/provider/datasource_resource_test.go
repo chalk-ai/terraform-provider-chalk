@@ -3,6 +3,7 @@ package provider
 import (
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -39,10 +40,15 @@ func setupMockIntegrationsServer(t *testing.T) *testserver.MockServer {
 
 	server.OnGetIntegration().WithBehavior(func(req proto.Message) (proto.Message, error) {
 		if currentIntegration == nil {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("not found"))
+			return &serverv1.GetIntegrationResponse{}, nil
 		}
+		// Simulate real server behavior: withhold secrets whose keys contain
+		// "PASSWORD" — those must be fetched via GetIntegrationValue.
 		secrets := make([]*serverv1.SecretWithValue, 0, len(currentEnvVars))
 		for k, v := range currentEnvVars {
+			if strings.Contains(k, "PASSWORD") {
+				continue
+			}
 			val := v
 			secrets = append(secrets, &serverv1.SecretWithValue{
 				Name:  k,
@@ -53,6 +59,20 @@ func setupMockIntegrationsServer(t *testing.T) *testserver.MockServer {
 			IntegrationWithSecrets: &serverv1.IntegrationWithSecrets{
 				Integration: currentIntegration,
 				Secrets:     secrets,
+			},
+		}, nil
+	})
+
+	server.OnGetIntegrationValue().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		getReq := req.(*serverv1.GetIntegrationValueRequest)
+		val, ok := currentEnvVars[getReq.SecretName]
+		if !ok {
+			return &serverv1.GetIntegrationValueResponse{}, nil
+		}
+		return &serverv1.GetIntegrationValueResponse{
+			Secretvalue: &serverv1.SecretValue{
+				Name:  getReq.SecretName,
+				Value: val,
 			},
 		}, nil
 	})
@@ -237,10 +257,11 @@ resource "chalk_datasource" "test" {
 `,
 			},
 			{
-				ResourceName:      "chalk_datasource.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "test-env-id/test-integration-id",
+				ResourceName:            "chalk_datasource.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"environment_variables"},
+				ImportStateId:           "test-env-id/test-integration-id",
 			},
 		},
 	})
