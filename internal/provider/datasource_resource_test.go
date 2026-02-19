@@ -215,6 +215,68 @@ resource "chalk_datasource" "test" {
 	})
 }
 
+func TestDatasourceResourceImport(t *testing.T) {
+	server := setupMockIntegrationsServer(t)
+	setupTestEnv(t, server.URL)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "chalk_datasource" "test" {
+  name           = "my-postgres"
+  kind           = "postgresql"
+  environment_id = "test-env-id"
+
+  environment_variables = {
+    PGHOST = "db.example.com"
+    PGPORT = "5432"
+  }
+}
+`,
+			},
+			{
+				ResourceName:      "chalk_datasource.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateId:     "test-env-id/test-integration-id",
+			},
+		},
+	})
+}
+
+func TestDatasourceResourceImportInvalidID(t *testing.T) {
+	server := setupMockIntegrationsServer(t)
+	setupTestEnv(t, server.URL)
+
+	cfg := `
+resource "chalk_datasource" "test" {
+  name           = "my-postgres"
+  kind           = "postgresql"
+  environment_id = "test-env-id"
+
+  environment_variables = {
+    PGHOST = "db.example.com"
+  }
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			{Config: cfg},
+			{
+				Config:        cfg,
+				ResourceName:  "chalk_datasource.test",
+				ImportState:   true,
+				ImportStateId: "just-an-id-without-env",
+				ExpectError:   regexp.MustCompile("Invalid Import ID"),
+			},
+		},
+	})
+}
+
 func TestDatasourceResourceCreateError(t *testing.T) {
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
