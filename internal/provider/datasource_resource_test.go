@@ -16,16 +16,48 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// literalVal extracts literal values from a proto Config map, for use in test assertions.
+func literalVal(config map[string]*serverv1.IntegrationConfigValue, key string) string {
+	v, ok := config[key]
+	if !ok {
+		return ""
+	}
+	lit, ok := v.Value.(*serverv1.IntegrationConfigValue_Literal)
+	if !ok {
+		return ""
+	}
+	return lit.Literal
+}
+
+// secretIdVal extracts secret_id values from a proto Config map, for use in test assertions.
+func secretIdVal(config map[string]*serverv1.IntegrationConfigValue, key string) string {
+	v, ok := config[key]
+	if !ok {
+		return ""
+	}
+	sid, ok := v.Value.(*serverv1.IntegrationConfigValue_SecretId)
+	if !ok {
+		return ""
+	}
+	return sid.SecretId
+}
+
 func setupMockIntegrationsServer(t *testing.T) *testserver.MockServer {
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
 	var currentIntegration *serverv1.Integration
-	var currentEnvVars map[string]string
+	// Stores literal values keyed by config key, for use in GetIntegration/GetIntegrationValue.
+	var currentLiterals map[string]string
 
 	server.OnInsertIntegration().WithBehavior(func(req proto.Message) (proto.Message, error) {
 		insertReq := req.(*serverv1.InsertIntegrationRequest)
-		currentEnvVars = insertReq.EnvironmentVariables
+		currentLiterals = make(map[string]string)
+		for k, v := range insertReq.Config {
+			if lit, ok := v.Value.(*serverv1.IntegrationConfigValue_Literal); ok {
+				currentLiterals[k] = lit.Literal
+			}
+		}
 		name := insertReq.Name
 		currentIntegration = &serverv1.Integration{
 			Id:            "test-integration-id",
@@ -44,8 +76,8 @@ func setupMockIntegrationsServer(t *testing.T) *testserver.MockServer {
 		}
 		// Simulate real server behavior: withhold secrets whose keys contain
 		// "PASSWORD" — those must be fetched via GetIntegrationValue.
-		secrets := make([]*serverv1.SecretWithValue, 0, len(currentEnvVars))
-		for k, v := range currentEnvVars {
+		secrets := make([]*serverv1.SecretWithValue, 0, len(currentLiterals))
+		for k, v := range currentLiterals {
 			if strings.Contains(k, "PASSWORD") {
 				continue
 			}
@@ -65,7 +97,7 @@ func setupMockIntegrationsServer(t *testing.T) *testserver.MockServer {
 
 	server.OnGetIntegrationValue().WithBehavior(func(req proto.Message) (proto.Message, error) {
 		getReq := req.(*serverv1.GetIntegrationValueRequest)
-		val, ok := currentEnvVars[getReq.SecretName]
+		val, ok := currentLiterals[getReq.SecretName]
 		if !ok {
 			return &serverv1.GetIntegrationValueResponse{}, nil
 		}
@@ -79,7 +111,12 @@ func setupMockIntegrationsServer(t *testing.T) *testserver.MockServer {
 
 	server.OnUpdateIntegration().WithBehavior(func(req proto.Message) (proto.Message, error) {
 		updateReq := req.(*serverv1.UpdateIntegrationRequest)
-		currentEnvVars = updateReq.EnvironmentVariables
+		currentLiterals = make(map[string]string)
+		for k, v := range updateReq.Config {
+			if lit, ok := v.Value.(*serverv1.IntegrationConfigValue_Literal); ok {
+				currentLiterals[k] = lit.Literal
+			}
+		}
 		if currentIntegration != nil {
 			name := updateReq.Name
 			currentIntegration.Name = &name
@@ -108,12 +145,12 @@ resource "chalk_datasource" "test" {
   kind           = "postgresql"
   environment_id = "test-env-id"
 
-  environment_variables = {
-    PGHOST     = "db.example.com"
-    PGPORT     = "5432"
-    PGDATABASE = "mydb"
-    PGUSER     = "admin"
-    PGPASSWORD = "secret"
+  config = {
+    PGHOST     = { literal = "db.example.com" }
+    PGPORT     = { literal = "5432" }
+    PGDATABASE = { literal = "mydb" }
+    PGUSER     = { literal = "admin" }
+    PGPASSWORD = { literal = "secret" }
   }
 }
 `,
@@ -129,11 +166,49 @@ resource "chalk_datasource" "test" {
 						req := captured[0].(*serverv1.InsertIntegrationRequest)
 						assert.Equal(t, "my-postgres", req.Name)
 						assert.Equal(t, serverv1.IntegrationKind_INTEGRATION_KIND_POSTGRESQL, req.IntegrationKind)
-						assert.Equal(t, "db.example.com", req.EnvironmentVariables["PGHOST"])
-						assert.Equal(t, "5432", req.EnvironmentVariables["PGPORT"])
-						assert.Equal(t, "mydb", req.EnvironmentVariables["PGDATABASE"])
-						assert.Equal(t, "admin", req.EnvironmentVariables["PGUSER"])
-						assert.Equal(t, "secret", req.EnvironmentVariables["PGPASSWORD"])
+						assert.Equal(t, "db.example.com", literalVal(req.Config, "PGHOST"))
+						assert.Equal(t, "5432", literalVal(req.Config, "PGPORT"))
+						assert.Equal(t, "mydb", literalVal(req.Config, "PGDATABASE"))
+						assert.Equal(t, "admin", literalVal(req.Config, "PGUSER"))
+						assert.Equal(t, "secret", literalVal(req.Config, "PGPASSWORD"))
+
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+func TestDatasourceResourceCreateWithSecretId(t *testing.T) {
+	server := setupMockIntegrationsServer(t)
+	setupTestEnv(t, server.URL)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "chalk_datasource" "test" {
+  name           = "my-postgres"
+  kind           = "postgresql"
+  environment_id = "test-env-id"
+
+  config = {
+    PGHOST     = { literal   = "db.example.com" }
+    PGPASSWORD = { secret_id = "my-pg-password-secret" }
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_datasource.test", "id", "test-integration-id"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("InsertIntegration")
+						require.Len(t, captured, 1, "Expected exactly one InsertIntegration call")
+
+						req := captured[0].(*serverv1.InsertIntegrationRequest)
+						assert.Equal(t, "db.example.com", literalVal(req.Config, "PGHOST"))
+						assert.Equal(t, "my-pg-password-secret", secretIdVal(req.Config, "PGPASSWORD"))
 
 						return nil
 					},
@@ -157,9 +232,9 @@ resource "chalk_datasource" "test" {
   kind           = "postgresql"
   environment_id = "test-env-id"
 
-  environment_variables = {
-    PGHOST = "db.example.com"
-    PGPORT = "5432"
+  config = {
+    PGHOST = { literal = "db.example.com" }
+    PGPORT = { literal = "5432" }
   }
 }
 `,
@@ -174,9 +249,9 @@ resource "chalk_datasource" "test" {
   kind           = "postgresql"
   environment_id = "test-env-id"
 
-  environment_variables = {
-    PGHOST = "db2.example.com"
-    PGPORT = "5433"
+  config = {
+    PGHOST = { literal = "db2.example.com" }
+    PGPORT = { literal = "5433" }
   }
 }
 `,
@@ -189,8 +264,8 @@ resource "chalk_datasource" "test" {
 						req := captured[len(captured)-1].(*serverv1.UpdateIntegrationRequest)
 						assert.Equal(t, "my-postgres-updated", req.Name)
 						assert.Equal(t, "test-integration-id", req.IntegrationId)
-						assert.Equal(t, "db2.example.com", req.EnvironmentVariables["PGHOST"])
-						assert.Equal(t, "5433", req.EnvironmentVariables["PGPORT"])
+						assert.Equal(t, "db2.example.com", literalVal(req.Config, "PGHOST"))
+						assert.Equal(t, "5433", literalVal(req.Config, "PGPORT"))
 
 						return nil
 					},
@@ -214,15 +289,13 @@ resource "chalk_datasource" "test" {
   kind           = "postgresql"
   environment_id = "test-env-id"
 
-  environment_variables = {
-    PGHOST = "db.example.com"
+  config = {
+    PGHOST = { literal = "db.example.com" }
   }
 }
 `,
 			},
 		},
-		// Terraform test framework automatically calls Delete at the end.
-		// Verify DeleteIntegration was called via CheckDestroy.
 		CheckDestroy: func(s *terraform.State) error {
 			captured := server.GetCapturedRequests("DeleteIntegration")
 			require.NotEmpty(t, captured, "Expected at least one DeleteIntegration call")
@@ -249,9 +322,9 @@ resource "chalk_datasource" "test" {
   kind           = "postgresql"
   environment_id = "test-env-id"
 
-  environment_variables = {
-    PGHOST = "db.example.com"
-    PGPORT = "5432"
+  config = {
+    PGHOST = { literal = "db.example.com" }
+    PGPORT = { literal = "5432" }
   }
 }
 `,
@@ -260,7 +333,7 @@ resource "chalk_datasource" "test" {
 				ResourceName:            "chalk_datasource.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"environment_variables"},
+				ImportStateVerifyIgnore: []string{"config"},
 				ImportStateId:           "test-env-id/test-integration-id",
 			},
 		},
@@ -277,8 +350,8 @@ resource "chalk_datasource" "test" {
   kind           = "postgresql"
   environment_id = "test-env-id"
 
-  environment_variables = {
-    PGHOST = "db.example.com"
+  config = {
+    PGHOST = { literal = "db.example.com" }
   }
 }
 `
@@ -317,8 +390,8 @@ resource "chalk_datasource" "test" {
   kind           = "postgresql"
   environment_id = "test-env-id"
 
-  environment_variables = {
-    PGHOST = "db.example.com"
+  config = {
+    PGHOST = { literal = "db.example.com" }
   }
 }
 `,
