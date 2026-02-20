@@ -7,7 +7,6 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -29,11 +28,11 @@ type DatasourceResource struct {
 }
 
 type DatasourceResourceModel struct {
-	Id                   types.String `tfsdk:"id"`
-	Name                 types.String `tfsdk:"name"`
-	Kind                 types.String `tfsdk:"kind"`
-	EnvironmentId        types.String `tfsdk:"environment_id"`
-	EnvironmentVariables types.Map    `tfsdk:"environment_variables"`
+	Id            types.String                     `tfsdk:"id"`
+	Name          types.String                     `tfsdk:"name"`
+	Kind          types.String                     `tfsdk:"kind"`
+	EnvironmentId types.String                     `tfsdk:"environment_id"`
+	Config        map[string]DatasourceConfigValue `tfsdk:"config"`
 }
 
 func (r *DatasourceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -70,11 +69,13 @@ func (r *DatasourceResource) Schema(ctx context.Context, req resource.SchemaRequ
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"environment_variables": schema.MapAttribute{
-				MarkdownDescription: "A map of environment variable names to values for configuring the datasource connection.",
-				Required:            true,
-				Sensitive:           true,
-				ElementType:         types.StringType,
+			"config": schema.MapNestedAttribute{
+				MarkdownDescription: "Configuration for the datasource. Each key is an environment variable name. " +
+					"Set `literal` to supply a plain-text value, or `secret_id` to reference an existing Chalk secret by ID.",
+				Required: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: configValueAttributes(),
+				},
 			},
 		},
 	}
@@ -97,23 +98,6 @@ func (r *DatasourceResource) Configure(ctx context.Context, req resource.Configu
 	r.client = client
 }
 
-// parseIntegrationKind converts a user-friendly string like "postgresql" to the proto enum.
-func parseIntegrationKind(kindStr string) (serverv1.IntegrationKind, error) {
-	enumName := "INTEGRATION_KIND_" + strings.ToUpper(kindStr)
-	val, ok := serverv1.IntegrationKind_value[enumName]
-	if !ok {
-		return serverv1.IntegrationKind_INTEGRATION_KIND_UNSPECIFIED,
-			fmt.Errorf("unknown integration kind %q", kindStr)
-	}
-	return serverv1.IntegrationKind(val), nil
-}
-
-// integrationKindToString converts a proto enum to a user-friendly string like "postgresql".
-func integrationKindToString(kind serverv1.IntegrationKind) string {
-	name := kind.String()
-	return strings.ToLower(strings.TrimPrefix(name, "INTEGRATION_KIND_"))
-}
-
 func (r *DatasourceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data DatasourceResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -127,21 +111,13 @@ func (r *DatasourceResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	envVars := make(map[string]string)
-	resp.Diagnostics.Append(data.EnvironmentVariables.ElementsAs(ctx, &envVars, false)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	ic := r.client.NewIntegrationsClient(ctx, data.EnvironmentId.ValueString())
 
-	insertReq := &serverv1.InsertIntegrationRequest{
-		Name:                 data.Name.ValueString(),
-		IntegrationKind:      kind,
-		EnvironmentVariables: envVars,
-	}
-
-	response, err := ic.InsertIntegration(ctx, connect.NewRequest(insertReq))
+	response, err := ic.InsertIntegration(ctx, connect.NewRequest(&serverv1.InsertIntegrationRequest{
+		Name:            data.Name.ValueString(),
+		IntegrationKind: kind,
+		Config:          configToProto(data.Config),
+	}))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Creating Chalk Datasource",
@@ -150,6 +126,13 @@ func (r *DatasourceResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
+	if response.Msg.Integration == nil {
+		resp.Diagnostics.AddError(
+			"Error Creating Chalk Datasource",
+			"Server returned an empty integration response.",
+		)
+		return
+	}
 	data.Id = types.StringValue(response.Msg.Integration.Id)
 
 	tflog.Trace(ctx, "created a chalk_datasource resource")
@@ -190,17 +173,26 @@ func (r *DatasourceResource) Read(ctx context.Context, req resource.ReadRequest,
 	data.Kind = types.StringValue(integrationKindToString(integration.Kind))
 	data.EnvironmentId = types.StringValue(integration.EnvironmentId)
 
-	// Reconstruct environment_variables from secrets
-	if len(iws.Secrets) > 0 {
-		envVarAttrs := make(map[string]attr.Value, len(iws.Secrets))
+	// Refresh config values from the server.
+	// - secret_id entries: the server only stores/returns the ID, so preserve from state.
+	// - literal entries: read back from GetIntegration's bulk response, falling back to
+	//   GetIntegrationValue for any keys the server withholds from bulk reads (e.g. passwords).
+	// On first import, data.Config is nil — no values to fetch, first apply will reconcile.
+	if data.Config != nil {
+		returnedSecrets := make(map[string]string, len(iws.Secrets))
 		for _, secret := range iws.Secrets {
 			if secret.Value != nil {
-				envVarAttrs[secret.Name] = types.StringValue(*secret.Value)
+				returnedSecrets[secret.Name] = *secret.Value
 			} else {
-				envVarAttrs[secret.Name] = types.StringValue("")
+				returnedSecrets[secret.Name] = ""
 			}
 		}
-		data.EnvironmentVariables = types.MapValueMust(types.StringType, envVarAttrs)
+
+		refreshed := refreshConfigKeys(ctx, ic, data.Id.ValueString(), returnedSecrets, data.Config, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		data.Config = refreshed
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -213,21 +205,13 @@ func (r *DatasourceResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	envVars := make(map[string]string)
-	resp.Diagnostics.Append(data.EnvironmentVariables.ElementsAs(ctx, &envVars, false)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	ic := r.client.NewIntegrationsClient(ctx, data.EnvironmentId.ValueString())
 
-	updateReq := &serverv1.UpdateIntegrationRequest{
-		IntegrationId:        data.Id.ValueString(),
-		Name:                 data.Name.ValueString(),
-		EnvironmentVariables: envVars,
-	}
-
-	_, err := ic.UpdateIntegration(ctx, connect.NewRequest(updateReq))
+	_, err := ic.UpdateIntegration(ctx, connect.NewRequest(&serverv1.UpdateIntegrationRequest{
+		IntegrationId: data.Id.ValueString(),
+		Name:          data.Name.ValueString(),
+		Config:        configToProto(data.Config),
+	}))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Chalk Datasource",
@@ -261,5 +245,14 @@ func (r *DatasourceResource) Delete(ctx context.Context, req resource.DeleteRequ
 }
 
 func (r *DatasourceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	parts := strings.SplitN(req.ID, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Expected import ID in the format 'environment_id/integration_id', got: %q", req.ID),
+		)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("environment_id"), parts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), parts[1])...)
 }
