@@ -117,6 +117,10 @@ func (r *PrivateGatewayBindingResource) Read(ctx context.Context, req resource.R
 
 	response, err := cloudComponentsClient.GetBindingPrivateGateway(ctx, connect.NewRequest(getRequest))
 	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error reading cluster private gateway binding",
 			fmt.Sprintf("Could not read cluster private gateway binding: %s", err.Error()),
