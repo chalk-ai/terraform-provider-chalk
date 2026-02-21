@@ -117,6 +117,10 @@ func (r *ClusterBackgroundPersistenceDeploymentBindingResource) Read(ctx context
 
 	response, err := cloudComponentsClient.GetBindingClusterBackgroundPersistenceDeployment(ctx, connect.NewRequest(getRequest))
 	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error reading cluster background persistence deployment binding",
 			fmt.Sprintf("Could not read cluster background persistence deployment binding: %s", err.Error()),

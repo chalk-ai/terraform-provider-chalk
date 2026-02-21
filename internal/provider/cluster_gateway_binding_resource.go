@@ -117,6 +117,10 @@ func (r *ClusterGatewayBindingResource) Read(ctx context.Context, req resource.R
 
 	response, err := cloudComponentsClient.GetBindingClusterGateway(ctx, connect.NewRequest(getRequest))
 	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error reading cluster gateway binding",
 			fmt.Sprintf("Could not read cluster gateway binding: %s", err.Error()),

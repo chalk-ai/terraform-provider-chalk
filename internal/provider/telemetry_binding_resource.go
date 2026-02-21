@@ -93,8 +93,8 @@ func (r *TelemetryBindingResource) Create(ctx context.Context, req resource.Crea
 	_, err := cloudComponentsClient.CreateBindingClusterTelemetryDeployment(ctx, connect.NewRequest(createRequest))
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error creating cluster gateway binding",
-			fmt.Sprintf("Could not create cluster gateway binding: %s", err.Error()),
+			"Error creating telemetry binding",
+			fmt.Sprintf("Could not create telemetry binding: %s", err.Error()),
 		)
 		return
 	}
@@ -118,9 +118,13 @@ func (r *TelemetryBindingResource) Read(ctx context.Context, req resource.ReadRe
 
 	response, err := cloudComponentsClient.GetBindingClusterTelemetryDeployment(ctx, connect.NewRequest(getRequest))
 	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
-			"Error reading cluster gateway binding",
-			fmt.Sprintf("Could not read cluster gateway binding: %s", err.Error()),
+			"Error reading telemetry binding",
+			fmt.Sprintf("Could not read telemetry binding: %s", err.Error()),
 		)
 		return
 	}
@@ -155,8 +159,8 @@ func (r *TelemetryBindingResource) Delete(ctx context.Context, req resource.Dele
 	_, err := cloudComponentsClient.DeleteBindingClusterTelemetryDeployment(ctx, connect.NewRequest(deleteRequest))
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error deleting cluster gateway binding",
-			fmt.Sprintf("Could not delete cluster gateway binding: %s", err.Error()),
+			"Error deleting telemetry binding",
+			fmt.Sprintf("Could not delete telemetry binding: %s", err.Error()),
 		)
 		return
 	}

@@ -215,6 +215,8 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewClusterBackgroundPersistenceDeploymentBindingResource,
 		NewTelemetryResource,
 		NewTelemetryBindingResource,
+		NewEnvironmentGatewayBindingResource,
+		NewEnvironmentBackgroundPersistenceDeploymentBindingResource,
 		NewManagedAWSVPCResource,
 		NewManagedGCPVPCResource,
 		NewManagedAzureVPCResource,
