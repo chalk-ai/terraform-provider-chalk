@@ -29,6 +29,7 @@ type ManagedClusterResourceModel struct {
 	Id                types.String `tfsdk:"id"`
 	Name              types.String `tfsdk:"name"`
 	Kind              types.String `tfsdk:"kind"`
+	Designator        types.String `tfsdk:"designator"`
 	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
 	VpcId             types.String `tfsdk:"vpc_id"`
 }
@@ -63,6 +64,13 @@ func (r *ManagedClusterResource) Schema(ctx context.Context, req resource.Schema
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+		"designator": schema.StringAttribute{
+			MarkdownDescription: "Cluster designator",
+			Computed:            true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
 			"cloud_credential_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the cloud credential to use for the managed cluster",
 				Required:            true,
@@ -238,6 +246,12 @@ func (r *ManagedClusterResource) updateModelFromProto(model *ManagedClusterResou
 	model.Id = types.StringValue(cluster.Id)
 	model.Name = types.StringValue(cluster.Spec.Name)
 	model.Kind = types.StringValue(cluster.Kind)
+
+	if cluster.Designator != nil {
+		model.Designator = types.StringValue(*cluster.Designator)
+	} else {
+		model.Designator = types.StringNull()
+	}
 
 	if cluster.CloudCredentialId != nil {
 		model.CloudCredentialId = types.StringValue(*cluster.CloudCredentialId)
