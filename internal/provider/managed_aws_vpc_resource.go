@@ -76,13 +76,13 @@ func (r *ManagedAWSVPCResource) Schema(ctx context.Context, req resource.SchemaR
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-		"designator": schema.StringAttribute{
-			MarkdownDescription: "VPC designator",
-			Computed:            true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
+			"designator": schema.StringAttribute{
+				MarkdownDescription: "VPC designator",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-		},
 			"cloud_credential_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the cloud credential to use for the managed VPC",
 				Required:            true,

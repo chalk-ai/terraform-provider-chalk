@@ -222,6 +222,8 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewManagedAzureVPCResource,
 		NewDatasourceResource,
 		NewDatasourcePostgresqlResource,
+		NewUnmanagedEnvironmentResource,
+		NewManagedEnvironmentResource,
 	}
 }
 
