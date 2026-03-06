@@ -8,6 +8,13 @@ on:
       - 'go.mod'
       - 'go.sum'
       - '.github/workflows/pr.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/pr.yml'
 
 jobs:
   build:
