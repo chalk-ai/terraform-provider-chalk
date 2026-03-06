@@ -70,8 +70,6 @@ type BackgroundPersistenceWriterModel struct {
 type ClusterBackgroundPersistenceResourceModel struct {
 	Id types.String `tfsdk:"id"`
 
-	//Todo remove EnvironmentIds
-	EnvironmentIds                       types.List   `tfsdk:"environment_ids"`
 	Namespace                            types.String `tfsdk:"namespace"`
 	BusWriterImageGo                     types.String `tfsdk:"bus_writer_image_go"`
 	BusWriterImagePython                 types.String `tfsdk:"bus_writer_image_python"`
@@ -93,9 +91,6 @@ type ClusterBackgroundPersistenceResourceModel struct {
 	ResultBusOfflineStoreSubscriptionId  types.String `tfsdk:"result_bus_offline_store_subscription_id"`
 	ResultBusOnlineStoreSubscriptionId   types.String `tfsdk:"result_bus_online_store_subscription_id"`
 	ResultBusTopicId                     types.String `tfsdk:"result_bus_topic_id"`
-
-	//TODO deprecate
-	IncludeChalkNodeSelector types.Bool `tfsdk:"include_chalk_node_selector"`
 
 	ApiServerHost                   types.String `tfsdk:"api_server_host"`
 	KafkaSaslSecret                 types.String `tfsdk:"kafka_sasl_secret"`
@@ -143,14 +138,9 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"environment_ids": schema.ListAttribute{
-				MarkdownDescription: "List of environment IDs for the background persistence",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
 			"kube_cluster_id": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes cluster ID",
-				Optional:            true,
+				Required:            true,
 			},
 			"namespace": schema.StringAttribute{
 				MarkdownDescription: "Kubernetes namespace",
@@ -238,12 +228,6 @@ func (r *ClusterBackgroundPersistenceResource) Schema(ctx context.Context, req r
 			"result_bus_topic_id": schema.StringAttribute{
 				MarkdownDescription: "Result bus topic ID",
 				Optional:            true,
-			},
-			"include_chalk_node_selector": schema.BoolAttribute{
-				MarkdownDescription: "Whether to include chalk node selector",
-				Optional:            true,
-				Computed:            true,
-				Default:             booldefault.StaticBool(false),
 			},
 			"api_server_host": schema.StringAttribute{
 				MarkdownDescription: "API server host",
@@ -431,16 +415,6 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 	// Create builder client
 	bc := r.client.NewBuilderClient(ctx)
 
-	var envIds []string
-	// Convert environment IDs
-	if !data.EnvironmentIds.IsNull() {
-		diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
 	// Convert writers
 	var writers []BackgroundPersistenceWriterModel
 	diags := data.Writers.ElementsAs(ctx, &writers, false)
@@ -569,9 +543,8 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 
 	// Convert terraform model to proto request
 	commonSpecs := &serverv1.BackgroundPersistenceCommonSpecs{
-		Namespace:                data.Namespace.ValueString(),
-		ServiceAccountName:       data.ServiceAccountName.ValueString(),
-		IncludeChalkNodeSelector: data.IncludeChalkNodeSelector.ValueBool(),
+		Namespace:          data.Namespace.ValueString(),
+		ServiceAccountName: data.ServiceAccountName.ValueString(),
 	}
 
 	// Handle optional subscription and topic fields
@@ -657,18 +630,9 @@ func (r *ClusterBackgroundPersistenceResource) Create(ctx context.Context, req r
 		deploymentSpecs.RedisLightningSupportsHasMany = data.RedisLightningSupportsHasMany.ValueBool()
 	}
 
-	//create a deployment based on whether kube_cluster_id or environment_ids is provided
-	var createReq *serverv1.CreateClusterBackgroundPersistenceRequest
-	if !data.KubeClusterId.IsNull() {
-		createReq = &serverv1.CreateClusterBackgroundPersistenceRequest{
-			Specs:         deploymentSpecs,
-			KubeClusterId: data.KubeClusterId.ValueStringPointer(),
-		}
-	} else {
-		createReq = &serverv1.CreateClusterBackgroundPersistenceRequest{
-			EnvironmentIds: envIds,
-			Specs:          deploymentSpecs,
-		}
+	createReq := &serverv1.CreateClusterBackgroundPersistenceRequest{
+		Specs:         deploymentSpecs,
+		KubeClusterId: data.KubeClusterId.ValueStringPointer(),
 	}
 
 	// Support upsert by setting ID if it exists
@@ -738,7 +702,6 @@ func (r *ClusterBackgroundPersistenceResource) Read(ctx context.Context, req res
 		common := bg.Specs.CommonPersistenceSpecs
 		data.Namespace = types.StringValue(common.Namespace)
 		data.ServiceAccountName = types.StringValue(common.ServiceAccountName)
-		data.IncludeChalkNodeSelector = types.BoolValue(common.IncludeChalkNodeSelector)
 
 		// Handle optional subscription and topic fields
 		if common.BigqueryParquetUploadSubscriptionId != "" {
@@ -1107,16 +1070,6 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 	// Create builder client
 	bc := r.client.NewBuilderClient(ctx)
 
-	var envIds []string
-	// Convert environment IDs
-	if !data.EnvironmentIds.IsNull() {
-		diags := data.EnvironmentIds.ElementsAs(ctx, &envIds, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
 	// Convert writers
 	var writers []BackgroundPersistenceWriterModel
 	diags := data.Writers.ElementsAs(ctx, &writers, false)
@@ -1245,9 +1198,8 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 
 	// Convert terraform model to proto request - reuse create logic since it's an upsert
 	commonSpecs := &serverv1.BackgroundPersistenceCommonSpecs{
-		Namespace:                data.Namespace.ValueString(),
-		ServiceAccountName:       data.ServiceAccountName.ValueString(),
-		IncludeChalkNodeSelector: data.IncludeChalkNodeSelector.ValueBool(),
+		Namespace:          data.Namespace.ValueString(),
+		ServiceAccountName: data.ServiceAccountName.ValueString(),
 	}
 
 	// Handle optional subscription and topic fields
@@ -1333,18 +1285,9 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 		deploymentSpecs.RedisLightningSupportsHasMany = data.RedisLightningSupportsHasMany.ValueBool()
 	}
 
-	//create a deployment based on whether kube_cluster_id or environment_ids is provided
-	var createReq *serverv1.CreateClusterBackgroundPersistenceRequest
-	if !data.KubeClusterId.IsNull() {
-		createReq = &serverv1.CreateClusterBackgroundPersistenceRequest{
-			Specs:         deploymentSpecs,
-			KubeClusterId: data.KubeClusterId.ValueStringPointer(),
-		}
-	} else {
-		createReq = &serverv1.CreateClusterBackgroundPersistenceRequest{
-			EnvironmentIds: envIds,
-			Specs:          deploymentSpecs,
-		}
+	createReq := &serverv1.CreateClusterBackgroundPersistenceRequest{
+		Specs:         deploymentSpecs,
+		KubeClusterId: data.KubeClusterId.ValueStringPointer(),
 	}
 
 	// Use the known ID from current state for the upsert
