@@ -78,3 +78,8 @@ func NewIntegrationsClient(ctx context.Context, options *GrpcClientOptions) serv
 	return serverv1connect.NewIntegrationsServiceClient(
 		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
 }
+
+func NewEnvironmentServiceClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.EnvironmentServiceClient {
+	return serverv1connect.NewEnvironmentServiceClient(
+		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+}

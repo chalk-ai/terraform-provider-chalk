@@ -4,9 +4,10 @@ go 1.26.0
 
 require (
 	connectrpc.com/connect v1.19.1
-	github.com/chalk-ai/chalk-go v1.2.195
-	github.com/chalk-ai/chalk-go/gen v1.2.195
+	github.com/chalk-ai/chalk-go v1.2.211
+	github.com/chalk-ai/chalk-go/gen v1.2.211
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
+	github.com/hashicorp/terraform-plugin-framework-jsontypes v0.2.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.18.0
 	github.com/hashicorp/terraform-plugin-go v0.26.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
