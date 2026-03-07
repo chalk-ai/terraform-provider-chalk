@@ -7,9 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -224,12 +223,15 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewDatasourcePostgresqlResource,
 		NewUnmanagedEnvironmentResource,
 		NewManagedEnvironmentResource,
+		NewOfflineStoreConnectionResource,
+		NewEnvironmentOfflineStoreConnectionBindingResource,
 	}
 }
 
 func (p *ChalkProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewEnvironmentDataSource,
+		NewOfflineStoreConnectionTestDataSource,
 	}
 }
 
