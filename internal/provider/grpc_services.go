@@ -83,3 +83,8 @@ func NewEnvironmentServiceClient(ctx context.Context, options *GrpcClientOptions
 	return serverv1connect.NewEnvironmentServiceClient(
 		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
 }
+
+func NewOfflineStoreConnectionClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.OfflineStoreConnectionServiceClient {
+	return serverv1connect.NewOfflineStoreConnectionServiceClient(
+		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+}
