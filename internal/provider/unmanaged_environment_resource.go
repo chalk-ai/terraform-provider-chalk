@@ -279,7 +279,6 @@ func updateStateFromEnvironment(data *UnmanagedEnvironmentResourceModel, e *serv
 	if diagnostics.HasError() {
 		return
 	}
-	data.ServiceUrl = types.StringPointerValue(e.ServiceUrl)
 	data.KubeServiceAccountName = types.StringPointerValue(e.KubeServiceAccountName)
 	data.KubeClusterMode = types.StringPointerValue(e.KubeClusterMode)
 }

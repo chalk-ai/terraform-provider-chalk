@@ -78,7 +78,7 @@ func (r *EnvironmentResource) Metadata(ctx context.Context, req resource.Metadat
 func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		DeprecationMessage:  "Use chalk_unmanaged_environment or chalk_managed_environment instead.",
-		MarkdownDescription: "Chalk environment resource",
+		MarkdownDescription: "~> **Deprecated** Use `chalk_unmanaged_environment` or `chalk_managed_environment` instead.\n\nChalk environment resource",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

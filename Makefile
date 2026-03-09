@@ -28,7 +28,13 @@ testacc:
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
 generate:
-	go generate ./...
+	go generate ./tools/...
+
+docs:
+	go generate ./tools/...
+
+docs-validate:
+	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate --provider-dir .
 
 fmt:
 	gofmt -s -w .
@@ -37,4 +43,4 @@ fmt:
 lint:
 	golangci-lint run
 
-.PHONY: build install test testacc generate fmt lint
+.PHONY: build install test testacc generate fmt lint docs docs-validate
