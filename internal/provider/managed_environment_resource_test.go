@@ -63,6 +63,8 @@ func setupMockServerManagedEnvironment(t *testing.T) *testserver.MockServer {
 // applyManagedEnvField applies a single field-mask path update from src to dst.
 func applyManagedEnvField(dst, src *serverv1.Environment, path string) {
 	switch path {
+	case "service_url":
+		dst.ServiceUrl = src.ServiceUrl
 	case "online_store_kind":
 		dst.OnlineStoreKind = src.OnlineStoreKind
 	case "online_store_secret":

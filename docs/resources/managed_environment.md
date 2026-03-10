@@ -34,6 +34,7 @@ Chalk managed environment resource
 - `online_store_secret` (String, Sensitive) Online store secret
 - `pinned_base_image` (String) Pinned base image for deployments
 - `private_pip_repositories` (String) Private pip repositories
+- `service_url` (String) Service URL (set by server if not provided)
 - `specs_config_json` (String) Specs config JSON (serialized map of spec configuration values)
 
 <a id="nestedatt--environment_buckets"></a>
