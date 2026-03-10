@@ -30,7 +30,6 @@ type UnmanagedEnvironmentResource struct {
 
 type UnmanagedEnvironmentResourceModel struct {
 	BaseEnvironmentModel
-	ServiceUrl             types.String `tfsdk:"service_url"`
 	KubeServiceAccountName types.String `tfsdk:"kube_service_account_name"`
 	KubeClusterMode        types.String `tfsdk:"kube_cluster_mode"`
 }
@@ -47,10 +46,6 @@ func (r *UnmanagedEnvironmentResource) Schema(ctx context.Context, req resource.
 			stringplanmodifier.RequiresReplace(),
 		},
 	})
-	attrs["service_url"] = schema.StringAttribute{
-		MarkdownDescription: "Service URL",
-		Optional:            true,
-	}
 	attrs["kube_service_account_name"] = schema.StringAttribute{
 		MarkdownDescription: "Kubernetes service account name",
 		Optional:            true,
@@ -146,10 +141,6 @@ func (r *UnmanagedEnvironmentResource) Update(ctx context.Context, req resource.
 	maskPaths := buildUnmanagedEnvUpdateMask(&plan, &state)
 
 	if len(maskPaths) > 0 {
-		if !plan.ServiceUrl.IsNull() {
-			v := plan.ServiceUrl.ValueString()
-			env.ServiceUrl = &v
-		}
 		if !plan.KubeServiceAccountName.IsNull() {
 			v := plan.KubeServiceAccountName.ValueString()
 			env.KubeServiceAccountName = &v
@@ -217,9 +208,6 @@ func (r *UnmanagedEnvironmentResource) ImportState(ctx context.Context, req reso
 // buildUnmanagedEnvUpdateMask compares plan and state to determine which fields changed.
 func buildUnmanagedEnvUpdateMask(plan, state *UnmanagedEnvironmentResourceModel) []string {
 	paths := buildBaseEnvUpdateMask(&plan.BaseEnvironmentModel, &state.BaseEnvironmentModel)
-	if !plan.ServiceUrl.IsUnknown() && !plan.ServiceUrl.Equal(state.ServiceUrl) {
-		paths = append(paths, "service_url")
-	}
 	if !plan.KubeServiceAccountName.IsUnknown() && !plan.KubeServiceAccountName.Equal(state.KubeServiceAccountName) {
 		paths = append(paths, "kube_service_account_name")
 	}
@@ -234,10 +222,6 @@ func unmanagedEnvToProto(ctx context.Context, data *UnmanagedEnvironmentResource
 	env := baseEnvToProto(ctx, &data.BaseEnvironmentModel, diagnostics)
 	if env == nil {
 		return nil
-	}
-	if !data.ServiceUrl.IsNull() && !data.ServiceUrl.IsUnknown() {
-		v := data.ServiceUrl.ValueString()
-		env.ServiceUrl = &v
 	}
 	if !data.KubeServiceAccountName.IsNull() && !data.KubeServiceAccountName.IsUnknown() {
 		v := data.KubeServiceAccountName.ValueString()

@@ -1,3 +1,4 @@
+// Deprecated: This resource is deprecated. You likely want to modify [un]managed_environment_resource.go instead.
 package provider
 
 import (

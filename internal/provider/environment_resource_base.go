@@ -26,6 +26,7 @@ type BaseEnvironmentModel struct {
 	KubeClusterId            types.String         `tfsdk:"kube_cluster_id"`
 	KubeJobNamespace         types.String         `tfsdk:"kube_job_namespace"`
 	EngineDockerRegistryPath types.String         `tfsdk:"engine_docker_registry_path"`
+	ServiceUrl               types.String         `tfsdk:"service_url"`
 	OnlineStoreKind          types.String         `tfsdk:"online_store_kind"`
 	OnlineStoreSecret        types.String         `tfsdk:"online_store_secret"`
 	AdditionalEnvVars        types.Map            `tfsdk:"additional_env_vars"`
@@ -74,6 +75,14 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 			},
 		},
 		"kube_job_namespace": kubeJobNamespace,
+		"service_url": schema.StringAttribute{
+			MarkdownDescription: "Service URL (set by server if not provided)",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
 		"engine_docker_registry_path": schema.StringAttribute{
 			MarkdownDescription: "Engine Docker registry path (immutable)",
 			Optional:            true,
@@ -175,6 +184,10 @@ func baseEnvToProto(ctx context.Context, data *BaseEnvironmentModel, diagnostics
 		v := data.EngineDockerRegistryPath.ValueString()
 		env.EngineDockerRegistryPath = &v
 	}
+	if !data.ServiceUrl.IsNull() && !data.ServiceUrl.IsUnknown() {
+		v := data.ServiceUrl.ValueString()
+		env.ServiceUrl = &v
+	}
 	if !data.OnlineStoreKind.IsNull() && !data.OnlineStoreKind.IsUnknown() {
 		v := data.OnlineStoreKind.ValueString()
 		env.OnlineStoreKind = &v
@@ -251,6 +264,7 @@ func baseUpdateStateFromEnvironment(data *BaseEnvironmentModel, e *serverv1.Envi
 	data.KubeClusterId = types.StringPointerValue(e.KubeClusterId)
 	data.KubeJobNamespace = types.StringPointerValue(e.KubeJobNamespace)
 	data.EngineDockerRegistryPath = types.StringPointerValue(e.EngineDockerRegistryPath)
+	data.ServiceUrl = types.StringPointerValue(e.ServiceUrl)
 	data.OnlineStoreKind = types.StringPointerValue(e.OnlineStoreKind)
 	data.OnlineStoreSecret = types.StringPointerValue(e.OnlineStoreSecret)
 	data.PrivatePipRepositories = types.StringPointerValue(e.PrivatePipRepositories)
@@ -301,6 +315,10 @@ func baseUpdateStateFromEnvironment(data *BaseEnvironmentModel, e *serverv1.Envi
 // BaseEnvironmentModel plan. Stops and sets a diagnostic error on the first conversion failure.
 // The caller must check diagnostics.HasError() after calling this function.
 func populateBaseEnvUpdateProto(ctx context.Context, plan *BaseEnvironmentModel, env *serverv1.Environment, diagnostics *diag.Diagnostics) {
+	if !plan.ServiceUrl.IsNull() && !plan.ServiceUrl.IsUnknown() {
+		v := plan.ServiceUrl.ValueString()
+		env.ServiceUrl = &v
+	}
 	if !plan.OnlineStoreKind.IsNull() {
 		v := plan.OnlineStoreKind.ValueString()
 		env.OnlineStoreKind = &v
@@ -365,6 +383,9 @@ func populateBaseEnvUpdateProto(ctx context.Context, plan *BaseEnvironmentModel,
 // field mask paths for mutable fields that changed.
 func buildBaseEnvUpdateMask(plan, state *BaseEnvironmentModel) []string {
 	var paths []string
+	if !plan.ServiceUrl.IsUnknown() && !plan.ServiceUrl.Equal(state.ServiceUrl) {
+		paths = append(paths, "service_url")
+	}
 	if !plan.OnlineStoreKind.IsUnknown() && !plan.OnlineStoreKind.Equal(state.OnlineStoreKind) {
 		paths = append(paths, "online_store_kind")
 	}
