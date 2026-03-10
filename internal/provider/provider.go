@@ -225,6 +225,7 @@ func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resourc
 		NewManagedEnvironmentResource,
 		NewOfflineStoreConnectionResource,
 		NewEnvironmentOfflineStoreConnectionBindingResource,
+		NewUnmanagedClusterBackgroundPersistenceResource,
 	}
 }
 
