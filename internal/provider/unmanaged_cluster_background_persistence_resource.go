@@ -429,6 +429,11 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Read(ctx context.Context
 
 	bg := bgPersistence.Msg.BackgroundPersistence
 
+	if bg == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if bg.GetKubeClusterId() != "" {
 		data.KubeClusterId = types.StringValue(bg.GetKubeClusterId())
 	} else {
