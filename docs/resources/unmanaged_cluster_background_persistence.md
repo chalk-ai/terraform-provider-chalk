@@ -25,10 +25,10 @@ Chalk unmanaged cluster background persistence resource.
 ### Optional
 
 - `api_server_host` (String) API server host
-- `bus_writer_image_bswl` (String) BSWL bus writer image. Only set these if Chalk instructs you to.
-- `bus_writer_image_go` (String) Go bus writer image. Only set these if Chalk instructs you to.
-- `bus_writer_image_python` (String) Python bus writer image. Only set these if Chalk instructs you to.
-- `bus_writer_image_rust` (String) Rust bus writer image. Only set these if Chalk instructs you to.
+- `bus_writer_image_bswl` (String) BSWL bus writer image. Only set this if instructed to by Chalk.
+- `bus_writer_image_go` (String) Go bus writer image. Only set this if instructed to by Chalk.
+- `bus_writer_image_python` (String) Python bus writer image. Only set this if instructed to by Chalk.
+- `bus_writer_image_rust` (String) Rust bus writer image. Only set this if instructed to by Chalk.
 - `google_pubsub` (Attributes) Google PubSub bus configuration. Exactly one of `google_pubsub` or `kafka` must be provided. (see [below for nested schema](#nestedatt--google_pubsub))
 - `kafka` (Attributes) Kafka bus configuration. Exactly one of `google_pubsub` or `kafka` must be provided. (see [below for nested schema](#nestedatt--kafka))
 - `offline_store_snowflake_storage_integration_name` (String) Snowflake storage integration name

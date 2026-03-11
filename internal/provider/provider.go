@@ -44,6 +44,7 @@ func (p *ChalkProvider) Metadata(ctx context.Context, req provider.MetadataReque
 
 func (p *ChalkProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "> **Alpha Status:** This provider is currently in alpha. While we strive to maintain backward compatibility and minimize bugs, it is under heavy development and breaking changes or bugs may be introduced.",
 		Attributes: map[string]schema.Attribute{
 			"client_id": schema.StringAttribute{
 				MarkdownDescription: "Chalk client ID for authentication. Can also be set via CHALK_CLIENT_ID environment variable.",
