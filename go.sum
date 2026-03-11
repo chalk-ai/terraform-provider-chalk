@@ -31,10 +31,10 @@ github.com/bmatcuk/doublestar/v4 v4.9.1 h1:X8jg9rRZmJd4yRy7ZeNDRnM+T3ZfHv15JiBJ/
 github.com/bmatcuk/doublestar/v4 v4.9.1/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=
 github.com/bufbuild/protocompile v0.14.1/go.mod h1:ppVdAIhbr2H8asPk6k4pY7t9zB1OU5DoEw9xY/FUi1c=
-github.com/chalk-ai/chalk-go v1.2.211 h1:sRv14t3z4GJQTWianUb+XuWrqjhxKXjx8KwdjC3JZak=
-github.com/chalk-ai/chalk-go v1.2.211/go.mod h1:sh3CGJ3al3JgoD0lIw3HtArbMVDgLygUwx/kkpkCpno=
-github.com/chalk-ai/chalk-go/gen v1.2.211 h1:/6KiwR+a3vcIaAGCB1YQhbfthFqNKsQTkz1iR5ev+g0=
-github.com/chalk-ai/chalk-go/gen v1.2.211/go.mod h1:7PRwtgDX+0SCdFQqTjmPoLnJPhSOB1guweA+ANV01KI=
+github.com/chalk-ai/chalk-go v1.2.215 h1:WdNo6KtPiy1synShuqeYZXx75MOPXc6RYrGTmtc+y/8=
+github.com/chalk-ai/chalk-go v1.2.215/go.mod h1:sh3CGJ3al3JgoD0lIw3HtArbMVDgLygUwx/kkpkCpno=
+github.com/chalk-ai/chalk-go/gen v1.2.215 h1:LJRtI04MCX6ExbBLg8a0C+K9EirsPx2VZdCR/ZVBJzo=
+github.com/chalk-ai/chalk-go/gen v1.2.215/go.mod h1:7PRwtgDX+0SCdFQqTjmPoLnJPhSOB1guweA+ANV01KI=
 github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
 github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
 github.com/cyphar/filepath-securejoin v0.4.1 h1:JyxxyPEaktOD+GAnqIqTf9A8tHyAG22rowi7HkoSU1s=
