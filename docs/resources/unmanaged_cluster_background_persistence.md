@@ -24,7 +24,7 @@ Chalk unmanaged cluster background persistence resource.
 
 ### Optional
 
-- `api_server_host` (String) API server host
+- `api_server_host` (String) API server host. Defaults to the provider's `api_server` if not set.
 - `bus_writer_image_bswl` (String) BSWL bus writer image. Only set this if instructed to by Chalk.
 - `bus_writer_image_go` (String) Go bus writer image. Only set this if instructed to by Chalk.
 - `bus_writer_image_python` (String) Python bus writer image. Only set this if instructed to by Chalk.
@@ -44,7 +44,6 @@ Chalk unmanaged cluster background persistence resource.
 Required:
 
 - `bus_subscriber_type` (String) Bus subscriber type
-- `name` (String) Writer name
 
 Optional:
 
@@ -67,6 +66,10 @@ Optional:
 - `results_writer_skip_producing_feature_metrics` (Boolean) Results writer skip producing feature metrics
 - `storage_cache_prefix` (String) Storage cache prefix
 - `version` (String) Writer version
+
+Read-Only:
+
+- `name` (String) Writer name (derived from bus_subscriber_type)
 
 <a id="nestedatt--writers--hpa_specs"></a>
 ### Nested Schema for `writers.hpa_specs`
