@@ -235,8 +235,12 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Schema(ctx context.Conte
 				Required:            true,
 			},
 			"api_server_host": schema.StringAttribute{
-				MarkdownDescription: "API server host",
+				MarkdownDescription: "API server host. Defaults to the provider's `api_server` if not set.",
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"offline_store_snowflake_storage_integration_name": schema.StringAttribute{
 				MarkdownDescription: "Snowflake storage integration name",
@@ -288,6 +292,14 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Configure(ctx context.Co
 	r.client = client
 }
 
+// applyApiServerHostDefault sets ApiServerHost from the provider's api_server when the
+// user has not provided a value. Must be called before buildUnmanagedBGPProtoRequest.
+func applyApiServerHostDefault(data *UnmanagedClusterBGPersistenceModel, defaultApiServer string) {
+	if (data.ApiServerHost.IsNull() || data.ApiServerHost.IsUnknown()) && defaultApiServer != "" {
+		data.ApiServerHost = types.StringValue(defaultApiServer)
+	}
+}
+
 func buildUnmanagedBGPProtoRequest(ctx context.Context, data *UnmanagedClusterBGPersistenceModel) (*serverv1.CreateClusterBackgroundPersistenceRequest, error) {
 	protoWriters, diags := bgpWritersTFToProto(ctx, data.Writers)
 	if diags.HasError() {
@@ -336,7 +348,7 @@ func buildUnmanagedBGPProtoRequest(ctx context.Context, data *UnmanagedClusterBG
 		Writers:                protoWriters,
 	}
 
-	if !data.ApiServerHost.IsNull() {
+	if !data.ApiServerHost.IsNull() && !data.ApiServerHost.IsUnknown() {
 		deploymentSpecs.ApiServerHost = data.ApiServerHost.ValueString()
 	}
 	if !data.OfflineStoreSnowflakeStorageIntegrationName.IsNull() {
@@ -410,6 +422,8 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Create(ctx context.Conte
 	}
 
 	bc := r.client.NewBuilderClient(ctx)
+
+	applyApiServerHostDefault(&data, r.client.GetChalkClient().ApiServer)
 
 	createReq, err := buildUnmanagedBGPProtoRequest(ctx, &data)
 	if err != nil {
@@ -607,6 +621,8 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Update(ctx context.Conte
 	data.Id = state.Id
 
 	bc := r.client.NewBuilderClient(ctx)
+
+	applyApiServerHostDefault(&data, r.client.GetChalkClient().ApiServer)
 
 	createReq, err := buildUnmanagedBGPProtoRequest(ctx, &data)
 	if err != nil {
