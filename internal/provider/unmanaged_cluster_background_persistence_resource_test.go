@@ -235,6 +235,57 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 	})
 }
 
+func TestUnmanagedClusterBGPClearWriters(t *testing.T) {
+	server := setupMockBuilderServerBGP(t)
+	setupTestEnv(t, server.URL)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "chalk_unmanaged_cluster_background_persistence" "test" {
+  kube_cluster_id      = "test-kube-cluster"
+  service_account_name = "test-sa"
+  namespace            = "default"
+` + testBGPWritersHCL + `
+  kafka = {
+    sasl_secret       = "my-sasl-secret"
+    bootstrap_servers = "kafka:9092"
+    dlq_topic         = "my-dlq-topic"
+    offline_store_bus_upload_topic_id          = "upload-topic"
+    offline_store_bus_streaming_write_topic_id = "streaming-topic"
+    metrics_bus_topic_id = "metrics-topic"
+    result_bus_topic_id  = "result-topic"
+  }
+}
+`,
+				Check: resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.#", "2"),
+			},
+			{
+				Config: `
+resource "chalk_unmanaged_cluster_background_persistence" "test" {
+  kube_cluster_id      = "test-kube-cluster"
+  service_account_name = "test-sa"
+  namespace            = "default"
+  writers              = []
+  kafka = {
+    sasl_secret       = "my-sasl-secret"
+    bootstrap_servers = "kafka:9092"
+    dlq_topic         = "my-dlq-topic"
+    offline_store_bus_upload_topic_id          = "upload-topic"
+    offline_store_bus_streaming_write_topic_id = "streaming-topic"
+    metrics_bus_topic_id = "metrics-topic"
+    result_bus_topic_id  = "result-topic"
+  }
+}
+`,
+				Check: resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.#", "0"),
+			},
+		},
+	})
+}
+
 func TestUnmanagedClusterBGPReadNotFound(t *testing.T) {
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })

@@ -337,7 +337,7 @@ func bgpWritersTFToProto(ctx context.Context, writersList types.List) ([]*server
 // bgpWritersProtoToTF converts a proto writers slice to a TF list.
 func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.BackgroundPersistenceWriterSpecs) (types.List, diag.Diagnostics) {
 	if len(protoWriters) == 0 {
-		return types.ListNull(bgpWriterObjectType), nil
+		return types.ListValueMust(bgpWriterObjectType, []attr.Value{}), nil
 	}
 
 	var tfWriters []BackgroundPersistenceWriterModel
