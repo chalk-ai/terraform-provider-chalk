@@ -35,8 +35,8 @@ github.com/chalk-ai/chalk-go v1.2.215 h1:WdNo6KtPiy1synShuqeYZXx75MOPXc6RYrGTmtc
 github.com/chalk-ai/chalk-go v1.2.215/go.mod h1:sh3CGJ3al3JgoD0lIw3HtArbMVDgLygUwx/kkpkCpno=
 github.com/chalk-ai/chalk-go/gen v1.2.215 h1:LJRtI04MCX6ExbBLg8a0C+K9EirsPx2VZdCR/ZVBJzo=
 github.com/chalk-ai/chalk-go/gen v1.2.215/go.mod h1:7PRwtgDX+0SCdFQqTjmPoLnJPhSOB1guweA+ANV01KI=
-github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
-github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
+github.com/cloudflare/circl v1.6.3 h1:9GPOhQGF9MCYUeXyMYlqTR6a5gTrgR/fBLXvUgtVcg8=
+github.com/cloudflare/circl v1.6.3/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
 github.com/cyphar/filepath-securejoin v0.4.1 h1:JyxxyPEaktOD+GAnqIqTf9A8tHyAG22rowi7HkoSU1s=
 github.com/cyphar/filepath-securejoin v0.4.1/go.mod h1:Sdj7gXlvMcPZsbhwhQ33GguGLDGQL7h7bg04C/+u9jI=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
