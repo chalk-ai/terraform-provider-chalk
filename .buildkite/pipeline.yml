@@ -1,0 +1,55 @@
+steps:
+  - label: ":terraform: PR Validation"
+    command: |
+      set -euo pipefail
+
+      # Configure Go cache on persistent volume
+      export GOMODCACHE=/go-cache/mod
+      export GOCACHE=/go-cache/build
+      sudo mkdir -p "$$GOMODCACHE" "$$GOCACHE"
+      sudo chown -R "$$(id -u):$$(id -g)" /go-cache
+
+      # Install Go 1.26 if needed
+      GO_VERSION=1.26.0
+      GO_INSTALL_DIR=/go-cache/go-$${GO_VERSION}
+      if [ ! -x "$$GO_INSTALL_DIR/bin/go" ]; then
+        echo "--- :golang: Installing Go $${GO_VERSION}"
+        curl -fsSL "https://go.dev/dl/go$${GO_VERSION}.linux-amd64.tar.gz" | tar -C /go-cache -xzf -
+        mv /go-cache/go "$$GO_INSTALL_DIR"
+      fi
+      export PATH="$$GO_INSTALL_DIR/bin:$$PATH"
+      go version
+
+      echo "--- :golang: Downloading dependencies"
+      go mod download
+      go mod verify
+
+      echo "--- :golang: Building provider"
+      go build -v ./...
+
+      echo "--- :golang: Running go vet"
+      go vet ./...
+
+      echo "--- :golang: Checking formatting"
+      if [ -n "$$(gofmt -s -l .)" ]; then
+        echo "Go files are not formatted. Please run 'gofmt -s -w .'"
+        gofmt -s -d .
+        exit 1
+      fi
+
+      echo "--- :golang: Running tests"
+      go test -v -shuffle=on -count=1 ./internal/provider -timeout 5m
+
+      echo "--- :terraform: Validating docs"
+      go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate --provider-dir .
+
+      echo "--- :white_check_mark: All checks passed"
+    agents:
+      queue: default
+    timeout_in_minutes: 15
+    retry:
+      automatic:
+        - exit_status: -1
+          limit: 2
+        - exit_status: 255
+          limit: 2
