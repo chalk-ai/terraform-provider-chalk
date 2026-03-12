@@ -44,7 +44,6 @@ Chalk unmanaged cluster background persistence resource.
 Required:
 
 - `bus_subscriber_type` (String) Bus subscriber type
-- `name` (String) Writer name
 
 Optional:
 
@@ -67,6 +66,10 @@ Optional:
 - `results_writer_skip_producing_feature_metrics` (Boolean) Results writer skip producing feature metrics
 - `storage_cache_prefix` (String) Storage cache prefix
 - `version` (String) Writer version
+
+Read-Only:
+
+- `name` (String) Writer name (derived from bus_subscriber_type)
 
 <a id="nestedatt--writers--hpa_specs"></a>
 ### Nested Schema for `writers.hpa_specs`

@@ -6,7 +6,9 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	serverv1connect "github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -260,7 +262,7 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Schema(ctx context.Conte
 				MarkdownDescription: "Rust bus writer image. Only set this if instructed to by Chalk.",
 				Optional:            true,
 			},
-			"writers":       bgpWritersSchemaAttribute,
+			"writers":       bgpUnmanagedWritersSchemaAttribute,
 			"google_pubsub": googlePubSubSchema,
 			"kafka":         kafkaSchema,
 		},
@@ -370,6 +372,34 @@ func buildUnmanagedBGPProtoRequest(ctx context.Context, data *UnmanagedClusterBG
 	return createReq, nil
 }
 
+// refreshWritersAfterWrite fetches the current specs from the server and returns the
+// writers list with server-populated computed fields (e.g. name).
+func (r *UnmanagedClusterBackgroundPersistenceResource) refreshWritersAfterWrite(
+	ctx context.Context,
+	bc serverv1connect.BuilderServiceClient,
+	id string,
+) (types.List, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	getResp, err := bc.GetClusterBackgroundPersistence(ctx, connect.NewRequest(&serverv1.GetClusterBackgroundPersistenceRequest{
+		Id: &id,
+	}))
+	if err != nil {
+		diags.AddError(
+			"Error Reading Chalk Unmanaged Cluster Background Persistence After Write",
+			fmt.Sprintf("Could not read unmanaged cluster background persistence %s: %v", id, err),
+		)
+		return types.ListNull(bgpWriterObjectType), diags
+	}
+	if getResp.Msg.BackgroundPersistence == nil || getResp.Msg.BackgroundPersistence.Specs == nil {
+		diags.AddError(
+			"Unexpected Response After Write",
+			fmt.Sprintf("Server returned no specs for background persistence %s after write", id),
+		)
+		return types.ListNull(bgpWriterObjectType), diags
+	}
+	return bgpWritersProtoToTF(ctx, getResp.Msg.BackgroundPersistence.Specs.Writers)
+}
+
 func (r *UnmanagedClusterBackgroundPersistenceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data UnmanagedClusterBGPersistenceModel
 
@@ -397,6 +427,13 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Create(ctx context.Conte
 	}
 
 	data.Id = types.StringValue(response.Msg.Id)
+
+	// Refresh writers from the server to populate computed fields (e.g. name).
+	writersList, writerDiags := r.refreshWritersAfterWrite(ctx, bc, data.Id.ValueString())
+	resp.Diagnostics.Append(writerDiags...)
+	if !resp.Diagnostics.HasError() {
+		data.Writers = writersList
+	}
 
 	tflog.Trace(ctx, "created a chalk_unmanaged_cluster_background_persistence resource")
 
@@ -587,6 +624,13 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Update(ctx context.Conte
 	}
 
 	data.Id = types.StringValue(response.Msg.Id)
+
+	// Refresh writers from the server to populate computed fields (e.g. name).
+	writersList, writerDiags := r.refreshWritersAfterWrite(ctx, bc, data.Id.ValueString())
+	resp.Diagnostics.Append(writerDiags...)
+	if !resp.Diagnostics.HasError() {
+		data.Writers = writersList
+	}
 
 	tflog.Trace(ctx, "updated a chalk_unmanaged_cluster_background_persistence resource")
 

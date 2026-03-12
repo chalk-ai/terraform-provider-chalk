@@ -16,7 +16,6 @@ import (
 const testBGPWritersHCL = `
   writers = [
     {
-      name                  = "go-metrics-bus-writer"
       bus_subscriber_type   = "GO_METRICS_BUS_WRITER"
       default_replica_count = 1
       request = {
@@ -25,7 +24,6 @@ const testBGPWritersHCL = `
       }
     },
     {
-      name                  = "cluster-manager"
       bus_subscriber_type   = "CLUSTER_MANAGER"
       default_replica_count = 1
       request = {
