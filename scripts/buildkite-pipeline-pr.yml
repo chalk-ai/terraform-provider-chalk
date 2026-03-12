@@ -41,7 +41,7 @@ steps:
       go test -v -shuffle=on -count=1 ./internal/provider -timeout 5m
 
       echo "--- :terraform: Validating docs"
-      go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate --provider-dir .
+      go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate --provider-dir . --provider-name chalk
 
       echo "--- :white_check_mark: All checks passed"
     agents:
