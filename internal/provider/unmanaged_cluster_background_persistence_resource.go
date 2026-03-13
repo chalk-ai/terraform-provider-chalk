@@ -174,11 +174,19 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Schema(ctx context.Conte
 		Attributes: map[string]schema.Attribute{
 			"sasl_secret": schema.StringAttribute{
 				MarkdownDescription: "Kafka SASL secret",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"bootstrap_servers": schema.StringAttribute{
 				MarkdownDescription: "Kafka bootstrap servers",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"sasl_mechanism": schema.StringAttribute{
 				MarkdownDescription: "Kafka SASL mechanism",
@@ -357,8 +365,12 @@ func buildUnmanagedBGPProtoRequest(ctx context.Context, data *UnmanagedClusterBG
 
 	if data.Kafka != nil {
 		k := data.Kafka
-		deploymentSpecs.KafkaSaslSecret = k.SaslSecret.ValueString()
-		deploymentSpecs.KafkaBootstrapServers = k.BootstrapServers.ValueString()
+		if !k.SaslSecret.IsNull() {
+			deploymentSpecs.KafkaSaslSecret = k.SaslSecret.ValueString()
+		}
+		if !k.BootstrapServers.IsNull() {
+			deploymentSpecs.KafkaBootstrapServers = k.BootstrapServers.ValueString()
+		}
 		if !k.SaslMechanism.IsNull() {
 			deploymentSpecs.KafkaSaslMechanism = k.SaslMechanism.ValueString()
 		}
@@ -569,9 +581,16 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Read(ctx context.Context
 
 		// Reconstruct kafka block if kafka fields are set
 		if bg.Specs.KafkaSaslSecret != "" || bg.Specs.KafkaBootstrapServers != "" {
-			data.Kafka = &BGPKafkaModel{
-				SaslSecret:       types.StringValue(bg.Specs.KafkaSaslSecret),
-				BootstrapServers: types.StringValue(bg.Specs.KafkaBootstrapServers),
+			data.Kafka = &BGPKafkaModel{}
+			if bg.Specs.KafkaSaslSecret != "" {
+				data.Kafka.SaslSecret = types.StringValue(bg.Specs.KafkaSaslSecret)
+			} else {
+				data.Kafka.SaslSecret = types.StringNull()
+			}
+			if bg.Specs.KafkaBootstrapServers != "" {
+				data.Kafka.BootstrapServers = types.StringValue(bg.Specs.KafkaBootstrapServers)
+			} else {
+				data.Kafka.BootstrapServers = types.StringNull()
 			}
 			if bg.Specs.KafkaSaslMechanism != "" {
 				data.Kafka.SaslMechanism = types.StringValue(bg.Specs.KafkaSaslMechanism)
