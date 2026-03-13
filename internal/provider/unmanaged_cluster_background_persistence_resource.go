@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/chalk-ai/terraform-provider-chalk/client"
+
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	serverv1connect "github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
@@ -27,7 +29,7 @@ func NewUnmanagedClusterBackgroundPersistenceResource() resource.Resource {
 }
 
 type UnmanagedClusterBackgroundPersistenceResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type UnmanagedClusterBGPersistenceModel struct {
@@ -286,12 +288,12 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Configure(ctx context.Co
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -435,7 +437,7 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Create(ctx context.Conte
 
 	bc := r.client.NewBuilderClient(ctx)
 
-	applyApiServerHostDefault(&data, r.client.GetChalkClient().ApiServer)
+	applyApiServerHostDefault(&data, r.client.GetConfig().ApiServer)
 
 	createReq, err := buildUnmanagedBGPProtoRequest(ctx, &data)
 	if err != nil {
@@ -641,7 +643,7 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Update(ctx context.Conte
 
 	bc := r.client.NewBuilderClient(ctx)
 
-	applyApiServerHostDefault(&data, r.client.GetChalkClient().ApiServer)
+	applyApiServerHostDefault(&data, r.client.GetConfig().ApiServer)
 
 	createReq, err := buildUnmanagedBGPProtoRequest(ctx, &data)
 	if err != nil {

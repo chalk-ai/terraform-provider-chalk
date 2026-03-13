@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/chalk-ai/terraform-provider-chalk/client"
+
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -28,7 +30,7 @@ func NewEnvironmentResource() resource.Resource {
 }
 
 type EnvironmentResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type EnvironmentBucketsModel struct {
@@ -208,12 +210,12 @@ func (r *EnvironmentResource) Configure(ctx context.Context, req resource.Config
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -231,7 +233,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	// Get team client from ClientManager
+	// Get team client from client.Manager
 	tc := r.client.NewTeamClient(ctx)
 
 	createReq := &serverv1.CreateEnvironmentRequest{

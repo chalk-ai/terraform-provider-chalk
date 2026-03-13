@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/chalk-ai/terraform-provider-chalk/client"
+
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -27,7 +29,7 @@ func NewClusterGatewayResource() resource.Resource {
 }
 
 type ClusterGatewayResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type EnvoyGatewayListenerModel struct {
@@ -237,12 +239,12 @@ func (r *ClusterGatewayResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return

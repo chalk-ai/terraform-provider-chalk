@@ -1,19 +1,22 @@
-package provider
+package client
 
 import (
-	"connectrpc.com/connect"
 	"context"
+	"net/http"
+
+	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
-	"net/http"
 )
 
+// GrpcClientOptions contains options for creating gRPC clients
 type GrpcClientOptions struct {
-	httpClient   *http.Client
-	host         string
-	interceptors []connect.Interceptor
+	HTTPClient   *http.Client
+	Host         string
+	Interceptors []connect.Interceptor
 }
 
+// MakeApiServerHeaderInterceptor creates an interceptor that adds a header to requests
 func MakeApiServerHeaderInterceptor(headerName string, headerValue string) connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
@@ -23,6 +26,7 @@ func MakeApiServerHeaderInterceptor(headerName string, headerValue string) conne
 	}
 }
 
+// MakeTokenInjectionInterceptor creates an interceptor that fetches and injects auth tokens
 func MakeTokenInjectionInterceptor(authService serverv1connect.AuthServiceClient, clientID, clientSecret string) connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
@@ -40,6 +44,7 @@ func MakeTokenInjectionInterceptor(authService serverv1connect.AuthServiceClient
 	}
 }
 
+// MakeJWTInterceptor creates an interceptor that adds a JWT token to requests
 func MakeJWTInterceptor(jwt string) connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
@@ -49,42 +54,50 @@ func MakeJWTInterceptor(jwt string) connect.UnaryInterceptorFunc {
 	}
 }
 
+// NewTeamClient creates a new TeamServiceClient
 func NewTeamClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.TeamServiceClient {
 	return serverv1connect.NewTeamServiceClient(
-		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
 
+// NewAuthClient creates a new AuthServiceClient
 func NewAuthClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.AuthServiceClient {
 	return serverv1connect.NewAuthServiceClient(
-		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
 
+// NewBuilderClient creates a new BuilderServiceClient
 func NewBuilderClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.BuilderServiceClient {
 	return serverv1connect.NewBuilderServiceClient(
-		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
 
+// NewCloudAccountCredentialsClient creates a new CloudAccountCredentialsServiceClient
 func NewCloudAccountCredentialsClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.CloudAccountCredentialsServiceClient {
 	return serverv1connect.NewCloudAccountCredentialsServiceClient(
-		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
 
+// NewCloudComponentsClient creates a new CloudComponentsServiceClient
 func NewCloudComponentsClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.CloudComponentsServiceClient {
 	return serverv1connect.NewCloudComponentsServiceClient(
-		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
 
+// NewIntegrationsClient creates a new IntegrationsServiceClient
 func NewIntegrationsClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.IntegrationsServiceClient {
 	return serverv1connect.NewIntegrationsServiceClient(
-		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
 
+// NewEnvironmentServiceClient creates a new EnvironmentServiceClient
 func NewEnvironmentServiceClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.EnvironmentServiceClient {
 	return serverv1connect.NewEnvironmentServiceClient(
-		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
 
+// NewOfflineStoreConnectionClient creates a new OfflineStoreConnectionServiceClient
 func NewOfflineStoreConnectionClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.OfflineStoreConnectionServiceClient {
 	return serverv1connect.NewOfflineStoreConnectionServiceClient(
-		options.httpClient, options.host, connect.WithInterceptors(options.interceptors...))
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
