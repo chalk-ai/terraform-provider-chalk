@@ -217,7 +217,7 @@ func TestOfflineStoreConnectionTypeChangeRequiresReplace(t *testing.T) {
 					Credentials: &serverv1.SnowflakeCredentialsStored{
 						Account:          "my-account",
 						Username:         "my-user",
-						PasswordSecretId: proto.String("secret-id"),
+						PasswordSecretId: new("secret-id"),
 						Warehouse:        &warehouse,
 						Database:         &database,
 						Schema:           &schemaStr,
@@ -356,9 +356,9 @@ func snowflakeStoredConn(secretField string) *serverv1.OfflineStoreConnection {
 		Role:      &role,
 	}
 	if secretField == "password_secret_id" {
-		creds.PasswordSecretId = proto.String("secret-id-for-password")
+		creds.PasswordSecretId = new("secret-id-for-password")
 	} else {
-		creds.PrivateKeySecretId = proto.String("secret-id-for-private-key")
+		creds.PrivateKeySecretId = new("secret-id-for-private-key")
 	}
 	return &serverv1.OfflineStoreConnection{
 		Id:            "test-snowflake-id",

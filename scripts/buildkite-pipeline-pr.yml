@@ -30,6 +30,17 @@ steps:
       echo "--- :golang: Running go vet"
       go vet ./...
 
+      echo "--- :golang: Checking go fix"
+      go fix ./...
+      if [ -n "$$(git diff --name-only)" ]; then
+        echo "go fix made changes. Please run 'go fix ./...' locally."
+        git --no-pager diff
+        exit 1
+      fi
+
+      echo "--- :golang: Running staticcheck"
+      go tool staticcheck ./...
+
       echo "--- :golang: Checking formatting"
       if [ -n "$$(gofmt -s -l .)" ]; then
         echo "Go files are not formatted. Please run 'gofmt -s -w .'"

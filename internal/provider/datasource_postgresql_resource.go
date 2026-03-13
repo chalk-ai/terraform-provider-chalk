@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -74,9 +75,7 @@ func (data *DatasourcePostgresqlResourceModel) buildConfig() map[string]Datasour
 	if data.Password != nil {
 		config["PGPASSWORD"] = *data.Password
 	}
-	for k, v := range data.Config {
-		config[k] = v
-	}
+	maps.Copy(config, data.Config)
 	return config
 }
 

@@ -1,4 +1,5 @@
 // Deprecated: This resource is deprecated. You likely want to modify [un]managed_environment_resource.go instead.
+
 package provider
 
 import (
@@ -460,7 +461,7 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 		data.KubeClusterId = types.StringValue(*e.KubeClusterId)
 	}
 
-	if e.AdditionalEnvVars != nil && len(e.AdditionalEnvVars) > 0 {
+	if len(e.AdditionalEnvVars) > 0 {
 		elements := make(map[string]attr.Value)
 		for k, v := range e.AdditionalEnvVars {
 			elements[k] = types.StringValue(v)
