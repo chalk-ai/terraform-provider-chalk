@@ -1,0 +1,57 @@
+steps:
+  - label: ":rocket: Release"
+    command: |
+      set -euo pipefail
+
+      # Configure Go cache on persistent volume
+      export GOMODCACHE=/go-cache/mod
+      export GOCACHE=/go-cache/build
+      sudo mkdir -p "$$GOMODCACHE" "$$GOCACHE"
+      sudo chown -R "$$(id -u):$$(id -g)" /go-cache
+
+      # Install Go if needed
+      GO_VERSION=1.26.0
+      GO_INSTALL_DIR=/go-cache/go-$${GO_VERSION}
+      if [ ! -x "$$GO_INSTALL_DIR/bin/go" ]; then
+        echo "--- :golang: Installing Go $${GO_VERSION}"
+        curl -fsSL "https://go.dev/dl/go$${GO_VERSION}.linux-amd64.tar.gz" | tar -C /go-cache -xzf -
+        mv /go-cache/go "$$GO_INSTALL_DIR"
+      fi
+      export PATH="$$GO_INSTALL_DIR/bin:$$PATH"
+      go version
+
+      echo "--- :key: Decrypting release secrets"
+      SOPS_VERSION="3.12.1"
+      SOPS_BIN=/go-cache/sops-$${SOPS_VERSION}
+      if [ ! -x "$$SOPS_BIN" ]; then
+        curl -fsSL "https://github.com/getsops/sops/releases/download/v$${SOPS_VERSION}/sops-v$${SOPS_VERSION}.linux.amd64" -o "$$SOPS_BIN"
+        chmod +x "$$SOPS_BIN"
+      fi
+      export GITHUB_TOKEN=$$("$$SOPS_BIN" decrypt --extract '["GITHUB_TOKEN"]' secrets/release.enc.yaml)
+      export PASSPHRASE=$$("$$SOPS_BIN" decrypt --extract '["PASSPHRASE"]' secrets/release.enc.yaml)
+
+      echo "--- :key: Importing GPG key"
+      GPG_PRIVATE_KEY=$$("$$SOPS_BIN" decrypt --extract '["GPG_PRIVATE_KEY"]' secrets/release.enc.yaml)
+      echo "$$GPG_PRIVATE_KEY" | gpg --batch --pinentry-mode loopback --passphrase "$$PASSPHRASE" --import
+      unset GPG_PRIVATE_KEY
+      export GPG_FINGERPRINT=$$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $$10; exit }')
+
+      echo "--- :goreleaser: Installing GoReleaser"
+      GORELEASER_VERSION="2.8.2"
+      GORELEASER_DIR=/go-cache/goreleaser-$${GORELEASER_VERSION}
+      if [ ! -x "$$GORELEASER_DIR/goreleaser" ]; then
+        mkdir -p "$$GORELEASER_DIR"
+        curl -fsSL "https://github.com/goreleaser/goreleaser/releases/download/v$${GORELEASER_VERSION}/goreleaser_Linux_x86_64.tar.gz" | tar -C "$$GORELEASER_DIR" -xzf -
+      fi
+      export PATH="$$GORELEASER_DIR:$$PATH"
+      goreleaser --version
+
+      echo "--- :rocket: Running GoReleaser"
+      goreleaser release --clean
+    agents:
+      queue: default
+    timeout_in_minutes: 15
+    retry:
+      automatic:
+        - exit_status: -1
+          limit: 1
