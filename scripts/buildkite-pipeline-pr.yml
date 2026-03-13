@@ -40,13 +40,18 @@ steps:
       echo "--- :golang: Running tests"
       go test -v -shuffle=on -count=1 ./internal/provider -timeout 5m
 
-      echo "--- :terraform: Validating docs"
-      go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate --provider-dir . --provider-name chalk
+      echo "--- :terraform: Checking for docs drift"
+      go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-dir . --provider-name chalk
+      if [ -n "$$(git diff --name-only)" ]; then
+        echo "Docs are out of date. Please run 'make docs'."
+        git --no-pager diff
+        exit 1
+      fi
 
       echo "--- :white_check_mark: All checks passed"
     agents:
       queue: default
-    timeout_in_minutes: 15
+    timeout_in_minutes: 10
     retry:
       automatic:
         - exit_status: -1
