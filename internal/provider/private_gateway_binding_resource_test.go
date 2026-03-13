@@ -27,14 +27,14 @@ func setupMockServerPrivateGatewayBinding(t *testing.T) *testserver.MockServer {
 
 // TestPrivateGatewayBindingCreate verifies the basic create/read/delete lifecycle.
 func TestPrivateGatewayBindingCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerPrivateGatewayBinding(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_private_gateway_binding" "test" {
   cluster_id         = "test-cluster-id"
   private_gateway_id = "test-private-gateway-id"
@@ -52,9 +52,9 @@ resource "chalk_private_gateway_binding" "test" {
 // TestPrivateGatewayBindingReadNotFound verifies that when Get returns not_found,
 // the resource is removed from state so Terraform can detect drift and recreate it.
 func TestPrivateGatewayBindingReadNotFound(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateBindingPrivateGateway().Return(&serverv1.CreateBindingPrivateGatewayResponse{})
 	server.OnDeleteBindingPrivateGateway().Return(&serverv1.DeleteBindingPrivateGatewayResponse{})
@@ -71,14 +71,14 @@ func TestPrivateGatewayBindingReadNotFound(t *testing.T) {
 		}, nil
 	})
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_private_gateway_binding" "test" {
   cluster_id         = "test-cluster-id"
   private_gateway_id = "test-private-gateway-id"
 }
 `
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{

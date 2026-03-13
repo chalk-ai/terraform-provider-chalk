@@ -49,14 +49,14 @@ func setupMockServerOfflineStoreConnection(t *testing.T) *testserver.MockServer 
 
 // TestOfflineStoreConnectionCreate verifies the basic create/read/delete lifecycle with BigQuery.
 func TestOfflineStoreConnectionCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerOfflineStoreConnection(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_offline_store_connection" "test" {
   environment_id = "test-environment-id"
   name           = "test-connection"
@@ -81,9 +81,9 @@ resource "chalk_offline_store_connection" "test" {
 // TestOfflineStoreConnectionUpdate verifies that a name/config change triggers an in-place update
 // (not a replacement), and that the correct update_mask is sent to the server.
 func TestOfflineStoreConnectionUpdate(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateOfflineStoreConnection().Return(&serverv1.CreateOfflineStoreConnectionResponse{
 		Connection: bigqueryConnection("original-name"),
@@ -133,10 +133,10 @@ func TestOfflineStoreConnectionUpdate(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_offline_store_connection" "test" {
   environment_id = "test-environment-id"
   name           = "original-name"
@@ -149,7 +149,7 @@ resource "chalk_offline_store_connection" "test" {
 				Check: resource.TestCheckResourceAttr("chalk_offline_store_connection.test", "name", "original-name"),
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_offline_store_connection" "test" {
   environment_id = "test-environment-id"
   name           = "updated-name"
@@ -172,7 +172,7 @@ resource "chalk_offline_store_connection" "test" {
 			},
 			// Verify that changing config within the same type is an in-place update, not a replacement.
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_offline_store_connection" "test" {
   environment_id = "test-environment-id"
   name           = "updated-name"
@@ -198,9 +198,9 @@ resource "chalk_offline_store_connection" "test" {
 // TestOfflineStoreConnectionTypeChangeRequiresReplace verifies that switching the connection
 // type (e.g. BigQuery → Snowflake) forces a destroy-before-create rather than an in-place update.
 func TestOfflineStoreConnectionTypeChangeRequiresReplace(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	warehouse := "my-warehouse"
 	database := "my-database"
@@ -249,10 +249,10 @@ func TestOfflineStoreConnectionTypeChangeRequiresReplace(t *testing.T) {
 	server.OnDeleteOfflineStoreConnection().Return(&serverv1.DeleteOfflineStoreConnectionResponse{})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_offline_store_connection" "test" {
   environment_id = "test-environment-id"
   name           = "test-connection"
@@ -265,7 +265,7 @@ resource "chalk_offline_store_connection" "test" {
 				Check: resource.TestCheckResourceAttr("chalk_offline_store_connection.test", "id", "test-connection-id"),
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_offline_store_connection" "test" {
   environment_id = "test-environment-id"
   name           = "test-connection"
@@ -298,9 +298,9 @@ resource "chalk_offline_store_connection" "test" {
 
 // TestOfflineStoreConnectionReadNotFound verifies that a CodeNotFound on Get removes the resource from state.
 func TestOfflineStoreConnectionReadNotFound(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateOfflineStoreConnection().Return(&serverv1.CreateOfflineStoreConnectionResponse{
 		Connection: bigqueryConnection("test-connection"),
@@ -318,7 +318,7 @@ func TestOfflineStoreConnectionReadNotFound(t *testing.T) {
 		}, nil
 	})
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_offline_store_connection" "test" {
   environment_id = "test-environment-id"
   name           = "test-connection"
@@ -329,7 +329,7 @@ resource "chalk_offline_store_connection" "test" {
 }
 `
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{
@@ -400,16 +400,16 @@ func TestOfflineStoreConnectionSnowflakeSensitivePreserved(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			server := testserver.NewMockBuilderServer(t)
 			t.Cleanup(func() { server.Close() })
-			setupTestEnv(t, server.URL)
 
 			conn := snowflakeStoredConn(tc.secretField)
 			server.OnCreateOfflineStoreConnection().Return(&serverv1.CreateOfflineStoreConnectionResponse{Connection: conn})
 			server.OnGetOfflineStoreConnection().Return(&serverv1.GetOfflineStoreConnectionResponse{Connection: conn})
 			server.OnDeleteOfflineStoreConnection().Return(&serverv1.DeleteOfflineStoreConnectionResponse{})
 
-			config := fmt.Sprintf(`
+			config := providerConfig(server.URL) + fmt.Sprintf(`
 resource "chalk_offline_store_connection" "test" {
   environment_id = "test-environment-id"
   name           = "test-snowflake"
@@ -428,7 +428,7 @@ resource "chalk_offline_store_connection" "test" {
 `, tc.configField)
 
 			resource.Test(t, resource.TestCase{
-				ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+				ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 				Steps: []resource.TestStep{
 					{
 						Config: config,

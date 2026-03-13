@@ -27,14 +27,14 @@ func setupMockServerBGPersistenceBinding(t *testing.T) *testserver.MockServer {
 
 // TestClusterBackgroundPersistenceDeploymentBindingCreate verifies the basic create/read/delete lifecycle.
 func TestClusterBackgroundPersistenceDeploymentBindingCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerBGPersistenceBinding(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_background_persistence_deployment_binding" "test" {
   cluster_id                           = "test-cluster-id"
   background_persistence_deployment_id = "test-bg-persist-id"
@@ -52,9 +52,9 @@ resource "chalk_cluster_background_persistence_deployment_binding" "test" {
 // TestClusterBackgroundPersistenceDeploymentBindingReadNotFound verifies that when Get returns not_found,
 // the resource is removed from state so Terraform can detect drift and recreate it.
 func TestClusterBackgroundPersistenceDeploymentBindingReadNotFound(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateBindingClusterBackgroundPersistenceDeployment().Return(&serverv1.CreateBindingClusterBackgroundPersistenceDeploymentResponse{})
 	server.OnDeleteBindingClusterBackgroundPersistenceDeployment().Return(&serverv1.DeleteBindingClusterBackgroundPersistenceDeploymentResponse{})
@@ -71,14 +71,14 @@ func TestClusterBackgroundPersistenceDeploymentBindingReadNotFound(t *testing.T)
 		}, nil
 	})
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_cluster_background_persistence_deployment_binding" "test" {
   cluster_id                           = "test-cluster-id"
   background_persistence_deployment_id = "test-bg-persist-id"
 }
 `
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{

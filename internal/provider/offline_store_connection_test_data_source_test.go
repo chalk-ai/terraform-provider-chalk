@@ -21,19 +21,19 @@ data "chalk_offline_store_connection_test" "test" {
 // TestOfflineStoreConnectionTestDataSourceSuccess verifies that the data source
 // correctly reflects a passing connection test.
 func TestOfflineStoreConnectionTestDataSourceSuccess(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnTestOfflineStoreConnection().Return(&serverv1.TestOfflineStoreConnectionResponse{
 		Success: true,
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: testOfflineStoreConnectionTestConfig,
+				Config: providerConfig(server.URL) + testOfflineStoreConnectionTestConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.chalk_offline_store_connection_test.test", "success", "true"),
 					resource.TestCheckResourceAttr("data.chalk_offline_store_connection_test.test", "error_message", ""),
@@ -46,9 +46,9 @@ func TestOfflineStoreConnectionTestDataSourceSuccess(t *testing.T) {
 // TestOfflineStoreConnectionTestDataSourceFailure verifies that a failed connection test
 // sets success=false and populates error_message from the server response.
 func TestOfflineStoreConnectionTestDataSourceFailure(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnTestOfflineStoreConnection().Return(&serverv1.TestOfflineStoreConnectionResponse{
 		Success: false,
@@ -56,10 +56,10 @@ func TestOfflineStoreConnectionTestDataSourceFailure(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: testOfflineStoreConnectionTestConfig,
+				Config: providerConfig(server.URL) + testOfflineStoreConnectionTestConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.chalk_offline_store_connection_test.test", "success", "false"),
 					resource.TestCheckResourceAttr("data.chalk_offline_store_connection_test.test", "error_message", "invalid credentials"),
@@ -72,19 +72,19 @@ func TestOfflineStoreConnectionTestDataSourceFailure(t *testing.T) {
 // TestOfflineStoreConnectionTestDataSourceAPIError verifies that an API-level error
 // (e.g. network failure, auth error) surfaces as a diagnostic error rather than success=false.
 func TestOfflineStoreConnectionTestDataSourceAPIError(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnTestOfflineStoreConnection().ReturnError(
 		connect.NewError(connect.CodeInternal, errors.New("connection refused")),
 	)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config:      testOfflineStoreConnectionTestConfig,
+				Config:      providerConfig(server.URL) + testOfflineStoreConnectionTestConfig,
 				ExpectError: regexp.MustCompile(`Could not test offline store connection`),
 			},
 		},

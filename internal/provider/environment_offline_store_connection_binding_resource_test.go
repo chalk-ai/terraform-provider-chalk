@@ -27,14 +27,14 @@ func setupMockServerEnvironmentOfflineStoreConnectionBinding(t *testing.T) *test
 
 // TestEnvironmentOfflineStoreConnectionBindingCreate verifies the basic create/read/delete lifecycle.
 func TestEnvironmentOfflineStoreConnectionBindingCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerEnvironmentOfflineStoreConnectionBinding(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_environment_offline_store_connection_binding" "test" {
   environment_id              = "test-environment-id"
   offline_store_connection_id = "test-connection-id"
@@ -52,9 +52,9 @@ resource "chalk_environment_offline_store_connection_binding" "test" {
 // TestEnvironmentOfflineStoreConnectionBindingReadNotFound verifies that a CodeNotFound on Get
 // removes the resource from state so Terraform can detect drift and recreate it.
 func TestEnvironmentOfflineStoreConnectionBindingReadNotFound(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateBindingEnvironmentOfflineStoreConnection().Return(&serverv1.CreateBindingEnvironmentOfflineStoreConnectionResponse{})
 	server.OnDeleteBindingEnvironmentOfflineStoreConnection().Return(&serverv1.DeleteBindingEnvironmentOfflineStoreConnectionResponse{})
@@ -71,14 +71,14 @@ func TestEnvironmentOfflineStoreConnectionBindingReadNotFound(t *testing.T) {
 		}, nil
 	})
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_environment_offline_store_connection_binding" "test" {
   environment_id              = "test-environment-id"
   offline_store_connection_id = "test-connection-id"
 }
 `
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{

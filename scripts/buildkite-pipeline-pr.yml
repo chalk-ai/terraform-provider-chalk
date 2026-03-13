@@ -37,16 +37,33 @@ steps:
         exit 1
       fi
 
-      echo "--- :golang: Running tests"
-      go test -v -shuffle=on -count=1 ./internal/provider -timeout 5m
+      echo "--- :terraform: Installing Terraform for tests"
+      TERRAFORM_VERSION=1.14.7
+      TERRAFORM_DIR=/go-cache/terraform-$${TERRAFORM_VERSION}
+      if [ ! -x "$$TERRAFORM_DIR/terraform" ]; then
+        mkdir -p "$$TERRAFORM_DIR"
+        curl -fsSL "https://releases.hashicorp.com/terraform/$${TERRAFORM_VERSION}/terraform_$${TERRAFORM_VERSION}_linux_amd64.zip" -o /tmp/terraform.zip
+        unzip -o /tmp/terraform.zip -d "$$TERRAFORM_DIR"
+        rm /tmp/terraform.zip
+      fi
+      export TF_ACC_TERRAFORM_PATH="$$TERRAFORM_DIR/terraform"
+      export PATH="$$TERRAFORM_DIR:$$PATH"
 
-      echo "--- :terraform: Validating docs"
-      go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate --provider-dir . --provider-name chalk
+      echo "--- :golang: Running tests"
+      go run gotest.tools/gotestsum --format testname -- ./internal/provider/... -shuffle=on -count=1 -timeout 5m
+
+      echo "--- :terraform: Checking for docs drift"
+      go generate ./tools/...
+      if [ -n "$$(git diff --name-only)" ]; then
+        echo "Docs are out of date. Please run 'make docs'."
+        git --no-pager diff
+        exit 1
+      fi
 
       echo "--- :white_check_mark: All checks passed"
     agents:
       queue: default
-    timeout_in_minutes: 15
+    timeout_in_minutes: 5
     retry:
       automatic:
         - exit_status: -1

@@ -27,14 +27,14 @@ func setupMockServerEnvironmentGatewayBinding(t *testing.T) *testserver.MockServ
 
 // TestEnvironmentGatewayBindingCreate verifies the basic create/read/delete lifecycle.
 func TestEnvironmentGatewayBindingCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerEnvironmentGatewayBinding(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_environment_gateway_binding" "test" {
   environment_id     = "test-environment-id"
   cluster_gateway_id = "test-gateway-id"
@@ -52,9 +52,9 @@ resource "chalk_environment_gateway_binding" "test" {
 // TestEnvironmentGatewayBindingReadNotFound verifies that when Get returns not_found,
 // the resource is removed from state so Terraform can detect drift and recreate it.
 func TestEnvironmentGatewayBindingReadNotFound(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateBindingEnvironmentGateway().Return(&serverv1.CreateBindingEnvironmentGatewayResponse{})
 	server.OnDeleteBindingEnvironmentGateway().Return(&serverv1.DeleteBindingEnvironmentGatewayResponse{})
@@ -71,14 +71,14 @@ func TestEnvironmentGatewayBindingReadNotFound(t *testing.T) {
 		}, nil
 	})
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_environment_gateway_binding" "test" {
   environment_id     = "test-environment-id"
   cluster_gateway_id = "test-gateway-id"
 }
 `
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{

@@ -25,14 +25,11 @@ install: build  ## Build and install the provider locally
 	mv ${BINARY} ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 
 test:  ## Run unit tests
-	go test ./... -v
+	go run gotest.tools/gotestsum --format testname -- ./internal/provider/... -shuffle=on -count=1 -timeout 5m
 
 
 docs:  ## Generate documentation
 	go generate ./tools/...
-
-docs-validate:  ## Validate generated documentation
-	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate --provider-dir .
 
 fmt:  ## Format Go and Terraform files
 	gofmt -s -w .
@@ -45,4 +42,4 @@ setup-buildkite:  ## Create or update the Buildkite PR pipeline (requires BUILDK
 	@test -n "$(BUILDKITE_API_TOKEN)" || (echo "BUILDKITE_API_TOKEN is not set" && exit 1)
 	@bash scripts/setup-buildkite.sh
 
-.PHONY: build install test fmt lint docs docs-validate setup-buildkite help
+.PHONY: build install test fmt lint docs setup-buildkite help

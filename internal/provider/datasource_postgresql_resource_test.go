@@ -14,14 +14,14 @@ import (
 )
 
 func TestDatasourcePostgresqlResourceCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockIntegrationsServer(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"
@@ -59,14 +59,14 @@ resource "chalk_datasource_postgresql" "test" {
 }
 
 func TestDatasourcePostgresqlResourceCreateWithoutPassword(t *testing.T) {
+	t.Parallel()
 	server := setupMockIntegrationsServer(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"
@@ -98,14 +98,14 @@ resource "chalk_datasource_postgresql" "test" {
 }
 
 func TestDatasourcePostgresqlResourceCreateWithSecretId(t *testing.T) {
+	t.Parallel()
 	server := setupMockIntegrationsServer(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"
@@ -135,14 +135,14 @@ resource "chalk_datasource_postgresql" "test" {
 }
 
 func TestDatasourcePostgresqlResourceCreateWithExtraConfig(t *testing.T) {
+	t.Parallel()
 	server := setupMockIntegrationsServer(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"
@@ -176,14 +176,14 @@ resource "chalk_datasource_postgresql" "test" {
 }
 
 func TestDatasourcePostgresqlResourceUpdate(t *testing.T) {
+	t.Parallel()
 	server := setupMockIntegrationsServer(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"
@@ -197,7 +197,7 @@ resource "chalk_datasource_postgresql" "test" {
 				Check: resource.TestCheckResourceAttr("chalk_datasource_postgresql.test", "name", "my-postgres"),
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres-updated"
   environment_id = "test-env-id"
@@ -229,14 +229,14 @@ resource "chalk_datasource_postgresql" "test" {
 }
 
 func TestDatasourcePostgresqlResourceDelete(t *testing.T) {
+	t.Parallel()
 	server := setupMockIntegrationsServer(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"
@@ -262,14 +262,14 @@ resource "chalk_datasource_postgresql" "test" {
 }
 
 func TestDatasourcePostgresqlResourceImport(t *testing.T) {
+	t.Parallel()
 	server := setupMockIntegrationsServer(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"
@@ -292,14 +292,14 @@ resource "chalk_datasource_postgresql" "test" {
 }
 
 func TestDatasourcePostgresqlResourceImportWithExtraConfig(t *testing.T) {
+	t.Parallel()
 	server := setupMockIntegrationsServer(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"
@@ -326,6 +326,7 @@ resource "chalk_datasource_postgresql" "test" {
 }
 
 func TestDatasourcePostgresqlResourceImportWrongKind(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
@@ -359,13 +360,11 @@ func TestDatasourcePostgresqlResourceImportWrongKind(t *testing.T) {
 	})
 	server.OnDeleteIntegration().Return(&serverv1.DeleteIntegrationResponse{})
 
-	setupTestEnv(t, server.URL)
-
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"
@@ -383,14 +382,14 @@ resource "chalk_datasource_postgresql" "test" {
 }
 
 func TestDatasourcePostgresqlResourceConfigConflict(t *testing.T) {
+	t.Parallel()
 	server := setupMockIntegrationsServer(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_datasource_postgresql" "test" {
   name           = "my-postgres"
   environment_id = "test-env-id"

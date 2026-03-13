@@ -65,14 +65,14 @@ func setupMockBuilderServerTelemetry(t *testing.T) *testserver.MockServer {
 
 // TestTelemetryResourceCreate verifies that CreateTelemetryDeployment is called with correct spec.
 func TestTelemetryResourceCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -110,14 +110,14 @@ resource "chalk_telemetry" "test" {
 
 // TestTelemetryResourceUpdate verifies that UpdateTelemetryDeployment is called for updates.
 func TestTelemetryResourceUpdate(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -130,7 +130,7 @@ resource "chalk_telemetry" "test" {
 				),
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -153,14 +153,14 @@ resource "chalk_telemetry" "test" {
 
 // TestTelemetryResourceUpdateFieldMask verifies that the field mask contains only the changed top-level field.
 func TestTelemetryResourceUpdateFieldMask(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -173,7 +173,7 @@ resource "chalk_telemetry" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -206,14 +206,14 @@ resource "chalk_telemetry" "test" {
 
 // TestTelemetryResourceUpdateOtelFieldMask verifies that only "otel" is in the mask when otel changes.
 func TestTelemetryResourceUpdateOtelFieldMask(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -226,7 +226,7 @@ resource "chalk_telemetry" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -259,14 +259,14 @@ resource "chalk_telemetry" "test" {
 
 // TestTelemetryResourceUpdateAggregatorFieldMask verifies that only "aggregator" is in the mask when aggregator changes.
 func TestTelemetryResourceUpdateAggregatorFieldMask(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -279,7 +279,7 @@ resource "chalk_telemetry" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -312,10 +312,10 @@ resource "chalk_telemetry" "test" {
 
 // TestTelemetryResourceNoOpUpdate verifies no RPC call is made when no fields change.
 func TestTelemetryResourceNoOpUpdate(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
-	setupTestEnv(t, server.URL)
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -325,7 +325,7 @@ resource "chalk_telemetry" "test" {
 `
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{
@@ -349,9 +349,9 @@ resource "chalk_telemetry" "test" {
 // TestTelemetryResourceServerDefaults verifies that when the server returns defaults for unconfigured
 // specs, the provider does not show drift on subsequent plans (the original bug).
 func TestTelemetryResourceServerDefaults(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	const deploymentID = "test-telemetry-id"
 	const clusterID = "test-cluster-id"
@@ -382,7 +382,7 @@ func TestTelemetryResourceServerDefaults(t *testing.T) {
 	server.OnDeleteTelemetryDeployment().Return(&serverv1.DeleteTelemetryDeploymentResponse{})
 
 	// User only configures clickhouse; server fills in otel and aggregator as defaults.
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -392,7 +392,7 @@ resource "chalk_telemetry" "test" {
 `
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			// Step 1: apply should succeed (no "inconsistent result after apply" error).
 			{Config: config},
@@ -408,17 +408,17 @@ resource "chalk_telemetry" "test" {
 
 // TestTelemetryResourceCreateError verifies proper error handling when Create RPC fails.
 func TestTelemetryResourceCreateError(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 	server.OnCreateTelemetryDeployment().ReturnError(
 		connect.NewError(connect.CodeInvalidArgument, errors.New("clickhouse-version-invalid")))
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -434,8 +434,8 @@ resource "chalk_telemetry" "test" {
 
 // TestTelemetryResourceUpdateError verifies proper error handling when Update RPC fails.
 func TestTelemetryResourceUpdateError(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
-	setupTestEnv(t, server.URL)
 
 	server.Reset()
 	server.OnCreateTelemetryDeployment().Return(&serverv1.CreateTelemetryDeploymentResponse{
@@ -457,10 +457,10 @@ func TestTelemetryResourceUpdateError(t *testing.T) {
 	server.OnDeleteTelemetryDeployment().Return(&serverv1.DeleteTelemetryDeploymentResponse{})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {
@@ -470,7 +470,7 @@ resource "chalk_telemetry" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
   clickhouse_deployment_spec = {

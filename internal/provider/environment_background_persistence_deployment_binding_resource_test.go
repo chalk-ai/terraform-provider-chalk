@@ -27,14 +27,14 @@ func setupMockServerEnvironmentBGPersistenceBinding(t *testing.T) *testserver.Mo
 
 // TestEnvironmentBackgroundPersistenceDeploymentBindingCreate verifies the basic create/read/delete lifecycle.
 func TestEnvironmentBackgroundPersistenceDeploymentBindingCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerEnvironmentBGPersistenceBinding(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_environment_background_persistence_deployment_binding" "test" {
   environment_id                       = "test-environment-id"
   background_persistence_deployment_id = "test-bg-persist-id"
@@ -52,9 +52,9 @@ resource "chalk_environment_background_persistence_deployment_binding" "test" {
 // TestEnvironmentBackgroundPersistenceDeploymentBindingReadNotFound verifies that when Get returns not_found,
 // the resource is removed from state so Terraform can detect drift and recreate it.
 func TestEnvironmentBackgroundPersistenceDeploymentBindingReadNotFound(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateBindingEnvironmentBackgroundPersistenceDeployment().Return(&serverv1.CreateBindingEnvironmentBackgroundPersistenceDeploymentResponse{})
 	server.OnDeleteBindingEnvironmentBackgroundPersistenceDeployment().Return(&serverv1.DeleteBindingEnvironmentBackgroundPersistenceDeploymentResponse{})
@@ -71,14 +71,14 @@ func TestEnvironmentBackgroundPersistenceDeploymentBindingReadNotFound(t *testin
 		}, nil
 	})
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_environment_background_persistence_deployment_binding" "test" {
   environment_id                       = "test-environment-id"
   background_persistence_deployment_id = "test-bg-persist-id"
 }
 `
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{
