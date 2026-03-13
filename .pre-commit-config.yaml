@@ -1,0 +1,30 @@
+repos:
+  - repo: local
+    hooks:
+      - id: go-vet
+        name: go vet
+        entry: go vet ./...
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      - id: go-fix
+        name: go fix
+        entry: bash -c 'go fix ./... && if ! git diff --quiet; then echo "go fix made changes, please stage them:"; git diff; exit 1; fi'
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      - id: gofmt
+        name: gofmt
+        entry: "bash -c 'test -z \"$(gofmt -s -l .)\" || (echo \"Files need formatting, please run: gofmt -s -w .\"; gofmt -s -d .; exit 1)'"
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      - id: staticcheck
+        name: staticcheck
+        entry: go tool staticcheck ./...
+        language: system
+        pass_filenames: false
+        types: [go]

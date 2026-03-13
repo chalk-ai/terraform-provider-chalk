@@ -42,4 +42,7 @@ setup-buildkite:  ## Create or update the Buildkite PR pipeline (requires BUILDK
 	@test -n "$(BUILDKITE_API_TOKEN)" || (echo "BUILDKITE_API_TOKEN is not set" && exit 1)
 	@bash scripts/setup-buildkite.sh
 
-.PHONY: build install test fmt lint docs setup-buildkite help
+setup-hooks:  ## Install git pre-commit hooks via prek (requires prek: brew install j178/tap/prek)
+	prek install
+
+.PHONY: build install test fmt lint docs setup-buildkite setup-hooks help
