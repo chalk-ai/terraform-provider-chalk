@@ -4,9 +4,12 @@ set -euo pipefail
 # Creates (or updates) the Buildkite PR validation pipeline for terraform-provider-chalk.
 # Requires BUILDKITE_API_TOKEN to be set in the environment.
 #
+# IMPORTANT: The pipeline configuration is stored statically in Buildkite, not loaded from
+# the repo on each build. Changes to buildkite-pipeline-pr.yml only take effect after
+# re-running this script.
+#
 # Usage:
-#   BUILDKITE_API_TOKEN=<token> ./scripts/setup-buildkite.sh          # create
-#   BUILDKITE_API_TOKEN=<token> ./scripts/setup-buildkite.sh update   # update config only
+#   BUILDKITE_API_TOKEN=<token> ./scripts/setup-buildkite.sh          # create or update
 
 ORG="chalk"
 CLUSTER_ID="7b9e4371-390a-4f64-88b8-b281a34c0843"
@@ -17,7 +20,7 @@ API="https://api.buildkite.com/v2/organizations/${ORG}"
 : "${BUILDKITE_API_TOKEN:?BUILDKITE_API_TOKEN is not set}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG="$(cat "${SCRIPT_DIR}/../.buildkite/pipeline.yml")"
+CONFIG="$(cat "${SCRIPT_DIR}/buildkite-pipeline-pr.yml")"
 
 STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
   -H "Authorization: Bearer ${BUILDKITE_API_TOKEN}" \
