@@ -86,14 +86,14 @@ func applyUnmanagedEnvField(dst, src *serverv1.Environment, path string) {
 
 // TestUnmanagedEnvironmentCreate verifies the basic create/read/delete lifecycle.
 func TestUnmanagedEnvironmentCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerUnmanagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "test-env"
   project_id         = "test-project"
@@ -131,14 +131,14 @@ resource "chalk_unmanaged_environment" "test" {
 // TestUnmanagedEnvironmentUpdateFieldMask verifies that the update field mask contains
 // only the paths of changed fields.
 func TestUnmanagedEnvironmentUpdateFieldMask(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerUnmanagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name                    = "test-env"
   project_id              = "test-project"
@@ -149,7 +149,7 @@ resource "chalk_unmanaged_environment" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name                    = "test-env"
   project_id              = "test-project"
@@ -181,10 +181,10 @@ resource "chalk_unmanaged_environment" "test" {
 // TestUnmanagedEnvironmentNoOpUpdate verifies that no UpdateEnvironment call is made
 // when no fields change between applies.
 func TestUnmanagedEnvironmentNoOpUpdate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerUnmanagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "test-env"
   project_id         = "test-project"
@@ -194,7 +194,7 @@ resource "chalk_unmanaged_environment" "test" {
 `
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{
@@ -219,14 +219,14 @@ resource "chalk_unmanaged_environment" "test" {
 // (name, project_id, kube_cluster_id, kube_job_namespace) triggers a destroy + recreate
 // rather than an in-place update.
 func TestUnmanagedEnvironmentImmutableFieldReplace(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerUnmanagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "test-env"
   project_id         = "test-project"
@@ -236,7 +236,7 @@ resource "chalk_unmanaged_environment" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "test-env-renamed"
   project_id         = "test-project"
@@ -263,8 +263,8 @@ resource "chalk_unmanaged_environment" "test" {
 
 // TestUnmanagedEnvironmentUpdateError verifies error handling when UpdateEnvironment fails.
 func TestUnmanagedEnvironmentUpdateError(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerUnmanagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	// Reset and reconfigure so the update error behavior takes effect.
 	// (WithBehavior takes precedence over ReturnError in the registry, so we must reset.)
@@ -287,10 +287,10 @@ func TestUnmanagedEnvironmentUpdateError(t *testing.T) {
 	server.OnDeleteEnvironment().Return(&serverv1.DeleteEnvironmentResponse{})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "test-env"
   project_id         = "test-project"
@@ -300,7 +300,7 @@ resource "chalk_unmanaged_environment" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "test-env"
   project_id         = "test-project"
@@ -317,18 +317,18 @@ resource "chalk_unmanaged_environment" "test" {
 
 // TestUnmanagedEnvironmentCreateError verifies error handling when CreateEnvironment fails.
 func TestUnmanagedEnvironmentCreateError(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateEnvironmentV2().ReturnError(
 		connect.NewError(connect.CodeInvalidArgument, errors.New("invalid environment name")))
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "invalid!"
   project_id         = "test-project"
@@ -344,14 +344,14 @@ resource "chalk_unmanaged_environment" "test" {
 
 // TestUnmanagedEnvironmentImport verifies the import lifecycle.
 func TestUnmanagedEnvironmentImport(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerUnmanagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "test-env"
   project_id         = "test-project"
@@ -373,9 +373,9 @@ resource "chalk_unmanaged_environment" "test" {
 // TestUnmanagedEnvironmentImportTypeMismatch verifies that importing a managed environment
 // into chalk_unmanaged_environment fails with a clear error.
 func TestUnmanagedEnvironmentImportTypeMismatch(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	managed := true
 	server.OnGetEnv().Return(&serverv1.GetEnvResponse{
@@ -388,13 +388,13 @@ func TestUnmanagedEnvironmentImportTypeMismatch(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
 				ResourceName:  "chalk_unmanaged_environment.test",
 				ImportState:   true,
 				ImportStateId: "managed-env-id",
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "placeholder"
   project_id         = "placeholder"
@@ -414,10 +414,10 @@ resource "chalk_unmanaged_environment" "test" {
 // re-serializes proto maps via protojson.Marshal (always compact), and jsontypes.Normalized
 // treats the plan value (pretty) and state value (compact) as semantically equivalent.
 func TestUnmanagedEnvironmentJsonNormalization(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerUnmanagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
   name               = "test-env"
   project_id         = "test-project"
@@ -429,7 +429,7 @@ resource "chalk_unmanaged_environment" "test" {
 `
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			// Step 1: apply must succeed without "inconsistent result after apply" error.
 			{Config: config},

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -27,19 +28,18 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func setupTestEnv(t *testing.T, serverURL string) {
-	os.Setenv("CHALK_API_SERVER", serverURL)
-	os.Setenv("CHALK_CLIENT_ID", "test-client-id")
-	os.Setenv("CHALK_CLIENT_SECRET", "test-client-secret")
-	t.Cleanup(func() {
-		os.Unsetenv("CHALK_API_SERVER")
-		os.Unsetenv("CHALK_CLIENT_ID")
-		os.Unsetenv("CHALK_CLIENT_SECRET")
-	})
+func providerConfig(serverURL string) string {
+	return fmt.Sprintf(`
+provider "chalk" {
+  api_server    = %q
+  client_id     = "test-client-id"
+  client_secret = "test-client-secret"
+}
+`, serverURL)
 }
 
 // testProtoV6ProviderFactories configures the provider to use a mock server.
-func testProtoV6ProviderFactories(mockServerURL string) map[string]func() (tfprotov6.ProviderServer, error) {
+func testProtoV6ProviderFactories() map[string]func() (tfprotov6.ProviderServer, error) {
 	return map[string]func() (tfprotov6.ProviderServer, error){
 		"chalk": providerserver.NewProtocol6WithError(func() provider.Provider {
 			return &ChalkProvider{version: "test"}

@@ -25,7 +25,7 @@ install: build  ## Build and install the provider locally
 	mv ${BINARY} ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 
 test:  ## Run unit tests
-	go test ./... -v
+	go run gotest.tools/gotestsum --format testname -- ./internal/provider/... -shuffle=on -count=1 -timeout 5m
 
 
 docs:  ## Generate documentation

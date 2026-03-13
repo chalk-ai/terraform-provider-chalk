@@ -62,14 +62,14 @@ func setupMockBuilderServerBGP(t *testing.T) *testserver.MockServer {
 }
 
 func TestUnmanagedClusterBGPCreateWithGooglePubSub(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerBGP(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id     = "test-kube-cluster"
   service_account_name = "test-sa"
@@ -128,14 +128,14 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 }
 
 func TestUnmanagedClusterBGPCreateWithKafka(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerBGP(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id     = "test-kube-cluster"
   service_account_name = "test-sa"
@@ -175,14 +175,14 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 }
 
 func TestUnmanagedClusterBGPUpdate(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerBGP(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id     = "test-kube-cluster"
   service_account_name = "test-sa"
@@ -202,7 +202,7 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 				Check: resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "kafka.dlq_topic", "original-dlq-topic"),
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id     = "test-kube-cluster"
   service_account_name = "test-sa"
@@ -236,14 +236,14 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 }
 
 func TestUnmanagedClusterBGPClearWriters(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerBGP(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id      = "test-kube-cluster"
   service_account_name = "test-sa"
@@ -263,7 +263,7 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 				Check: resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.#", "2"),
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id      = "test-kube-cluster"
   service_account_name = "test-sa"
@@ -287,6 +287,7 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 }
 
 func TestUnmanagedClusterBGPReadNotFound(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
@@ -311,13 +312,11 @@ func TestUnmanagedClusterBGPReadNotFound(t *testing.T) {
 		return &serverv1.GetClusterBackgroundPersistenceResponse{BackgroundPersistence: currentBGP}, nil
 	})
 
-	setupTestEnv(t, server.URL)
-
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id      = "test-kube-cluster"
   service_account_name = "test-sa"
@@ -350,14 +349,14 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 }
 
 func TestUnmanagedClusterBGPApiServerHostDefaultsToProvider(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerBGP(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id      = "test-kube-cluster"
   service_account_name = "test-sa"
@@ -391,14 +390,14 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 }
 
 func TestUnmanagedClusterBGPApiServerHostExplicit(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerBGP(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id      = "test-kube-cluster"
   service_account_name = "test-sa"
@@ -433,14 +432,14 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 }
 
 func TestUnmanagedClusterBGPImport(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerBGP(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id     = "test-kube-cluster"
   service_account_name = "test-sa"

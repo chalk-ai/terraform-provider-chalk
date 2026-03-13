@@ -89,14 +89,14 @@ func applyManagedEnvField(dst, src *serverv1.Environment, path string) {
 // TestManagedEnvironmentCreate verifies the basic create/read/delete lifecycle and that
 // managed=true is sent in the CreateEnvironment request.
 func TestManagedEnvironmentCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerManagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name            = "test-managed-env"
   project_id      = "test-project"
@@ -132,14 +132,14 @@ resource "chalk_managed_environment" "test" {
 // TestManagedEnvironmentUpdateFieldMask verifies that the update field mask contains
 // only the paths of changed fields.
 func TestManagedEnvironmentUpdateFieldMask(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerManagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name             = "test-managed-env"
   project_id       = "test-project"
@@ -149,7 +149,7 @@ resource "chalk_managed_environment" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name             = "test-managed-env"
   project_id       = "test-project"
@@ -180,10 +180,10 @@ resource "chalk_managed_environment" "test" {
 // TestManagedEnvironmentNoOpUpdate verifies that no UpdateEnvironment call is made
 // when no fields change between applies.
 func TestManagedEnvironmentNoOpUpdate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerManagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name            = "test-managed-env"
   project_id      = "test-project"
@@ -192,7 +192,7 @@ resource "chalk_managed_environment" "test" {
 `
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{
@@ -216,14 +216,14 @@ resource "chalk_managed_environment" "test" {
 // TestManagedEnvironmentImmutableFieldReplace verifies that changing an immutable field
 // (name, project_id, kube_cluster_id) triggers a destroy + recreate rather than an update.
 func TestManagedEnvironmentImmutableFieldReplace(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerManagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name            = "test-managed-env"
   project_id      = "test-project"
@@ -232,7 +232,7 @@ resource "chalk_managed_environment" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name            = "test-managed-env"
   project_id      = "test-project-renamed"
@@ -257,8 +257,8 @@ resource "chalk_managed_environment" "test" {
 
 // TestManagedEnvironmentUpdateError verifies error handling when UpdateEnvironment fails.
 func TestManagedEnvironmentUpdateError(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerManagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	// Reset and reconfigure so the update error behavior takes effect.
 	// (WithBehavior takes precedence over ReturnError in the registry, so we must reset.)
@@ -281,10 +281,10 @@ func TestManagedEnvironmentUpdateError(t *testing.T) {
 	server.OnDeleteEnvironment().Return(&serverv1.DeleteEnvironmentResponse{})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name            = "test-managed-env"
   project_id      = "test-project"
@@ -293,7 +293,7 @@ resource "chalk_managed_environment" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name             = "test-managed-env"
   project_id       = "test-project"
@@ -309,18 +309,18 @@ resource "chalk_managed_environment" "test" {
 
 // TestManagedEnvironmentCreateError verifies error handling when CreateEnvironment fails.
 func TestManagedEnvironmentCreateError(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateEnvironmentV2().ReturnError(
 		connect.NewError(connect.CodePermissionDenied, errors.New("insufficient permissions for environment.create")))
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name            = "test-managed-env"
   project_id      = "test-project"
@@ -335,14 +335,14 @@ resource "chalk_managed_environment" "test" {
 
 // TestManagedEnvironmentImport verifies the import lifecycle.
 func TestManagedEnvironmentImport(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerManagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name            = "test-managed-env"
   project_id      = "test-project"
@@ -363,9 +363,9 @@ resource "chalk_managed_environment" "test" {
 // TestManagedEnvironmentImportTypeMismatch verifies that importing an unmanaged environment
 // into chalk_managed_environment fails with a clear error.
 func TestManagedEnvironmentImportTypeMismatch(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	managed := false
 	server.OnGetEnv().Return(&serverv1.GetEnvResponse{
@@ -378,13 +378,13 @@ func TestManagedEnvironmentImportTypeMismatch(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
 				ResourceName:  "chalk_managed_environment.test",
 				ImportState:   true,
 				ImportStateId: "unmanaged-env-id",
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name            = "placeholder"
   project_id      = "placeholder"
@@ -400,9 +400,9 @@ resource "chalk_managed_environment" "test" {
 // TestManagedEnvironmentServerDefaults verifies that computed fields set by the server
 // (like kube_job_namespace) do not cause drift on re-plan.
 func TestManagedEnvironmentServerDefaults(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	const envID = "test-managed-env-id"
 	kubeClusterID := "test-cluster-id"
@@ -428,7 +428,7 @@ func TestManagedEnvironmentServerDefaults(t *testing.T) {
 	})
 	server.OnDeleteEnvironment().Return(&serverv1.DeleteEnvironmentResponse{})
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name            = "test-managed-env"
   project_id      = "test-project"
@@ -437,7 +437,7 @@ resource "chalk_managed_environment" "test" {
 `
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			// Step 1: apply should succeed; kube_job_namespace is populated from server response.
 			{
@@ -460,10 +460,10 @@ resource "chalk_managed_environment" "test" {
 // re-serializes proto maps via protojson.Marshal (always compact), and jsontypes.Normalized
 // treats the plan value (pretty) and state value (compact) as semantically equivalent.
 func TestManagedEnvironmentJsonNormalization(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerManagedEnvironment(t)
-	setupTestEnv(t, server.URL)
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_managed_environment" "test" {
   name              = "test-managed-env"
   project_id        = "test-project"
@@ -474,7 +474,7 @@ resource "chalk_managed_environment" "test" {
 `
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			// Step 1: apply must succeed without "inconsistent result after apply" error.
 			{Config: config},

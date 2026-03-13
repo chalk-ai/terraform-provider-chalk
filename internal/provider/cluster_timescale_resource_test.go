@@ -119,15 +119,14 @@ func mockClusterTimescaleSpecs(overrides map[string]any) *serverv1.ClusterTimesc
 
 // TestClusterTimescaleResourceCreate verifies that CreateClusterTimescaleDB is called with correct specs.
 func TestClusterTimescaleResourceCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTimescale(t)
 
-	setupTestEnv(t, server.URL)
-
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id    = "test-env-id"
   storage           = "30Gi"
@@ -161,15 +160,14 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdate verifies that UpdateClusterTimescaleDB is called for updates.
 func TestClusterTimescaleResourceUpdate(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTimescale(t)
 
-	setupTestEnv(t, server.URL)
-
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id    = "test-env-id"
   storage           = "30Gi"
@@ -181,7 +179,7 @@ resource "chalk_cluster_timescale" "test" {
 				),
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id    = "test-env-id"
   storage           = "50Gi"
@@ -205,15 +203,14 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateFieldMask verifies that field mask contains only changed fields.
 func TestClusterTimescaleResourceUpdateFieldMask(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTimescale(t)
 
-	setupTestEnv(t, server.URL)
-
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id    = "test-env-id"
   storage           = "30Gi"
@@ -222,7 +219,7 @@ resource "chalk_cluster_timescale" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id    = "test-env-id"
   storage           = "50Gi"
@@ -250,15 +247,14 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateMultipleFields verifies that field mask includes all changed fields.
 func TestClusterTimescaleResourceUpdateMultipleFields(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTimescale(t)
 
-	setupTestEnv(t, server.URL)
-
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id         = "test-env-id"
   storage                = "30Gi"
@@ -268,7 +264,7 @@ resource "chalk_cluster_timescale" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id         = "test-env-id"
   storage                = "50Gi"
@@ -303,6 +299,7 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceNoOpUpdate verifies no RPC call when no fields change.
 func TestClusterTimescaleResourceNoOpUpdate(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTimescale(t)
 
 	// Configure Create response
@@ -323,9 +320,7 @@ func TestClusterTimescaleResourceNoOpUpdate(t *testing.T) {
 		}),
 	})
 
-	setupTestEnv(t, server.URL)
-
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id    = "test-env-id"
   storage           = "30Gi"
@@ -334,7 +329,7 @@ resource "chalk_cluster_timescale" "test" {
 `
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -361,15 +356,14 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateMapFields verifies map field updates trigger correct field mask.
 func TestClusterTimescaleResourceUpdateMapFields(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTimescale(t)
 
-	setupTestEnv(t, server.URL)
-
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id = "test-env-id"
   postgres_parameters = {
@@ -379,7 +373,7 @@ resource "chalk_cluster_timescale" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id = "test-env-id"
   postgres_parameters = {
@@ -408,15 +402,14 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateObjectField verifies object field updates trigger correct field mask.
 func TestClusterTimescaleResourceUpdateObjectField(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTimescale(t)
 
-	setupTestEnv(t, server.URL)
-
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id = "test-env-id"
   request = {
@@ -427,7 +420,7 @@ resource "chalk_cluster_timescale" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id = "test-env-id"
   request = {
@@ -458,8 +451,8 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceCreateError verifies proper error handling when Create RPC fails.
 func TestClusterTimescaleResourceCreateError(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTimescale(t)
-	setupTestEnv(t, server.URL)
 
 	// Reset and configure Create to return an error
 	server.Reset()
@@ -467,10 +460,10 @@ func TestClusterTimescaleResourceCreateError(t *testing.T) {
 		connect.NewError(connect.CodeInvalidArgument, errors.New("invalid storage size")))
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id    = "test-env-id"
   storage           = "invalid"
@@ -485,8 +478,8 @@ resource "chalk_cluster_timescale" "test" {
 
 // TestClusterTimescaleResourceUpdateError verifies proper error handling when Update RPC fails.
 func TestClusterTimescaleResourceUpdateError(t *testing.T) {
+	t.Parallel()
 	server := setupMockBuilderServerTimescale(t)
-	setupTestEnv(t, server.URL)
 
 	// Reset and configure responses - Create succeeds, Update fails
 	server.Reset()
@@ -510,10 +503,10 @@ func TestClusterTimescaleResourceUpdateError(t *testing.T) {
 	server.OnDeleteClusterTimescaleDB().Return(&serverv1.DeleteClusterTimescaleDBResponse{})
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id    = "test-env-id"
   storage           = "30Gi"
@@ -522,7 +515,7 @@ resource "chalk_cluster_timescale" "test" {
 `,
 			},
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_timescale" "test" {
   environment_id    = "test-env-id"
   storage           = "100Gi"

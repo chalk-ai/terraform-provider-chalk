@@ -27,14 +27,14 @@ func setupMockServerTelemetryBinding(t *testing.T) *testserver.MockServer {
 
 // TestTelemetryBindingCreate verifies the basic create/read/delete lifecycle.
 func TestTelemetryBindingCreate(t *testing.T) {
+	t.Parallel()
 	server := setupMockServerTelemetryBinding(t)
-	setupTestEnv(t, server.URL)
 
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry_binding" "test" {
   cluster_id              = "test-cluster-id"
   telemetry_deployment_id = "test-telemetry-id"
@@ -52,9 +52,9 @@ resource "chalk_telemetry_binding" "test" {
 // TestTelemetryBindingReadNotFound verifies that when Get returns not_found,
 // the resource is removed from state so Terraform can detect drift and recreate it.
 func TestTelemetryBindingReadNotFound(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
-	setupTestEnv(t, server.URL)
 
 	server.OnCreateBindingClusterTelemetryDeployment().Return(&serverv1.CreateBindingClusterTelemetryDeploymentResponse{})
 	server.OnDeleteBindingClusterTelemetryDeployment().Return(&serverv1.DeleteBindingClusterTelemetryDeploymentResponse{})
@@ -71,14 +71,14 @@ func TestTelemetryBindingReadNotFound(t *testing.T) {
 		}, nil
 	})
 
-	config := `
+	config := providerConfig(server.URL) + `
 resource "chalk_telemetry_binding" "test" {
   cluster_id              = "test-cluster-id"
   telemetry_deployment_id = "test-telemetry-id"
 }
 `
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(server.URL),
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: config},
 			{
