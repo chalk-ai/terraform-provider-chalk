@@ -161,15 +161,15 @@ Required:
 
 Required:
 
-- `bootstrap_servers` (String) Kafka bootstrap servers
 - `dlq_topic` (String) Kafka DLQ topic
 - `metrics_bus_topic_id` (String) Metrics bus topic ID
 - `offline_store_bus_streaming_write_topic_id` (String) Offline store bus streaming write topic ID
 - `offline_store_bus_upload_topic_id` (String) Offline store bus upload topic ID
 - `result_bus_topic_id` (String) Result bus topic ID
-- `sasl_secret` (String) Kafka SASL secret
 
 Optional:
 
+- `bootstrap_servers` (String) Kafka bootstrap servers
 - `sasl_mechanism` (String) Kafka SASL mechanism
+- `sasl_secret` (String) Kafka SASL secret
 - `security_protocol` (String) Kafka security protocol
