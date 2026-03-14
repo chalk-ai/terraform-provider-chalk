@@ -25,7 +25,9 @@ steps:
       go mod verify
 
       echo "--- :golang: Building provider"
-      go build -v ./...
+      go build -v .
+      # upload to GCS so the e2e pipeline can test against this exact commit
+      gcloud storage cp terraform-provider-chalk "gs://chalk-ci-binary-cache/terraform-provider-chalk/$${BUILDKITE_COMMIT}/terraform-provider-chalk"
 
       echo "--- :golang: Running go vet"
       go vet ./...
@@ -81,3 +83,11 @@ steps:
           limit: 2
         - exit_status: 255
           limit: 2
+
+  - wait: ~
+
+  - trigger: terraform-provider-e2e-smoke
+    label: ":terraform: E2E Smoke Test"
+    build:
+      env:
+        PROVIDER_COMMIT: "$BUILDKITE_COMMIT"
