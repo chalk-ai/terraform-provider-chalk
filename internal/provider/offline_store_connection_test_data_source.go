@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/chalk-ai/terraform-provider-chalk/client"
+
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -18,7 +20,7 @@ func NewOfflineStoreConnectionTestDataSource() datasource.DataSource {
 }
 
 type OfflineStoreConnectionTestDataSource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type OfflineStoreConnectionTestDataSourceModel struct {
@@ -60,11 +62,11 @@ func (d *OfflineStoreConnectionTestDataSource) Configure(_ context.Context, req 
 	if req.ProviderData == nil {
 		return
 	}
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}

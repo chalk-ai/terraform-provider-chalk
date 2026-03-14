@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/chalk-ai/terraform-provider-chalk/client"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -183,15 +184,15 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		)
 	}
 
-	client := &ChalkClient{
+	cfg := &client.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		JWT:          jwt,
 		ApiServer:    apiServer,
 	}
 
-	// Create ClientManager to handle all gRPC client creation
-	clientManager := NewClientManager(client)
+	// Create Manager to handle all gRPC client creation
+	clientManager := client.NewManager(cfg)
 
 	resp.DataSourceData = clientManager
 	resp.ResourceData = clientManager
@@ -235,15 +236,4 @@ func (p *ChalkProvider) DataSources(ctx context.Context) []func() datasource.Dat
 		NewEnvironmentDataSource,
 		NewOfflineStoreConnectionTestDataSource,
 	}
-}
-
-type ChalkClient struct {
-	ClientID     string
-	ClientSecret string
-	JWT          string
-	ApiServer    string
-}
-
-func (c *ChalkClient) String() string {
-	return fmt.Sprintf("ChalkClient{ApiServer: %s}", c.ApiServer)
 }

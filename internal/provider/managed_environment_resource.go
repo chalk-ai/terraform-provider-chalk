@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/chalk-ai/terraform-provider-chalk/client"
+
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -24,7 +26,7 @@ func NewManagedEnvironmentResource() resource.Resource {
 }
 
 type ManagedEnvironmentResource struct {
-	client *ClientManager
+	client *client.Manager
 }
 
 type ManagedEnvironmentResourceModel struct {
@@ -55,11 +57,11 @@ func (r *ManagedEnvironmentResource) Configure(ctx context.Context, req resource
 		return
 	}
 
-	client, ok := req.ProviderData.(*ClientManager)
+	client, ok := req.ProviderData.(*client.Manager)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *ClientManager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Manager, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
@@ -191,7 +193,7 @@ func (r *ManagedEnvironmentResource) ImportState(ctx context.Context, req resour
 
 // readManagedEnv fetches environment state via TeamService.GetEnv and populates data.
 // Used by the Read handler only — Create and Update parse the RPC response directly.
-func readManagedEnv(ctx context.Context, client *ClientManager, data *ManagedEnvironmentResourceModel, diagnostics *diag.Diagnostics) {
+func readManagedEnv(ctx context.Context, client *client.Manager, data *ManagedEnvironmentResourceModel, diagnostics *diag.Diagnostics) {
 	tc := client.NewTeamClient(ctx, data.Id.ValueString())
 	envResp, err := tc.GetEnv(ctx, connect.NewRequest(&serverv1.GetEnvRequest{}))
 	if err != nil {
