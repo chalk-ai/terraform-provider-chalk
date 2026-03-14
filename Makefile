@@ -45,4 +45,7 @@ setup-buildkite:  ## Create or update the Buildkite pipelines for this repo (req
 setup-hooks:  ## Install git pre-commit hooks via prek (requires prek: brew install j178/tap/prek)
 	prek install
 
-.PHONY: build install test fmt lint docs setup-buildkite setup-hooks help
+release:  ## Tag and create a new release (increments patch version)
+	@bash scripts/release.sh
+
+.PHONY: build install test fmt lint docs setup-buildkite setup-hooks release help
