@@ -46,6 +46,10 @@ steps:
       export PATH="$$GORELEASER_DIR:$$PATH"
       goreleaser --version
 
+      echo "--- :git: Fetching tags"
+      git fetch --unshallow 2>/dev/null || true
+      git fetch --tags
+
       echo "--- :rocket: Running GoReleaser"
       goreleaser release --clean
     agents:
