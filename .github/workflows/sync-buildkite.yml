@@ -10,8 +10,6 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    permissions:
-      administration: read
     steps:
       - uses: actions/checkout@v4
       - uses: chalk-ai/buildkite-sync-action@v1
