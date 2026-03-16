@@ -1,3 +1,8 @@
+on:
+  tag:
+    branch_filter: "v*"
+    conditional_filter: 'build.tag =~ /^v\d+\.\d+(\.\d+)?$/'
+
 steps:
   - label: ":rocket: Release"
     command: |

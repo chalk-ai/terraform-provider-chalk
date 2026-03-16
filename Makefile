@@ -38,14 +38,10 @@ fmt:  ## Format Go and Terraform files
 lint:  ## Run linter
 	golangci-lint run
 
-setup-buildkite:  ## Create or update the Buildkite pipelines for this repo (requires BUILDKITE_API_TOKEN; must re-run when scripts/buildkite-pipeline-*.yml changes)
-	@test -n "$(BUILDKITE_API_TOKEN)" || (echo "BUILDKITE_API_TOKEN is not set" && exit 1)
-	@bash scripts/setup-buildkite.sh
-
 setup-hooks:  ## Install git pre-commit hooks via prek (requires prek: brew install j178/tap/prek)
 	prek install
 
 release:  ## Tag and create a new release (increments patch version)
 	@bash scripts/release.sh
 
-.PHONY: build install test fmt lint docs setup-buildkite setup-hooks release help
+.PHONY: build install test fmt lint docs setup-hooks release help
