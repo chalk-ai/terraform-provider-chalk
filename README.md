@@ -104,8 +104,20 @@ PRs are validated via Buildkite. The pipeline runs tests, linting, and formattin
 then triggers an E2E smoke test against a live Chalk environment using the provider binary
 built from the PR commit.
 
-To update the Buildkite pipelines after changing `scripts/buildkite-pipeline-*.yml`:
+Pipeline configs live in `.buildkite/`. Changes merged to `main` are automatically
+reconciled by the `sync-buildkite` GitHub Actions workflow — no manual steps required.
 
-```shell
-BUILDKITE_API_TOKEN=<token> make setup-buildkite
-```
+### One-time setup (per repo)
+
+Set the following in GitHub repo settings (done once, never again):
+
+- **Secret** `BUILDKITE_API_TOKEN` — Buildkite API token with pipeline write access
+- **Variable** `BUILDKITE_CLUSTER_ID` — `7b9e4371-390a-4f64-88b8-b281a34c0843`
+
+`GITHUB_TOKEN` is provided automatically by GitHub Actions.
+
+### Adopting in other repos
+
+1. Add `.buildkite/*.yml` files with `on:` trigger blocks (`pull_request`, `push`, or `tag`)
+2. Add `.github/workflows/sync-buildkite.yml` using `chalk-ai/buildkite-sync-action@v1`
+3. Set `BUILDKITE_API_TOKEN` and `BUILDKITE_CLUSTER_ID` in GitHub repo settings

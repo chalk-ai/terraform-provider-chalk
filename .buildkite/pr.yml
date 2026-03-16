@@ -1,3 +1,7 @@
+on:
+  pull_request: {}
+  push: {}
+
 steps:
   - label: ":terraform: PR Validation"
     command: |
