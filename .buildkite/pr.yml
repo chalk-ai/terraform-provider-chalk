@@ -77,7 +77,7 @@ steps:
         exit 1
       fi
 
-      echo "--- :white_check_mark: All checks passed"
+      echo "--- :white_check_mark: All checks passed!"
     agents:
       queue: default
     timeout_in_minutes: 5
