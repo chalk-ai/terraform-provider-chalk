@@ -77,14 +77,24 @@ func (cm *Manager) NewTeamClient(ctx context.Context, envId ...string) serverv1c
 }
 
 // NewBuilderClient creates a BuilderServiceClient with standard headers and auth
-func (cm *Manager) NewBuilderClient(ctx context.Context) serverv1connect.BuilderServiceClient {
+func (cm *Manager) NewBuilderClient(ctx context.Context, envId ...string) serverv1connect.BuilderServiceClient {
+	var interceptors []connect.Interceptor
+
+	// Add x-chalk-env-id header if envId is provided
+	if len(envId) > 0 && envId[0] != "" {
+		interceptors = append(interceptors, MakeApiServerHeaderInterceptor("x-chalk-env-id", envId[0]))
+	}
+
+	// Add standard headers and authentication
+	interceptors = append(interceptors,
+		MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+		cm.makeAuthInterceptor(ctx),
+	)
+
 	return NewBuilderClient(ctx, &GrpcClientOptions{
-		HTTPClient: cm.httpClient,
-		Host:       cm.config.ApiServer,
-		Interceptors: []connect.Interceptor{
-			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
-			cm.makeAuthInterceptor(ctx),
-		},
+		HTTPClient:   cm.httpClient,
+		Host:         cm.config.ApiServer,
+		Interceptors: interceptors,
 	})
 }
 
