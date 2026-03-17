@@ -90,7 +90,7 @@ steps:
 
   - wait: ~
 
-  - trigger: terraform-provider-e2e-smoke
+  - trigger: chalk-terraform-provider-e2e-smoke
     label: ":terraform: E2E Smoke Test"
     build:
       env:
