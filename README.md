@@ -26,8 +26,6 @@ provider "chalk" {
 }
 ```
 
-See [`terraform-provider-e2e`](https://github.com/chalk-ai/chalk-terraform/tree/main/terraform-provider-e2e) for a full working example.
-
 ## Local Development
 
 ### Build and install locally
