@@ -398,14 +398,15 @@ func buildUnmanagedBGPProtoRequest(ctx context.Context, data *UnmanagedClusterBG
 	return createReq, nil
 }
 
-// refreshWritersAfterWrite fetches the current specs from the server and returns the
-// writers list with server-populated computed fields (e.g. name).
-func (r *UnmanagedClusterBackgroundPersistenceResource) refreshWritersAfterWrite(
+// refreshStateAfterWrite fetches the current specs from the server and updates
+// computed fields (writers, and Kafka bootstrap_servers/sasl_secret if applicable).
+func (r *UnmanagedClusterBackgroundPersistenceResource) refreshStateAfterWrite(
 	ctx context.Context,
 	bc serverv1connect.BuilderServiceClient,
-	id string,
-) (types.List, diag.Diagnostics) {
+	data *UnmanagedClusterBGPersistenceModel,
+) diag.Diagnostics {
 	var diags diag.Diagnostics
+	id := data.Id.ValueString()
 	getResp, err := bc.GetClusterBackgroundPersistence(ctx, connect.NewRequest(&serverv1.GetClusterBackgroundPersistenceRequest{
 		Id: &id,
 	}))
@@ -414,16 +415,36 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) refreshWritersAfterWrite
 			"Error Reading Chalk Unmanaged Cluster Background Persistence After Write",
 			fmt.Sprintf("Could not read unmanaged cluster background persistence %s: %v", id, err),
 		)
-		return types.ListNull(bgpWriterObjectType), diags
+		return diags
 	}
 	if getResp.Msg.BackgroundPersistence == nil || getResp.Msg.BackgroundPersistence.Specs == nil {
 		diags.AddError(
 			"Unexpected Response After Write",
 			fmt.Sprintf("Server returned no specs for background persistence %s after write", id),
 		)
-		return types.ListNull(bgpWriterObjectType), diags
+		return diags
 	}
-	return bgpWritersProtoToTF(ctx, getResp.Msg.BackgroundPersistence.Specs.Writers)
+
+	specs := getResp.Msg.BackgroundPersistence.Specs
+
+	// Refresh writers
+	writersList, writerDiags := bgpWritersProtoToTF(ctx, specs.Writers)
+	diags.Append(writerDiags...)
+	if !diags.HasError() {
+		data.Writers = writersList
+	}
+
+	// Refresh Kafka computed fields (bootstrap_servers, sasl_secret)
+	if data.Kafka != nil {
+		if specs.KafkaBootstrapServers != "" {
+			data.Kafka.BootstrapServers = types.StringValue(specs.KafkaBootstrapServers)
+		}
+		if specs.KafkaSaslSecret != "" {
+			data.Kafka.SaslSecret = types.StringValue(specs.KafkaSaslSecret)
+		}
+	}
+
+	return diags
 }
 
 func (r *UnmanagedClusterBackgroundPersistenceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -456,12 +477,8 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Create(ctx context.Conte
 
 	data.Id = types.StringValue(response.Msg.Id)
 
-	// Refresh writers from the server to populate computed fields (e.g. name).
-	writersList, writerDiags := r.refreshWritersAfterWrite(ctx, bc, data.Id.ValueString())
-	resp.Diagnostics.Append(writerDiags...)
-	if !resp.Diagnostics.HasError() {
-		data.Writers = writersList
-	}
+	// Refresh computed fields from the server (writers, Kafka bootstrap_servers/sasl_secret).
+	resp.Diagnostics.Append(r.refreshStateAfterWrite(ctx, bc, &data)...)
 
 	tflog.Trace(ctx, "created a chalk_unmanaged_cluster_background_persistence resource")
 
@@ -662,12 +679,8 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Update(ctx context.Conte
 
 	data.Id = types.StringValue(response.Msg.Id)
 
-	// Refresh writers from the server to populate computed fields (e.g. name).
-	writersList, writerDiags := r.refreshWritersAfterWrite(ctx, bc, data.Id.ValueString())
-	resp.Diagnostics.Append(writerDiags...)
-	if !resp.Diagnostics.HasError() {
-		data.Writers = writersList
-	}
+	// Refresh computed fields from the server (writers, Kafka bootstrap_servers/sasl_secret).
+	resp.Diagnostics.Append(r.refreshStateAfterWrite(ctx, bc, &data)...)
 
 	tflog.Trace(ctx, "updated a chalk_unmanaged_cluster_background_persistence resource")
 
