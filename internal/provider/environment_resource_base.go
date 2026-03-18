@@ -130,6 +130,7 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 			MarkdownDescription: "Specs config JSON (serialized map of spec configuration values)",
 			CustomType:          jsontypes.NormalizedType{},
 			Optional:            true,
+			Computed:            true,
 		},
 		"private_pip_repositories": schema.StringAttribute{
 			MarkdownDescription: "Private pip repositories",
