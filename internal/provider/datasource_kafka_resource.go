@@ -25,20 +25,20 @@ var _ resource.ResourceWithValidateConfig = &DatasourceKafkaResource{}
 
 // kafkaEnvVarToField maps Kafka env var names to their Terraform attribute names.
 var kafkaEnvVarToField = map[string]string{
-	"KAFKA_BOOTSTRAP_SERVER":       "bootstrap_server",
-	"KAFKA_TOPIC":                  "topic",
-	"KAFKA_CLIENT_ID_PREFIX":       "client_id_prefix",
-	"KAFKA_GROUP_ID_PREFIX":        "group_id_prefix",
-	"KAFKA_SECURITY_PROTOCOL":      "security_protocol",
-	"KAFKA_SASL_MECHANISM":         "sasl_mechanism",
-	"KAFKA_SASL_USERNAME":          "sasl_username",
-	"KAFKA_SASL_PASSWORD":          "sasl_password",
-	"KAFKA_SSL_CA_FILE":            "ssl_ca_file",
-	"KAFKA_DLQ_TOPIC":              "dlq_topic",
-	"KAFKA_MSK_IAM_AUTH":           "msk_iam_auth",
-	"KAFKA_AWS_REGION":             "aws_region",
-	"KAFKA_AWS_ROLE_ARN":           "aws_role_arn",
-	"KAFKA_ADDITIONAL_KAFKA_ARGS":  "additional_kafka_args",
+	"KAFKA_BOOTSTRAP_SERVER":      "bootstrap_server",
+	"KAFKA_TOPIC":                 "topic",
+	"KAFKA_CLIENT_ID_PREFIX":      "client_id_prefix",
+	"KAFKA_GROUP_ID_PREFIX":       "group_id_prefix",
+	"KAFKA_SECURITY_PROTOCOL":     "security_protocol",
+	"KAFKA_SASL_MECHANISM":        "sasl_mechanism",
+	"KAFKA_SASL_USERNAME":         "sasl_username",
+	"KAFKA_SASL_PASSWORD":         "sasl_password",
+	"KAFKA_SSL_CA_FILE":           "ssl_ca_file",
+	"KAFKA_DLQ_TOPIC":             "dlq_topic",
+	"KAFKA_MSK_IAM_AUTH":          "msk_iam_auth",
+	"KAFKA_AWS_REGION":            "aws_region",
+	"KAFKA_AWS_ROLE_ARN":          "aws_role_arn",
+	"KAFKA_ADDITIONAL_KAFKA_ARGS": "additional_kafka_args",
 }
 
 func NewDatasourceKafkaResource() resource.Resource {
