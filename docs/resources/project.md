@@ -4,11 +4,14 @@ page_title: "chalk_project Resource - chalk"
 subcategory: ""
 description: |-
   Chalk project resource
+  Required permissions: project.create (team-scoped)
 ---
 
 # chalk_project (Resource)
 
 Chalk project resource
+
+**Required permissions:** `project.create` *(team-scoped)*
 
 
 

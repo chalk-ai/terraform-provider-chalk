@@ -4,11 +4,14 @@ page_title: "chalk_aws_cloud_credentials Resource - chalk"
 subcategory: ""
 description: |-
   Chalk AWS cloud credentials resource for configuring AWS authentication
+  Required permissions: project.create
 ---
 
 # chalk_aws_cloud_credentials (Resource)
 
 Chalk AWS cloud credentials resource for configuring AWS authentication
+
+**Required permissions:** `project.create`
 
 
 

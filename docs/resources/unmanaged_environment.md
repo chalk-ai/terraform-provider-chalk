@@ -4,11 +4,14 @@ page_title: "chalk_unmanaged_environment Resource - chalk"
 subcategory: ""
 description: |-
   Chalk unmanaged environment resource
+  Required permissions: environment.create (team-scoped)
 ---
 
 # chalk_unmanaged_environment (Resource)
 
 Chalk unmanaged environment resource
+
+**Required permissions:** `environment.create` *(team-scoped)*
 
 
 

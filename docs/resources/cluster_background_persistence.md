@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   ~> Deprecated Use chalk_unmanaged_cluster_background_persistence instead.
   Chalk cluster background persistence resource
+  Required permissions: team.admin, deploy.read
 ---
 
 # chalk_cluster_background_persistence (Resource)
@@ -12,6 +13,8 @@ description: |-
 ~> **Deprecated** Use `chalk_unmanaged_cluster_background_persistence` instead.
 
 Chalk cluster background persistence resource
+
+**Required permissions:** `team.admin`, `deploy.read`
 
 
 

@@ -96,6 +96,13 @@ Provider documentation is generated from schema descriptions. To regenerate afte
 make docs
 ```
 
+`make docs` runs two steps in order:
+
+1. **`genpermissions`** (`tools/genpermissions/`) — analyzes the provider's resource implementations via AST analysis and reads `chalk.auth.v1.permission` annotations from the embedded proto descriptors to generate `internal/provider/permissions_gen.go`. This file maps each resource/data-source type name to its required-permissions markdown text.
+2. **`tfplugindocs`** — builds the provider binary (which now includes the generated permissions) and renders the `docs/` markdown files from each resource's schema description.
+
+If you add a new resource or data source, run `make docs` to regenerate. CI will fail if the docs are out of date.
+
 ## CI
 
 PRs are validated via Buildkite. The pipeline runs tests, linting, and formatting checks,

@@ -4,11 +4,14 @@ page_title: "chalk_cluster_background_persistence_deployment_binding Resource - 
 subcategory: ""
 description: |-
   Manages a binding between a Chalk cluster and a background persistence deployment.
+  Required permissions: project.create
 ---
 
 # chalk_cluster_background_persistence_deployment_binding (Resource)
 
 Manages a binding between a Chalk cluster and a background persistence deployment.
+
+**Required permissions:** `project.create`
 
 
 
