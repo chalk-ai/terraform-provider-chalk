@@ -4,11 +4,14 @@ page_title: "chalk_environment Data Source - chalk"
 subcategory: ""
 description: |-
   Chalk environment data source
+  Required permissions: deploy.read
 ---
 
 # chalk_environment (Data Source)
 
 Chalk environment data source
+
+**Required permissions:** `deploy.read`
 
 ## Example Usage
 

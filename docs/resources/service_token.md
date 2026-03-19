@@ -4,11 +4,14 @@ page_title: "chalk_service_token Resource - chalk"
 subcategory: ""
 description: |-
   Chalk service token resource
+  Required permissions: tokens.write, tokens.list
 ---
 
 # chalk_service_token (Resource)
 
 Chalk service token resource
+
+**Required permissions:** `tokens.write`, `tokens.list`
 
 
 

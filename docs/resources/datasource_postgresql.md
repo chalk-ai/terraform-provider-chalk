@@ -4,11 +4,14 @@ page_title: "chalk_datasource_postgresql Resource - chalk"
 subcategory: ""
 description: |-
   Manages a Chalk PostgreSQL datasource integration.
+  Required permissions: secrets.write, secrets.decrypt
 ---
 
 # chalk_datasource_postgresql (Resource)
 
 Manages a Chalk PostgreSQL datasource integration.
+
+**Required permissions:** `secrets.write`, `secrets.decrypt`
 
 
 

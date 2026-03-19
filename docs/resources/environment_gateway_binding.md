@@ -4,11 +4,14 @@ page_title: "chalk_environment_gateway_binding Resource - chalk"
 subcategory: ""
 description: |-
   Manages a binding between a Chalk environment and a gateway.
+  Required permissions: project.create
 ---
 
 # chalk_environment_gateway_binding (Resource)
 
 Manages a binding between a Chalk environment and a gateway.
+
+**Required permissions:** `project.create`
 
 
 

@@ -71,9 +71,10 @@ steps:
 
       echo "--- :terraform: Checking for docs drift"
       go generate ./tools/...
-      if [ -n "$$(git diff --name-only)" ]; then
+      if [ -n "$$(git status --porcelain)" ]; then
         echo "Docs are out of date. Please run 'make docs'."
         git --no-pager diff
+        git --no-pager status
         exit 1
       fi
 

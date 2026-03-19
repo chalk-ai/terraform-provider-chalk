@@ -4,11 +4,14 @@ page_title: "chalk_unmanaged_cluster_background_persistence Resource - chalk"
 subcategory: ""
 description: |-
   Chalk unmanaged cluster background persistence resource.
+  Required permissions: team.admin, deploy.read
 ---
 
 # chalk_unmanaged_cluster_background_persistence (Resource)
 
 Chalk unmanaged cluster background persistence resource.
+
+**Required permissions:** `team.admin`, `deploy.read`
 
 
 

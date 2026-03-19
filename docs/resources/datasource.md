@@ -4,11 +4,14 @@ page_title: "chalk_datasource Resource - chalk"
 subcategory: ""
 description: |-
   Manages a Chalk datasource integration (e.g., PostgreSQL, Snowflake, Kafka).
+  Required permissions: secrets.write, secrets.decrypt
 ---
 
 # chalk_datasource (Resource)
 
 Manages a Chalk datasource integration (e.g., PostgreSQL, Snowflake, Kafka).
+
+**Required permissions:** `secrets.write`, `secrets.decrypt`
 
 
 

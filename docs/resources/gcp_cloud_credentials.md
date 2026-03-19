@@ -4,11 +4,14 @@ page_title: "chalk_gcp_cloud_credentials Resource - chalk"
 subcategory: ""
 description: |-
   Chalk GCP cloud credentials resource for configuring GCP authentication
+  Required permissions: project.create
 ---
 
 # chalk_gcp_cloud_credentials (Resource)
 
 Chalk GCP cloud credentials resource for configuring GCP authentication
+
+**Required permissions:** `project.create`
 
 
 
