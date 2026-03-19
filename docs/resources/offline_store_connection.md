@@ -4,11 +4,14 @@ page_title: "chalk_offline_store_connection Resource - chalk"
 subcategory: ""
 description: |-
   Manages a Chalk offline store connection (Snowflake or BigQuery).
+  Required permissions: deploy.create, deploy.read
 ---
 
 # chalk_offline_store_connection (Resource)
 
 Manages a Chalk offline store connection (Snowflake or BigQuery).
+
+**Required permissions:** `deploy.create`, `deploy.read`
 
 
 

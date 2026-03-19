@@ -4,11 +4,14 @@ page_title: "chalk_managed_environment Resource - chalk"
 subcategory: ""
 description: |-
   Chalk managed environment resource
+  Required permissions: environment.create (team-scoped)
 ---
 
 # chalk_managed_environment (Resource)
 
 Chalk managed environment resource
+
+**Required permissions:** `environment.create` *(team-scoped)*
 
 
 

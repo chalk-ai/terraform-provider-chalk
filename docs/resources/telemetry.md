@@ -4,11 +4,14 @@ page_title: "chalk_telemetry Resource - chalk"
 subcategory: ""
 description: |-
   Chalk telemetry resource
+  Required permissions: team.admin, deploy.read
 ---
 
 # chalk_telemetry (Resource)
 
 Chalk telemetry resource
+
+**Required permissions:** `team.admin`, `deploy.read`
 
 
 

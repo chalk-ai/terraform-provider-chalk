@@ -198,45 +198,53 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	resp.ResourceData = clientManager
 }
 
+// allResourceCtors is the canonical list of resource constructors. It is used
+// by Resources() and by tests that verify wrapper behavior.
+var allResourceCtors = []func() resource.Resource{
+	NewEnvironmentResource,
+	NewProjectResource,
+	NewServiceTokenResource,
+	NewClusterGatewayResource,
+	NewClusterBackgroundPersistenceResource,
+	NewClusterTimescaleResource,
+	NewKubernetesClusterResource,
+	NewManagedClusterResource,
+	NewAWSCloudCredentialsResource,
+	NewGCPCloudCredentialsResource,
+	NewAzureCloudCredentialsResource,
+	NewClusterGatewayBindingResource,
+	NewPrivateGatewayBindingResource,
+	NewClusterBackgroundPersistenceDeploymentBindingResource,
+	NewTelemetryResource,
+	NewTelemetryBindingResource,
+	NewEnvironmentGatewayBindingResource,
+	NewEnvironmentBackgroundPersistenceDeploymentBindingResource,
+	NewManagedAWSVPCResource,
+	NewManagedGCPVPCResource,
+	NewManagedAzureVPCResource,
+	NewDatasourceResource,
+	NewDatasourcePostgresqlResource,
+	NewDatasourceDatabricksResource,
+	NewDatasourceKinesisResource,
+	NewDatasourceKafkaResource,
+	NewUnmanagedEnvironmentResource,
+	NewManagedEnvironmentResource,
+	NewOfflineStoreConnectionResource,
+	NewEnvironmentOfflineStoreConnectionBindingResource,
+	NewUnmanagedClusterBackgroundPersistenceResource,
+}
+
+// allDatasourceCtors is the canonical list of data-source constructors. It is
+// used by DataSources() and by tests that verify wrapper behavior.
+var allDatasourceCtors = []func() datasource.DataSource{
+	NewEnvironmentDataSource,
+	NewOfflineStoreConnectionTestDataSource,
+}
+
 func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewEnvironmentResource,
-		NewProjectResource,
-		NewServiceTokenResource,
-		NewClusterGatewayResource,
-		NewClusterBackgroundPersistenceResource,
-		NewClusterTimescaleResource,
-		NewKubernetesClusterResource,
-		NewManagedClusterResource,
-		NewAWSCloudCredentialsResource,
-		NewGCPCloudCredentialsResource,
-		NewAzureCloudCredentialsResource,
-		NewClusterGatewayBindingResource,
-		NewPrivateGatewayBindingResource,
-		NewClusterBackgroundPersistenceDeploymentBindingResource,
-		NewTelemetryResource,
-		NewTelemetryBindingResource,
-		NewEnvironmentGatewayBindingResource,
-		NewEnvironmentBackgroundPersistenceDeploymentBindingResource,
-		NewManagedAWSVPCResource,
-		NewManagedGCPVPCResource,
-		NewManagedAzureVPCResource,
-		NewDatasourceResource,
-		NewDatasourcePostgresqlResource,
-		NewDatasourceDatabricksResource,
-		NewDatasourceKinesisResource,
-		NewDatasourceKafkaResource,
-		NewUnmanagedEnvironmentResource,
-		NewManagedEnvironmentResource,
-		NewOfflineStoreConnectionResource,
-		NewEnvironmentOfflineStoreConnectionBindingResource,
-		NewUnmanagedClusterBackgroundPersistenceResource,
-	}
+	return applyResourcePermDocs(allResourceCtors)
 }
 
 func (p *ChalkProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewEnvironmentDataSource,
-		NewOfflineStoreConnectionTestDataSource,
-	}
+	return applyDatasourcePermDocs(allDatasourceCtors)
 }

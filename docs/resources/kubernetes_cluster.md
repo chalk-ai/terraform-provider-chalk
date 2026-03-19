@@ -4,11 +4,14 @@ page_title: "chalk_kubernetes_cluster Resource - chalk"
 subcategory: ""
 description: |-
   Chalk Kubernetes cluster resource (unmanaged)
+  Required permissions: project.create
 ---
 
 # chalk_kubernetes_cluster (Resource)
 
 Chalk Kubernetes cluster resource (unmanaged)
+
+**Required permissions:** `project.create`
 
 
 

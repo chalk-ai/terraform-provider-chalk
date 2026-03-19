@@ -4,11 +4,14 @@ page_title: "chalk_azure_cloud_credentials Resource - chalk"
 subcategory: ""
 description: |-
   Chalk Azure cloud credentials resource for configuring Azure authentication
+  Required permissions: project.create
 ---
 
 # chalk_azure_cloud_credentials (Resource)
 
 Chalk Azure cloud credentials resource for configuring Azure authentication
+
+**Required permissions:** `project.create`
 
 
 

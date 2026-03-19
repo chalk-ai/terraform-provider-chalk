@@ -4,11 +4,14 @@ page_title: "chalk_cluster_timescale Resource - chalk"
 subcategory: ""
 description: |-
   Chalk cluster TimescaleDB resource
+  Required permissions: team.admin, deploy.read
 ---
 
 # chalk_cluster_timescale (Resource)
 
 Chalk cluster TimescaleDB resource
+
+**Required permissions:** `team.admin`, `deploy.read`
 
 
 

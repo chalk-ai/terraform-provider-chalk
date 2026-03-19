@@ -4,11 +4,14 @@ page_title: "chalk_private_gateway_binding Resource - chalk"
 subcategory: ""
 description: |-
   Manages a binding between a Chalk cluster and a private gateway.
+  Required permissions: project.create
 ---
 
 # chalk_private_gateway_binding (Resource)
 
 Manages a binding between a Chalk cluster and a private gateway.
+
+**Required permissions:** `project.create`
 
 
 
