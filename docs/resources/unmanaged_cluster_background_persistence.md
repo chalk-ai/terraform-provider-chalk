@@ -172,7 +172,7 @@ Required:
 
 Optional:
 
-- `bootstrap_servers` (String) Kafka bootstrap servers
+- `bootstrap_servers` (String) Kafka bootstrap servers; if not provided, auto-discovery will be used. Canonical form is expected, e.g. 'broker1.example.com:9092,broker2.example.com:9092'
 - `sasl_mechanism` (String) Kafka SASL mechanism
-- `sasl_secret` (String) Kafka SASL secret
+- `sasl_secret` (String) Kafka SASL secret; if not provided, auto-discovery will be used. Refer to https://docs.aws.amazon.com/msk/latest/developerguide/msk-password-tutorial.html.
 - `security_protocol` (String) Kafka security protocol

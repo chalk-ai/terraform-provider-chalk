@@ -175,17 +175,19 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Schema(ctx context.Conte
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"sasl_secret": schema.StringAttribute{
-				MarkdownDescription: "Kafka SASL secret",
-				Optional:            true,
-				Computed:            true,
+				MarkdownDescription: "Kafka SASL secret; if not provided, auto-discovery will be used. Refer to " +
+					"https://docs.aws.amazon.com/msk/latest/developerguide/msk-password-tutorial.html.",
+				Optional: true,
+				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"bootstrap_servers": schema.StringAttribute{
-				MarkdownDescription: "Kafka bootstrap servers",
-				Optional:            true,
-				Computed:            true,
+				MarkdownDescription: "Kafka bootstrap servers; if not provided, auto-discovery will be used. Canonical" +
+					" form is expected, e.g. 'broker1.example.com:9092,broker2.example.com:9092'",
+				Optional: true,
+				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
