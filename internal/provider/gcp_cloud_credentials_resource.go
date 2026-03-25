@@ -102,7 +102,7 @@ func (r *GCPCloudCredentialsResource) Schema(ctx context.Context, req resource.S
 							Sensitive:           true,
 						},
 						"notification_topic": schema.StringAttribute{
-							MarkdownDescription: "Docker build notification topic",
+							MarkdownDescription: "Topic to receive build notifications. Accepts a GCP Pub/Sub topic path (`projects/<project>/topics/<topic>`).",
 							Optional:            true,
 						},
 					},
