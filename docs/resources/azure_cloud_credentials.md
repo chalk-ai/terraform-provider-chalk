@@ -51,7 +51,7 @@ Optional:
 Optional:
 
 - `builder` (String) Docker builder configuration
-- `notification_topic` (String) Docker build notification topic
+- `notification_topic` (String) Topic to receive build notifications. Accepts a GCP Pub/Sub topic path (`projects/<project>/topics/<topic>`).
 - `push_registry_tag_prefix` (String) Docker push registry tag prefix
 - `push_registry_type` (String) Docker push registry type
 - `registry_credentials_secret_id` (String, Sensitive) Docker registry credentials secret ID

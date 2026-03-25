@@ -109,7 +109,7 @@ func (r *AWSCloudCredentialsResource) Schema(ctx context.Context, req resource.S
 							Sensitive:           true,
 						},
 						"notification_topic": schema.StringAttribute{
-							MarkdownDescription: "Docker build notification topic",
+							MarkdownDescription: "Topic to receive build notifications. Accepts an AWS SQS ARN (`arn:aws:sqs:<region>:<account-id>:<queue-name>`) or a GCP Pub/Sub topic path (`projects/<project>/topics/<topic>`).",
 							Optional:            true,
 						},
 					},
