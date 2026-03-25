@@ -21,7 +21,7 @@ Chalk AWS cloud credentials resource for configuring AWS authentication
 ### Required
 
 - `aws_account_id` (String) AWS account ID
-- `aws_management_role_arn` (String) AWS management role ARN
+- `aws_management_role_arn` (String) AWS management role ARN; the name of an IAM role that has permissions to access the cluster in which Chalk environments will run. Refer to https://docs.chalk.ai/docs/aws-cloud-deployment#iam-role-permissions for the permissions necessary. Note that for self-hosted deployments the trust relationship must point to *your* api server role.
 - `aws_region` (String) AWS region
 - `name` (String) Cloud credentials name
 
