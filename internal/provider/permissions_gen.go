@@ -16,7 +16,7 @@ var resourcePermissionsMarkdown = map[string]string{
 	"chalk_datasource_kafka":                                      "**Required permissions:** `secrets.write`, `secrets.decrypt`",
 	"chalk_datasource_kinesis":                                    "**Required permissions:** `secrets.write`, `secrets.decrypt`",
 	"chalk_datasource_postgresql":                                 "**Required permissions:** `secrets.write`, `secrets.decrypt`",
-	"chalk_environment":                                           "**Required permissions:** `project.create`, `deploy.create`, `deploy.read`",
+	"chalk_environment":                                           "**Required permissions:** `project.create`, `deploy.create`, `deploy.read`, `environment.create` *(team-scoped)*",
 	"chalk_environment_background_persistence_deployment_binding": "**Required permissions:** `project.create`",
 	"chalk_environment_gateway_binding":                           "**Required permissions:** `project.create`",
 	"chalk_environment_offline_store_connection_binding":          "**Required permissions:** `deploy.create`, `deploy.read`",

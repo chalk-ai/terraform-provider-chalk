@@ -1,11 +1,11 @@
 module github.com/chalk-ai/terraform-provider-chalk
 
-go 1.26.0
+go 1.26.1
 
 require (
 	connectrpc.com/connect v1.19.1
-	github.com/chalk-ai/chalk-go v1.2.218
-	github.com/chalk-ai/chalk-go/gen v1.2.218
+	github.com/chalk-ai/chalk-go v1.2.227
+	github.com/chalk-ai/chalk-go/gen v1.2.227
 	github.com/hashicorp/terraform-plugin-docs v0.24.0
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
 	github.com/hashicorp/terraform-plugin-framework-jsontypes v0.2.0
@@ -15,6 +15,7 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.12.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
+	golang.org/x/tools v0.41.0
 	google.golang.org/protobuf v1.36.11
 	gotest.tools/gotestsum v1.13.0
 )
@@ -92,12 +93,12 @@ require (
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/term v0.40.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20260209200024-4cfbd4190f57 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.7.0 // indirect

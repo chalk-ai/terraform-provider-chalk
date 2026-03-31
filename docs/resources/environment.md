@@ -5,7 +5,7 @@ subcategory: ""
 description: |-
   ~> Deprecated Use chalk_unmanaged_environment or chalk_managed_environment instead.
   Chalk environment resource
-  Required permissions: project.create, deploy.create, deploy.read
+  Required permissions: project.create, deploy.create, deploy.read, environment.create (team-scoped)
 ---
 
 # chalk_environment (Resource)
@@ -14,7 +14,7 @@ description: |-
 
 Chalk environment resource
 
-**Required permissions:** `project.create`, `deploy.create`, `deploy.read`
+**Required permissions:** `project.create`, `deploy.create`, `deploy.read`, `environment.create` *(team-scoped)*
 
 
 
