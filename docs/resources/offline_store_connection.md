@@ -3,13 +3,13 @@
 page_title: "chalk_offline_store_connection Resource - chalk"
 subcategory: ""
 description: |-
-  Manages a Chalk offline store connection (Snowflake or BigQuery).
+  Manages a Chalk offline store connection (Snowflake, BigQuery, or Iceberg).
   Required permissions: deploy.create, deploy.read
 ---
 
 # chalk_offline_store_connection (Resource)
 
-Manages a Chalk offline store connection (Snowflake or BigQuery).
+Manages a Chalk offline store connection (Snowflake, BigQuery, or Iceberg).
 
 **Required permissions:** `deploy.create`, `deploy.read`
 
@@ -26,6 +26,7 @@ Manages a Chalk offline store connection (Snowflake or BigQuery).
 ### Optional
 
 - `bigquery` (Attributes) BigQuery offline store connection configuration. (see [below for nested schema](#nestedatt--bigquery))
+- `iceberg` (Attributes) Iceberg offline store connection configuration using AWS Glue catalog and S3 storage. (see [below for nested schema](#nestedatt--iceberg))
 - `snowflake` (Attributes) Snowflake offline store connection configuration. (see [below for nested schema](#nestedatt--snowflake))
 
 ### Read-Only
@@ -39,6 +40,23 @@ Required:
 
 - `dataset_id` (String) BigQuery dataset ID.
 - `project_id` (String) BigQuery project ID.
+
+
+<a id="nestedatt--iceberg"></a>
+### Nested Schema for `iceberg`
+
+Required:
+
+- `glue_s3` (Attributes) Iceberg configuration with AWS Glue catalog and S3 storage. (see [below for nested schema](#nestedatt--iceberg--glue_s3))
+
+<a id="nestedatt--iceberg--glue_s3"></a>
+### Nested Schema for `iceberg.glue_s3`
+
+Required:
+
+- `glue_database_name` (String) Name of the AWS Glue database to use as the Iceberg catalog.
+- `s3_bucket` (String) Name of the S3 bucket where Iceberg data files will be stored.
+
 
 
 <a id="nestedatt--snowflake"></a>

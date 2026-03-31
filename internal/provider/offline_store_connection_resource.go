@@ -41,6 +41,7 @@ type OfflineStoreConnectionResourceModel struct {
 	Name          types.String              `tfsdk:"name"`
 	Snowflake     *SnowflakeConnectionModel `tfsdk:"snowflake"`
 	BigQuery      *BigQueryConnectionModel  `tfsdk:"bigquery"`
+	Iceberg       *IcebergConnectionModel   `tfsdk:"iceberg"`
 }
 
 type SnowflakeConnectionModel struct {
@@ -63,11 +64,21 @@ type BigQueryConnectionModel struct {
 	DatasetId types.String `tfsdk:"dataset_id"`
 }
 
+type IcebergConnectionModel struct {
+	GlueS3 *IcebergGlueS3Model `tfsdk:"glue_s3"`
+}
+
+type IcebergGlueS3Model struct {
+	S3Bucket         types.String `tfsdk:"s3_bucket"`
+	GlueDatabaseName types.String `tfsdk:"glue_database_name"`
+}
+
 func (r *OfflineStoreConnectionResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		resourcevalidator.ExactlyOneOf(
 			path.MatchRoot("snowflake"),
 			path.MatchRoot("bigquery"),
+			path.MatchRoot("iceberg"),
 		),
 	}
 }
@@ -78,7 +89,7 @@ func (r *OfflineStoreConnectionResource) Metadata(ctx context.Context, req resou
 
 func (r *OfflineStoreConnectionResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a Chalk offline store connection (Snowflake or BigQuery).",
+		MarkdownDescription: "Manages a Chalk offline store connection (Snowflake, BigQuery, or Iceberg).",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique identifier of the offline store connection.",
@@ -167,6 +178,26 @@ func (r *OfflineStoreConnectionResource) Schema(ctx context.Context, req resourc
 					"dataset_id": schema.StringAttribute{
 						MarkdownDescription: "BigQuery dataset ID.",
 						Required:            true,
+					},
+				},
+			},
+			"iceberg": schema.SingleNestedAttribute{
+				MarkdownDescription: "Iceberg offline store connection configuration using AWS Glue catalog and S3 storage.",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"glue_s3": schema.SingleNestedAttribute{
+						MarkdownDescription: "Iceberg configuration with AWS Glue catalog and S3 storage.",
+						Required:            true,
+						Attributes: map[string]schema.Attribute{
+							"s3_bucket": schema.StringAttribute{
+								MarkdownDescription: "Name of the S3 bucket where Iceberg data files will be stored.",
+								Required:            true,
+							},
+							"glue_database_name": schema.StringAttribute{
+								MarkdownDescription: "Name of the AWS Glue database to use as the Iceberg catalog.",
+								Required:            true,
+							},
+						},
 					},
 				},
 			},
@@ -290,6 +321,7 @@ func (r *OfflineStoreConnectionResource) Read(ctx context.Context, req resource.
 					},
 				}
 				data.BigQuery = nil
+				data.Iceberg = nil
 			}
 		case *serverv1.OfflineStoreConnectionConfigStored_Bigquery:
 			if cfg.Bigquery != nil {
@@ -298,6 +330,18 @@ func (r *OfflineStoreConnectionResource) Read(ctx context.Context, req resource.
 					DatasetId: types.StringValue(cfg.Bigquery.DatasetId),
 				}
 				data.Snowflake = nil
+				data.Iceberg = nil
+			}
+		case *serverv1.OfflineStoreConnectionConfigStored_Iceberg:
+			if cfg.Iceberg != nil && cfg.Iceberg.GetGlueS3() != nil {
+				data.Iceberg = &IcebergConnectionModel{
+					GlueS3: &IcebergGlueS3Model{
+						S3Bucket:         types.StringValue(cfg.Iceberg.GetGlueS3().S3Bucket),
+						GlueDatabaseName: types.StringValue(cfg.Iceberg.GetGlueS3().GlueDatabaseName),
+					},
+				}
+				data.Snowflake = nil
+				data.BigQuery = nil
 			}
 		}
 	}
@@ -383,16 +427,12 @@ func (r *OfflineStoreConnectionResource) ModifyPlan(ctx context.Context, req res
 		return
 	}
 
-	// If the connection type changes (e.g. BigQuery → Snowflake), require replacement.
+	// If the connection type changes, require replacement.
 	// The backend does not support in-place type changes.
-	stateHasSnowflake := state.Snowflake != nil
-	planHasSnowflake := plan.Snowflake != nil
-	if stateHasSnowflake != planHasSnowflake {
-		if planHasSnowflake {
-			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("snowflake"))
-		} else {
-			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("bigquery"))
-		}
+	stateType := connTypeRoot(&state)
+	planType := connTypeRoot(&plan)
+	if stateType != planType && planType != "" {
+		resp.RequiresReplace = append(resp.RequiresReplace, path.Root(planType))
 	}
 }
 
@@ -407,6 +447,20 @@ func (r *OfflineStoreConnectionResource) ImportState(ctx context.Context, req re
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("environment_id"), parts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), parts[1])...)
+}
+
+// connTypeRoot returns the root attribute name of the active connection type in the model.
+func connTypeRoot(m *OfflineStoreConnectionResourceModel) string {
+	switch {
+	case m.Snowflake != nil:
+		return "snowflake"
+	case m.BigQuery != nil:
+		return "bigquery"
+	case m.Iceberg != nil:
+		return "iceberg"
+	default:
+		return ""
+	}
 }
 
 func derefString(s *string) string {
@@ -457,7 +511,22 @@ func modelToConfigInput(data *OfflineStoreConnectionResourceModel) (*serverv1.Of
 		}, nil
 	}
 
-	// data.BigQuery != nil is guaranteed by ConfigValidators (ExactlyOneOf)
+	if data.Iceberg != nil && data.Iceberg.GlueS3 != nil {
+		return &serverv1.OfflineStoreConnectionConfigInput{
+			Config: &serverv1.OfflineStoreConnectionConfigInput_Iceberg{
+				Iceberg: &serverv1.IcebergOfflineStoreConnectionConfig{
+					Catalog: &serverv1.IcebergOfflineStoreConnectionConfig_GlueS3{
+						GlueS3: &serverv1.IcebergGlueS3CatalogConfig{
+							S3Bucket:         data.Iceberg.GlueS3.S3Bucket.ValueString(),
+							GlueDatabaseName: data.Iceberg.GlueS3.GlueDatabaseName.ValueString(),
+						},
+					},
+				},
+			},
+		}, nil
+	}
+
+	// data.BigQuery != nil is guaranteed by ConfigValidators (ExactlyOneOf snowflake/bigquery/iceberg)
 	return &serverv1.OfflineStoreConnectionConfigInput{
 		Config: &serverv1.OfflineStoreConnectionConfigInput_Bigquery{
 			Bigquery: &serverv1.BigQueryOfflineStoreConnectionConfig{
