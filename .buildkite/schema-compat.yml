@@ -35,6 +35,9 @@ steps:
       fi
       export PATH="$$TERRAFORM_DIR:$$PATH"
 
+      # Unshallow so that git describe can walk history to find the nearest tag
+      git fetch --unshallow 2>/dev/null || true
+
       # Determine the base ref to compare against.
       # On any branch other than main, compare against main.
       # On main itself, compare against the last release tag.
