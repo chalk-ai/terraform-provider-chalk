@@ -17,6 +17,19 @@ func validDeploymentBuildProfiles() []string {
 	return names
 }
 
+// stringSliceToListValue converts a []string to a types.List of strings.
+// Returns types.ListNull when the slice is empty.
+func stringSliceToListValue(items []string) types.List {
+	if len(items) == 0 {
+		return types.ListNull(types.StringType)
+	}
+	elems := make([]attr.Value, len(items))
+	for i, item := range items {
+		elems[i] = types.StringValue(item)
+	}
+	return types.ListValueMust(types.StringType, elems)
+}
+
 // optionalStringValue converts an empty string to a null types.String, and a non-empty
 // string to a types.StringValue. This prevents spurious drift when the server returns
 // empty strings for fields the user did not configure.

@@ -111,6 +111,8 @@ func mockClusterTimescaleSpecs(overrides map[string]any) *serverv1.ClusterTimesc
 		case "gateway_id":
 			id := v.(string)
 			specs.GatewayId = &id
+		case "ip_allowlist":
+			specs.IpAllowlist = v.([]string)
 		}
 	}
 
@@ -440,6 +442,83 @@ resource "chalk_cluster_timescale" "test" {
 						assert.Contains(t, req.UpdateMask.Paths, "request")
 						assert.Equal(t, "1000m", req.Specs.Request.Cpu)
 						assert.Equal(t, "2Gi", req.Specs.Request.Memory)
+
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// TestClusterTimescaleResourceIpAllowlist verifies ip_allowlist is set and updated correctly.
+func TestClusterTimescaleResourceIpAllowlist(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerTimescale(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_cluster_timescale" "test" {
+  environment_id = "test-env-id"
+  ip_allowlist   = ["10.0.0.0/8", "192.168.1.1/32"]
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_cluster_timescale.test", "ip_allowlist.#", "2"),
+					resource.TestCheckResourceAttr("chalk_cluster_timescale.test", "ip_allowlist.0", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr("chalk_cluster_timescale.test", "ip_allowlist.1", "192.168.1.1/32"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateClusterTimescaleDB")
+						require.Len(t, captured, 1, "Expected exactly one CreateClusterTimescaleDB call")
+
+						req := captured[0].(*serverv1.CreateClusterTimescaleDBRequest)
+						assert.Equal(t, []string{"10.0.0.0/8", "192.168.1.1/32"}, req.Specs.IpAllowlist)
+
+						return nil
+					},
+				),
+			},
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_cluster_timescale" "test" {
+  environment_id = "test-env-id"
+  ip_allowlist   = ["10.0.0.0/8"]
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_cluster_timescale.test", "ip_allowlist.#", "1"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateClusterTimescaleDB")
+						require.NotEmpty(t, captured, "Expected at least one UpdateClusterTimescaleDB call")
+
+						req := captured[len(captured)-1].(*serverv1.UpdateClusterTimescaleDBRequest)
+						assert.NotNil(t, req.UpdateMask)
+						assert.Contains(t, req.UpdateMask.Paths, "ip_allowlist")
+						assert.Equal(t, []string{"10.0.0.0/8"}, req.Specs.IpAllowlist)
+
+						return nil
+					},
+				),
+			},
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_cluster_timescale" "test" {
+  environment_id = "test-env-id"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_cluster_timescale.test", "ip_allowlist"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateClusterTimescaleDB")
+						require.NotEmpty(t, captured, "Expected at least one UpdateClusterTimescaleDB call")
+
+						req := captured[len(captured)-1].(*serverv1.UpdateClusterTimescaleDBRequest)
+						assert.NotNil(t, req.UpdateMask)
+						assert.Contains(t, req.UpdateMask.Paths, "ip_allowlist")
+						assert.Empty(t, req.Specs.IpAllowlist)
 
 						return nil
 					},
