@@ -79,6 +79,7 @@ type ClusterTimescaleResourceModel struct {
 	Internal                     types.Bool   `tfsdk:"internal"`
 	ServiceType                  types.String `tfsdk:"service_type"`
 	PostgresParameters           types.Map    `tfsdk:"postgres_parameters"`
+	IpAllowlist                  types.List   `tfsdk:"ip_allowlist"`
 }
 
 func (r *ClusterTimescaleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -296,6 +297,11 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 				MarkdownDescription: "Gateway ID for the TimescaleDB",
 				Optional:            true,
 			},
+			"ip_allowlist": schema.ListAttribute{
+				MarkdownDescription: "List of CIDR blocks allowed to connect (e.g. `10.0.0.1/32`, `10.0.0.0/8`)",
+				Optional:            true,
+				ElementType:         types.StringType,
+			},
 		},
 	}
 }
@@ -438,6 +444,18 @@ func buildClusterTimescaleSpecs(ctx context.Context, data *ClusterTimescaleResou
 		}
 	}
 
+	if !data.IpAllowlist.IsNull() && !data.IpAllowlist.IsUnknown() {
+		var allowlist []string
+		d := data.IpAllowlist.ElementsAs(ctx, &allowlist, false)
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil, fmt.Errorf("failed to convert ip allowlist")
+		}
+		if len(allowlist) > 0 {
+			specs.IpAllowlist = allowlist
+		}
+	}
+
 	return specs, nil
 }
 
@@ -523,6 +541,8 @@ func updateStateFromSpecs(data *ClusterTimescaleResourceModel, specs *serverv1.C
 		data.NodeSelector = types.MapNull(types.StringType)
 	}
 
+	data.IpAllowlist = stringSliceToListValue(specs.IpAllowlist)
+
 	return nil
 }
 
@@ -581,6 +601,10 @@ func buildTimescaleUpdateMask(data, state *ClusterTimescaleResourceModel) []stri
 	// Skip if unknown (Terraform hasn't determined the value yet)
 	if !data.PostgresParameters.IsUnknown() && !data.PostgresParameters.Equal(state.PostgresParameters) {
 		updateMaskPaths = append(updateMaskPaths, "postgres_parameters")
+	}
+
+	if !data.IpAllowlist.IsUnknown() && !data.IpAllowlist.Equal(state.IpAllowlist) {
+		updateMaskPaths = append(updateMaskPaths, "ip_allowlist")
 	}
 
 	return updateMaskPaths
