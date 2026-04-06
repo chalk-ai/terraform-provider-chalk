@@ -68,6 +68,7 @@ type ClusterGatewayResourceModel struct {
 	ServiceAnnotations types.Map                  `tfsdk:"service_annotations"`
 	Listeners          types.List                 `tfsdk:"listeners"`
 	Routing            types.String               `tfsdk:"routing"`
+	LoadBalancerClass  types.String               `tfsdk:"load_balancer_class"`
 
 	// Required field
 	KubeClusterId types.String `tfsdk:"kube_cluster_id"`
@@ -230,6 +231,10 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"load_balancer_class": schema.StringAttribute{
+				MarkdownDescription: "Load balancer class for the gateway service (e.g., 'service.k8s.aws/nlb')",
+				Optional:            true,
+			},
 		},
 	}
 }
@@ -384,6 +389,13 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 	} else {
 		data.Routing = types.StringNull()
 	}
+
+	// Update load balancer class
+	if specs.LoadBalancerClass != nil {
+		data.LoadBalancerClass = types.StringValue(*specs.LoadBalancerClass)
+	} else {
+		data.LoadBalancerClass = types.StringNull()
+	}
 }
 
 func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -503,6 +515,9 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 
 	// Set routing
 	createReq.Specs.Routing = data.Routing.ValueStringPointer()
+
+	// Set load balancer class
+	createReq.Specs.LoadBalancerClass = data.LoadBalancerClass.ValueStringPointer()
 
 	if !data.Id.IsNull() {
 		createReq.Id = data.Id.ValueStringPointer()
@@ -691,6 +706,9 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 
 	// Set routing
 	createReq.Specs.Routing = data.Routing.ValueStringPointer()
+
+	// Set load balancer class
+	createReq.Specs.LoadBalancerClass = data.LoadBalancerClass.ValueStringPointer()
 
 	// Use the known ID from the current state for the upsert
 	createReq.Id = data.Id.ValueStringPointer()
