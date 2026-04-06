@@ -32,6 +32,7 @@ Chalk cluster gateway resource
 - `ip_allowlist` (List of String) IP allowlist for the gateway
 - `letsencrypt_cluster_issuer` (String) Let's Encrypt cluster issuer for Envoy gateway
 - `listeners` (Attributes List) Gateway listeners configuration (see [below for nested schema](#nestedatt--listeners))
+- `load_balancer_class` (String) Load balancer class for the gateway service (e.g., 'service.k8s.aws/nlb')
 - `min_available` (Number) Minimum available replicas for Envoy gateway
 - `namespace` (String) Kubernetes namespace for the gateway
 - `nodepool` (String) Nodepool for the gateway
