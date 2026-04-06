@@ -4,11 +4,14 @@ page_title: "chalk_environment_offline_store_connection_binding Resource - chalk
 subcategory: ""
 description: |-
   Manages a binding between a Chalk environment and an offline store connection.
+  Required permissions: deploy.create, deploy.read
 ---
 
 # chalk_environment_offline_store_connection_binding (Resource)
 
 Manages a binding between a Chalk environment and an offline store connection.
+
+**Required permissions:** `deploy.create`, `deploy.read`
 
 
 

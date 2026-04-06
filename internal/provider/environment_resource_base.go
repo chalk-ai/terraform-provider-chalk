@@ -105,23 +105,25 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 			ElementType:         types.StringType,
 		},
 		"environment_buckets": schema.SingleNestedAttribute{
-			MarkdownDescription: "Environment object storage configuration",
-			Optional:            true,
+			MarkdownDescription: "Environment object storage configuration; required for 'chalk apply' to work." +
+				" Note that the buckets provided must be created externally first, and should have a CORS policy set" +
+				" that allows GET access from the Chalk frontend.",
+			Optional: true,
 			Attributes: map[string]schema.Attribute{
 				"dataset_bucket": schema.StringAttribute{
-					MarkdownDescription: "Dataset bucket",
+					MarkdownDescription: "Dataset bucket; required for 'chalk apply' to work.",
 					Optional:            true,
 				},
 				"plan_stages_bucket": schema.StringAttribute{
-					MarkdownDescription: "Plan stages bucket",
+					MarkdownDescription: "Plan stages bucket; required for 'chalk apply' to work.",
 					Optional:            true,
 				},
 				"source_bundle_bucket": schema.StringAttribute{
-					MarkdownDescription: "Source bundle bucket",
+					MarkdownDescription: "Source bundle bucket; required for 'chalk apply' to work.",
 					Optional:            true,
 				},
 				"model_registry_bucket": schema.StringAttribute{
-					MarkdownDescription: "Model registry bucket",
+					MarkdownDescription: "Model registry bucket. This bucket is required if using the model registry.",
 					Optional:            true,
 				},
 			},
@@ -130,6 +132,7 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 			MarkdownDescription: "Specs config JSON (serialized map of spec configuration values)",
 			CustomType:          jsontypes.NormalizedType{},
 			Optional:            true,
+			Computed:            true,
 		},
 		"private_pip_repositories": schema.StringAttribute{
 			MarkdownDescription: "Private pip repositories",

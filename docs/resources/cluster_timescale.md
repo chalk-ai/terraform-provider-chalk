@@ -4,11 +4,14 @@ page_title: "chalk_cluster_timescale Resource - chalk"
 subcategory: ""
 description: |-
   Chalk cluster TimescaleDB resource
+  Required permissions: team.admin, deploy.read
 ---
 
 # chalk_cluster_timescale (Resource)
 
 Chalk cluster TimescaleDB resource
+
+**Required permissions:** `team.admin`, `deploy.read`
 
 
 
@@ -35,6 +38,7 @@ Chalk cluster TimescaleDB resource
 - `gateway_port` (Number) Gateway port for the TimescaleDB
 - `instance_type` (String) Instance type
 - `internal` (Boolean) Whether the database is internal
+- `ip_allowlist` (List of String) List of CIDR blocks allowed to connect (e.g. `10.0.0.1/32`, `10.0.0.0/8`)
 - `namespace` (String) Kubernetes namespace
 - `node_selector` (Map of String) Node selector labels
 - `nodepool` (String) Nodepool name

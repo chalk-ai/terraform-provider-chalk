@@ -4,11 +4,14 @@ page_title: "chalk_managed_environment Resource - chalk"
 subcategory: ""
 description: |-
   Chalk managed environment resource
+  Required permissions: environment.create (team-scoped)
 ---
 
 # chalk_managed_environment (Resource)
 
 Chalk managed environment resource
+
+**Required permissions:** `environment.create` *(team-scoped)*
 
 
 
@@ -27,7 +30,7 @@ Chalk managed environment resource
 - `customer_metadata` (String) Customer metadata as a JSON object
 - `default_build_profile` (String) Default deployment build profile
 - `engine_docker_registry_path` (String) Engine Docker registry path (immutable)
-- `environment_buckets` (Attributes) Environment object storage configuration (see [below for nested schema](#nestedatt--environment_buckets))
+- `environment_buckets` (Attributes) Environment object storage configuration; required for 'chalk apply' to work. Note that the buckets provided must be created externally first, and should have a CORS policy set that allows GET access from the Chalk frontend. (see [below for nested schema](#nestedatt--environment_buckets))
 - `id` (String) Environment identifier; server-generated (immutable)
 - `kube_job_namespace` (String) Kubernetes job namespace (immutable; auto-assigned by server if not provided)
 - `online_store_kind` (String) Online store kind
@@ -42,7 +45,7 @@ Chalk managed environment resource
 
 Optional:
 
-- `dataset_bucket` (String) Dataset bucket
-- `model_registry_bucket` (String) Model registry bucket
-- `plan_stages_bucket` (String) Plan stages bucket
-- `source_bundle_bucket` (String) Source bundle bucket
+- `dataset_bucket` (String) Dataset bucket; required for 'chalk apply' to work.
+- `model_registry_bucket` (String) Model registry bucket. This bucket is required if using the model registry.
+- `plan_stages_bucket` (String) Plan stages bucket; required for 'chalk apply' to work.
+- `source_bundle_bucket` (String) Source bundle bucket; required for 'chalk apply' to work.

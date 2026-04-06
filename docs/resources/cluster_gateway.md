@@ -4,11 +4,14 @@ page_title: "chalk_cluster_gateway Resource - chalk"
 subcategory: ""
 description: |-
   Chalk cluster gateway resource
+  Required permissions: team.admin, deploy.read
 ---
 
 # chalk_cluster_gateway (Resource)
 
 Chalk cluster gateway resource
+
+**Required permissions:** `team.admin`, `deploy.read`
 
 
 

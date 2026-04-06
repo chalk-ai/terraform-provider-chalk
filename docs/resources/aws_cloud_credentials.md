@@ -4,11 +4,14 @@ page_title: "chalk_aws_cloud_credentials Resource - chalk"
 subcategory: ""
 description: |-
   Chalk AWS cloud credentials resource for configuring AWS authentication
+  Required permissions: project.create
 ---
 
 # chalk_aws_cloud_credentials (Resource)
 
 Chalk AWS cloud credentials resource for configuring AWS authentication
+
+**Required permissions:** `project.create`
 
 
 
@@ -18,7 +21,7 @@ Chalk AWS cloud credentials resource for configuring AWS authentication
 ### Required
 
 - `aws_account_id` (String) AWS account ID
-- `aws_management_role_arn` (String) AWS management role ARN
+- `aws_management_role_arn` (String) AWS management role ARN; the name of an IAM role that has permissions to access the cluster in which Chalk environments will run. Refer to https://docs.chalk.ai/docs/aws-cloud-deployment#iam-role-permissions for the permissions necessary. Note that for self-hosted deployments the trust relationship must point to *your* api server role.
 - `aws_region` (String) AWS region
 - `name` (String) Cloud credentials name
 
@@ -38,7 +41,7 @@ Chalk AWS cloud credentials resource for configuring AWS authentication
 Optional:
 
 - `builder` (String) Docker builder configuration
-- `notification_topic` (String) Docker build notification topic
+- `notification_topic` (String) Topic to receive build notifications. Accepts an AWS SQS ARN (`arn:aws:sqs:<region>:<account-id>:<queue-name>`) or a GCP Pub/Sub topic path (`projects/<project>/topics/<topic>`).
 - `push_registry_tag_prefix` (String) Docker push registry tag prefix
 - `push_registry_type` (String) Docker push registry type
 - `registry_credentials_secret_id` (String, Sensitive) Docker registry credentials secret ID

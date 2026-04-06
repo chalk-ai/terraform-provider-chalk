@@ -1,0 +1,102 @@
+on:
+  pull_request: {}
+  push: {}
+
+steps:
+  - label: ":terraform: Schema Compatibility Check"
+    command: |
+      set -euo pipefail
+
+      # Configure Go cache on persistent volume
+      export GOMODCACHE=/go-cache/mod
+      export GOCACHE=/go-cache/build
+      sudo mkdir -p "$$GOMODCACHE" "$$GOCACHE"
+      sudo chown -R "$$(id -u):$$(id -g)" /go-cache
+
+      # Install Go 1.26 if needed
+      GO_VERSION=1.26.0
+      GO_INSTALL_DIR=/go-cache/go-$${GO_VERSION}
+      if [ ! -x "$$GO_INSTALL_DIR/bin/go" ]; then
+        echo "--- :golang: Installing Go $${GO_VERSION}"
+        curl -fsSL "https://go.dev/dl/go$${GO_VERSION}.linux-amd64.tar.gz" | tar -C /go-cache -xzf -
+        mv /go-cache/go "$$GO_INSTALL_DIR"
+      fi
+      export PATH="$$GO_INSTALL_DIR/bin:$$PATH"
+
+      # Install Terraform if needed
+      TERRAFORM_VERSION=1.14.7
+      TERRAFORM_DIR=/go-cache/terraform-$${TERRAFORM_VERSION}
+      if [ ! -x "$$TERRAFORM_DIR/terraform" ]; then
+        echo "--- :terraform: Installing Terraform $${TERRAFORM_VERSION}"
+        mkdir -p "$$TERRAFORM_DIR"
+        curl -fsSL "https://releases.hashicorp.com/terraform/$${TERRAFORM_VERSION}/terraform_$${TERRAFORM_VERSION}_linux_amd64.zip" -o /tmp/terraform.zip
+        unzip -o /tmp/terraform.zip -d "$$TERRAFORM_DIR"
+        rm /tmp/terraform.zip
+      fi
+      export PATH="$$TERRAFORM_DIR:$$PATH"
+
+      # Unshallow so that git describe can walk history to find the nearest tag
+      git fetch --unshallow 2>/dev/null || true
+
+      # Determine the base ref to compare against.
+      # On any branch other than main, compare against main.
+      # On main itself, compare against the last release tag.
+      if [ "$${BUILDKITE_BRANCH}" != "main" ]; then
+        BASE_REF="origin/main"
+        echo "--- :git: Comparing branch $${BUILDKITE_BRANCH} against $${BASE_REF}"
+      else
+        BASE_REF=$$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -z "$$BASE_REF" ]; then
+          echo "No previous release tag found — skipping compatibility check."
+          exit 0
+        fi
+        echo "--- :git: Comparing main against last tag $${BASE_REF}"
+      fi
+
+      BUILD_DIR="/tmp/schema-compat-$${BUILDKITE_BUILD_ID}"
+      mkdir -p "$$BUILD_DIR"
+      trap 'rm -rf "$$BUILD_DIR"' EXIT
+
+      echo "--- :golang: Building current branch"
+      go build -o "$$BUILD_DIR/provider-new" .
+
+      echo "--- :golang: Building base ($${BASE_REF})"
+      git fetch origin
+      git fetch --tags
+      git worktree add "$$BUILD_DIR/base-src" "$$BASE_REF"
+      (cd "$$BUILD_DIR/base-src" && go build -o "$$BUILD_DIR/provider-base" .)
+      git worktree remove --force "$$BUILD_DIR/base-src"
+
+      # generate_schema <binary> <output-json>
+      # Installs the binary as a local provider and runs `terraform providers schema -json`.
+      generate_schema() {
+        local binary="$$1"
+        local output="$$2"
+        local workdir plugin_dir
+        workdir=$$(mktemp -d "$$BUILD_DIR/tf-XXXXXX")
+        plugin_dir="$$workdir/plugins/registry.terraform.io/chalk-ai/chalk/99.0.0/linux_amd64"
+        mkdir -p "$$plugin_dir"
+        cp "$$binary" "$$plugin_dir/terraform-provider-chalk"
+        chmod +x "$$plugin_dir/terraform-provider-chalk"
+
+        printf 'terraform {\n  required_providers {\n    chalk = {\n      source  = "registry.terraform.io/chalk-ai/chalk"\n      version = "99.0.0"\n    }\n  }\n}\n' > "$$workdir/main.tf"
+
+        terraform -chdir="$$workdir" init -backend=false -plugin-dir="$$workdir/plugins" > /dev/null
+        terraform -chdir="$$workdir" providers schema -json > "$$output"
+      }
+
+      echo "--- :terraform: Generating schemas"
+      generate_schema "$$BUILD_DIR/provider-base" "$$BUILD_DIR/schema-base.json"
+      generate_schema "$$BUILD_DIR/provider-new" "$$BUILD_DIR/schema-new.json"
+
+      echo "--- :terraform: Checking backward compatibility"
+      go run ./tools/schemacompat "$$BUILD_DIR/schema-base.json" "$$BUILD_DIR/schema-new.json"
+    agents:
+      queue: default
+    timeout_in_minutes: 5
+    retry:
+      automatic:
+        - exit_status: -1
+          limit: 2
+        - exit_status: 255
+          limit: 2

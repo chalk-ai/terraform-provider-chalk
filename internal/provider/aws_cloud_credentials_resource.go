@@ -72,8 +72,10 @@ func (r *AWSCloudCredentialsResource) Schema(ctx context.Context, req resource.S
 				Required:            true,
 			},
 			"aws_management_role_arn": schema.StringAttribute{
-				MarkdownDescription: "AWS management role ARN",
-				Required:            true,
+				MarkdownDescription: "AWS management role ARN; the name of an IAM role that has permissions to access" +
+					" the cluster in which Chalk environments will run. Refer to https://docs.chalk.ai/docs/aws-cloud-deployment#iam-role-permissions" +
+					" for the permissions necessary. Note that for self-hosted deployments the trust relationship must point to *your* api server role.",
+				Required: true,
 			},
 			"aws_region": schema.StringAttribute{
 				MarkdownDescription: "AWS region",
@@ -109,7 +111,7 @@ func (r *AWSCloudCredentialsResource) Schema(ctx context.Context, req resource.S
 							Sensitive:           true,
 						},
 						"notification_topic": schema.StringAttribute{
-							MarkdownDescription: "Docker build notification topic",
+							MarkdownDescription: "Topic to receive build notifications. Accepts an AWS SQS ARN (`arn:aws:sqs:<region>:<account-id>:<queue-name>`) or a GCP Pub/Sub topic path (`projects/<project>/topics/<topic>`).",
 							Optional:            true,
 						},
 					},

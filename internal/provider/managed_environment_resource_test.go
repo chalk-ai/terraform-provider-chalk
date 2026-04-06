@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // setupMockServerManagedEnvironment creates a mock server that tracks environment
@@ -445,6 +446,72 @@ resource "chalk_managed_environment" "test" {
 				Check:  resource.TestCheckResourceAttr("chalk_managed_environment.test", "kube_job_namespace", "server-assigned-namespace"),
 			},
 			// Step 2: re-plan should show no changes.
+			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+// TestManagedEnvironmentSpecsConfigDefault verifies that when specs_config_json is omitted
+// from the config, the server-assigned default is stored in state and causes no drift on
+// subsequent plans.
+func TestManagedEnvironmentSpecsConfigDefault(t *testing.T) {
+	t.Parallel()
+	server := testserver.NewMockBuilderServer(t)
+	t.Cleanup(func() { server.Close() })
+
+	const envID = "test-managed-env-id"
+	kubeClusterID := "test-cluster-id"
+	kubeJobNS := "server-assigned-namespace"
+
+	// Simulate the default specs config the server applies when none is provided.
+	defaultSpecsConfig, err := structpb.NewStruct(map[string]any{
+		"services": map[string]any{
+			"branch": map[string]any{
+				"request":       map[string]any{"cpu": "2", "memory": "6Gi"},
+				"env_overrides": map[string]any{"AUTO_SHUTDOWN_PERIOD": "3600"},
+			},
+			"engine": map[string]any{
+				"min_instances": 1, "max_instances": 1,
+				"request": map[string]any{"cpu": "2", "memory": "2Gi"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	env := &serverv1.Environment{
+		Id:               envID,
+		Name:             "test-managed-env",
+		ProjectId:        "test-project",
+		KubeClusterId:    &kubeClusterID,
+		KubeJobNamespace: &kubeJobNS,
+		SpecConfigJson:   defaultSpecsConfig.Fields,
+	}
+
+	server.OnCreateEnvironmentV2().Return(&serverv1.CreateEnvironmentV2Response{Environment: env})
+	server.OnGetEnv().Return(&serverv1.GetEnvResponse{Environment: env})
+	server.OnDeleteEnvironment().Return(&serverv1.DeleteEnvironmentResponse{})
+
+	config := providerConfig(server.URL) + `
+resource "chalk_managed_environment" "test" {
+  name            = "test-managed-env"
+  project_id      = "test-project"
+  kube_cluster_id = "test-cluster-id"
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// Step 1: apply succeeds; specs_config_json is populated from the server default.
+			{
+				Config: config,
+				Check:  resource.TestCheckResourceAttrSet("chalk_managed_environment.test", "specs_config_json"),
+			},
+			// Step 2: re-plan must show no diff — the computed value must not be treated as drift.
 			{
 				Config:             config,
 				PlanOnly:           true,

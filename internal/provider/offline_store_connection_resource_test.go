@@ -32,6 +32,26 @@ func bigqueryConnection(name string) *serverv1.OfflineStoreConnection {
 	}
 }
 
+func icebergConnection(name string) *serverv1.OfflineStoreConnection {
+	return &serverv1.OfflineStoreConnection{
+		Id:            "test-iceberg-id",
+		EnvironmentId: "test-environment-id",
+		Name:          name,
+		Config: &serverv1.OfflineStoreConnectionConfigStored{
+			Config: &serverv1.OfflineStoreConnectionConfigStored_Iceberg{
+				Iceberg: &serverv1.IcebergOfflineStoreConnectionConfig{
+					Catalog: &serverv1.IcebergOfflineStoreConnectionConfig_GlueS3{
+						GlueS3: &serverv1.IcebergGlueS3CatalogConfig{
+							S3Bucket:         "my-iceberg-bucket",
+							GlueDatabaseName: "my_offline_store",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func setupMockServerOfflineStoreConnection(t *testing.T) *testserver.MockServer {
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
@@ -449,4 +469,46 @@ resource "chalk_offline_store_connection" "test" {
 			})
 		})
 	}
+}
+
+// TestOfflineStoreConnectionCreateIceberg verifies the basic create/read/delete lifecycle with Iceberg (Glue + S3).
+func TestOfflineStoreConnectionCreateIceberg(t *testing.T) {
+	t.Parallel()
+	server := testserver.NewMockBuilderServer(t)
+	t.Cleanup(func() { server.Close() })
+
+	server.OnCreateOfflineStoreConnection().Return(&serverv1.CreateOfflineStoreConnectionResponse{
+		Connection: icebergConnection("test-iceberg"),
+	})
+	server.OnGetOfflineStoreConnection().Return(&serverv1.GetOfflineStoreConnectionResponse{
+		Connection: icebergConnection("test-iceberg"),
+	})
+	server.OnDeleteOfflineStoreConnection().Return(&serverv1.DeleteOfflineStoreConnectionResponse{})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_offline_store_connection" "test" {
+  environment_id = "test-environment-id"
+  name           = "test-iceberg"
+  iceberg = {
+    glue_s3 = {
+      s3_bucket          = "my-iceberg-bucket"
+      glue_database_name = "my_offline_store"
+    }
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_offline_store_connection.test", "id", "test-iceberg-id"),
+					resource.TestCheckResourceAttr("chalk_offline_store_connection.test", "environment_id", "test-environment-id"),
+					resource.TestCheckResourceAttr("chalk_offline_store_connection.test", "name", "test-iceberg"),
+					resource.TestCheckResourceAttr("chalk_offline_store_connection.test", "iceberg.glue_s3.s3_bucket", "my-iceberg-bucket"),
+					resource.TestCheckResourceAttr("chalk_offline_store_connection.test", "iceberg.glue_s3.glue_database_name", "my_offline_store"),
+				),
+			},
+		},
+	})
 }
