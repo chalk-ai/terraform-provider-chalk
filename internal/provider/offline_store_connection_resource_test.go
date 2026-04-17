@@ -360,6 +360,81 @@ resource "chalk_offline_store_connection" "test" {
 	})
 }
 
+// TestOfflineStoreConnectionSnowflakeStorageIntegration verifies that storage_integration_name is
+// sent in the create request and read back correctly from the server response.
+func TestOfflineStoreConnectionSnowflakeStorageIntegration(t *testing.T) {
+	t.Parallel()
+	server := testserver.NewMockBuilderServer(t)
+	t.Cleanup(func() { server.Close() })
+
+	warehouse, database, schemaStr, role := "my-warehouse", "my-database", "my-schema", "my-role"
+	storedConn := &serverv1.OfflineStoreConnection{
+		Id:            "test-snowflake-id",
+		EnvironmentId: "test-environment-id",
+		Name:          "test-snowflake",
+		Config: &serverv1.OfflineStoreConnectionConfigStored{
+			Config: &serverv1.OfflineStoreConnectionConfigStored_Snowflake{
+				Snowflake: &serverv1.SnowflakeOfflineStoreConnectionConfigStored{
+					Credentials: &serverv1.SnowflakeCredentialsStored{
+						Account:          "my-account",
+						Username:         "my-user",
+						PasswordSecretId: new("secret-id"),
+						Warehouse:        &warehouse,
+						Database:         &database,
+						Schema:           &schemaStr,
+						Role:             &role,
+					},
+					StorageIntegration: &serverv1.SnowflakeStorageIntegration{
+						IntegrationName: "MY_SNOWFLAKE_INTEGRATION",
+					},
+				},
+			},
+		},
+	}
+
+	server.OnCreateOfflineStoreConnection().Return(&serverv1.CreateOfflineStoreConnectionResponse{Connection: storedConn})
+	server.OnGetOfflineStoreConnection().Return(&serverv1.GetOfflineStoreConnectionResponse{Connection: storedConn})
+	server.OnDeleteOfflineStoreConnection().Return(&serverv1.DeleteOfflineStoreConnectionResponse{})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_offline_store_connection" "test" {
+  environment_id = "test-environment-id"
+  name           = "test-snowflake"
+  snowflake = {
+    storage_integration_name = "MY_SNOWFLAKE_INTEGRATION"
+    credentials = {
+      account   = "my-account"
+      username  = "my-user"
+      password  = "super-secret"
+      warehouse = "my-warehouse"
+      database  = "my-database"
+      schema    = "my-schema"
+      role      = "my-role"
+    }
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_offline_store_connection.test", "id", "test-snowflake-id"),
+					resource.TestCheckResourceAttr("chalk_offline_store_connection.test", "snowflake.storage_integration_name", "MY_SNOWFLAKE_INTEGRATION"),
+					func(s *terraform.State) error {
+						reqs := server.GetCapturedRequests("CreateOfflineStoreConnection")
+						require.Len(t, reqs, 1)
+						req := reqs[0].(*serverv1.CreateOfflineStoreConnectionRequest)
+						integrationName := req.Connection.Config.GetSnowflake().GetStorageIntegration().GetIntegrationName()
+						assert.Equal(t, "MY_SNOWFLAKE_INTEGRATION", integrationName)
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
 // snowflakeConn builds a stored Snowflake connection for test use.
 // secretField is either "password_secret_id" or "private_key_secret_id".
 func snowflakeStoredConn(secretField string) *serverv1.OfflineStoreConnection {
