@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"connectrpc.com/connect"
+	"github.com/chalk-ai/chalk-go/gen/chalk/scalinggroup/v1/scalinggroupv1connect"
 	serverv1connect "github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
 )
 
@@ -152,6 +153,19 @@ func (cm *Manager) NewIntegrationsClient(ctx context.Context, envId string) serv
 		HTTPClient:   cm.httpClient,
 		Host:         cm.config.ApiServer,
 		Interceptors: interceptors,
+	})
+}
+
+// NewScalingGroupManagerClient creates a ScalingGroupManagerServiceClient with standard headers and auth.
+func (cm *Manager) NewScalingGroupManagerClient(ctx context.Context, envId string) scalinggroupv1connect.ScalingGroupManagerServiceClient {
+	return NewScalingGroupManagerClient(ctx, &GrpcClientOptions{
+		HTTPClient: cm.httpClient,
+		Host:       cm.config.ApiServer,
+		Interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-env-id", envId),
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			cm.makeAuthInterceptor(ctx),
+		},
 	})
 }
 

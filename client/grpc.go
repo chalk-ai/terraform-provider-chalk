@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/chalk-ai/chalk-go/gen/chalk/scalinggroup/v1/scalinggroupv1connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
 )
@@ -99,5 +100,11 @@ func NewEnvironmentServiceClient(ctx context.Context, options *GrpcClientOptions
 // NewOfflineStoreConnectionClient creates a new OfflineStoreConnectionServiceClient
 func NewOfflineStoreConnectionClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.OfflineStoreConnectionServiceClient {
 	return serverv1connect.NewOfflineStoreConnectionServiceClient(
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
+}
+
+// NewScalingGroupManagerClient creates a new ScalingGroupManagerServiceClient
+func NewScalingGroupManagerClient(ctx context.Context, options *GrpcClientOptions) scalinggroupv1connect.ScalingGroupManagerServiceClient {
+	return scalinggroupv1connect.NewScalingGroupManagerServiceClient(
 		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
