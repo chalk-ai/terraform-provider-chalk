@@ -45,7 +45,8 @@ type OfflineStoreConnectionResourceModel struct {
 }
 
 type SnowflakeConnectionModel struct {
-	Credentials SnowflakeCredentialsModel `tfsdk:"credentials"`
+	Credentials            SnowflakeCredentialsModel `tfsdk:"credentials"`
+	StorageIntegrationName types.String              `tfsdk:"storage_integration_name"`
 }
 
 type SnowflakeCredentialsModel struct {
@@ -113,6 +114,10 @@ func (r *OfflineStoreConnectionResource) Schema(ctx context.Context, req resourc
 				MarkdownDescription: "Snowflake offline store connection configuration.",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
+					"storage_integration_name": schema.StringAttribute{
+						MarkdownDescription: "Name of the Snowflake storage integration to use for bulk data operations (e.g. `MY_SNOWFLAKE_INTEGRATION`). Optional but recommended for large datasets.",
+						Optional:            true,
+					},
 					"credentials": schema.SingleNestedAttribute{
 						MarkdownDescription: "Snowflake credentials.",
 						Required:            true,
@@ -319,6 +324,7 @@ func (r *OfflineStoreConnectionResource) Read(ctx context.Context, req resource.
 						Password:   existing.Password,
 						PrivateKey: existing.PrivateKey,
 					},
+					StorageIntegrationName: optionalStringValue(cfg.Snowflake.GetStorageIntegration().GetIntegrationName()),
 				}
 				data.BigQuery = nil
 				data.Iceberg = nil
@@ -501,12 +507,13 @@ func modelToConfigInput(data *OfflineStoreConnectionResourceModel) (*serverv1.Of
 			v := data.Snowflake.Credentials.Role.ValueString()
 			creds.Role = &v
 		}
-		// TODO: expose storage_integration (SnowflakeStorageIntegration) as a schema attribute
+		sfInput := &serverv1.SnowflakeOfflineStoreConnectionConfigInput{Credentials: creds}
+		if v := data.Snowflake.StorageIntegrationName.ValueString(); v != "" {
+			sfInput.StorageIntegration = &serverv1.SnowflakeStorageIntegration{IntegrationName: v}
+		}
 		return &serverv1.OfflineStoreConnectionConfigInput{
 			Config: &serverv1.OfflineStoreConnectionConfigInput_Snowflake{
-				Snowflake: &serverv1.SnowflakeOfflineStoreConnectionConfigInput{
-					Credentials: creds,
-				},
+				Snowflake: sfInput,
 			},
 		}, nil
 	}

@@ -66,6 +66,10 @@ Required:
 
 - `credentials` (Attributes) Snowflake credentials. (see [below for nested schema](#nestedatt--snowflake--credentials))
 
+Optional:
+
+- `storage_integration_name` (String) Name of the Snowflake storage integration to use for bulk data operations (e.g. `MY_SNOWFLAKE_INTEGRATION`). Optional but recommended for large datasets.
+
 <a id="nestedatt--snowflake--credentials"></a>
 ### Nested Schema for `snowflake.credentials`
 
