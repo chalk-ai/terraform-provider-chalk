@@ -67,6 +67,7 @@ type BackgroundPersistenceWriterModel struct {
 	StorageCachePrefix                       types.String                         `tfsdk:"storage_cache_prefix"`
 	ResultsWriterSkipProducingFeatureMetrics types.Bool                           `tfsdk:"results_writer_skip_producing_feature_metrics"`
 	QueryTableWriteDropRatio                 types.String                         `tfsdk:"query_table_write_drop_ratio"`
+	AdditionalEnvVars                        types.Map                            `tfsdk:"additional_env_vars"`
 }
 
 type ClusterBackgroundPersistenceResourceModel struct {

@@ -431,6 +431,130 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 	})
 }
 
+func TestUnmanagedClusterBGPWriterAdditionalEnvVars(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerBGP(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_unmanaged_cluster_background_persistence" "test" {
+  kube_cluster_id      = "test-kube-cluster"
+  service_account_name = "test-sa"
+  namespace            = "default"
+  writers = [
+    {
+      bus_subscriber_type = "GO_METRICS_BUS_WRITER"
+      additional_env_vars = {
+        MY_VAR   = "my-value"
+        OTHER_VAR = "other-value"
+      }
+    }
+  ]
+  kafka = {
+    sasl_secret                                = "my-sasl-secret"
+    bootstrap_servers                          = "kafka:9092"
+    dlq_topic                                  = "my-dlq-topic"
+    offline_store_bus_upload_topic_id          = "upload-topic"
+    offline_store_bus_streaming_write_topic_id = "streaming-topic"
+    metrics_bus_topic_id                       = "metrics-topic"
+    result_bus_topic_id                        = "result-topic"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.0.additional_env_vars.MY_VAR", "my-value"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.0.additional_env_vars.OTHER_VAR", "other-value"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateClusterBackgroundPersistence")
+						require.Len(t, captured, 1)
+
+						req := captured[0].(*serverv1.CreateClusterBackgroundPersistenceRequest)
+						require.Len(t, req.Specs.Writers, 1)
+						assert.Equal(t, map[string]string{"MY_VAR": "my-value", "OTHER_VAR": "other-value"}, req.Specs.Writers[0].AdditionalEnvVars)
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+func TestUnmanagedClusterBGPWriterAdditionalEnvVarsClear(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerBGP(t)
+
+	writerWithEnvVars := `
+  writers = [
+    {
+      bus_subscriber_type = "GO_METRICS_BUS_WRITER"
+      additional_env_vars = {
+        MY_VAR = "my-value"
+      }
+    }
+  ]`
+
+	writerWithoutEnvVars := `
+  writers = [
+    {
+      bus_subscriber_type = "GO_METRICS_BUS_WRITER"
+    }
+  ]`
+
+	kafkaBlock := `
+  kafka = {
+    sasl_secret                                = "my-sasl-secret"
+    bootstrap_servers                          = "kafka:9092"
+    dlq_topic                                  = "my-dlq-topic"
+    offline_store_bus_upload_topic_id          = "upload-topic"
+    offline_store_bus_streaming_write_topic_id = "streaming-topic"
+    metrics_bus_topic_id                       = "metrics-topic"
+    result_bus_topic_id                        = "result-topic"
+  }
+}`
+
+	baseConfig := func(writersHCL string) string {
+		return providerConfig(server.URL) + `
+resource "chalk_unmanaged_cluster_background_persistence" "test" {
+  kube_cluster_id      = "test-kube-cluster"
+  service_account_name = "test-sa"
+  namespace            = "default"` + writersHCL + kafkaBlock
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: baseConfig(writerWithEnvVars),
+				Check: resource.TestCheckResourceAttr(
+					"chalk_unmanaged_cluster_background_persistence.test",
+					"writers.0.additional_env_vars.MY_VAR", "my-value",
+				),
+			},
+			{
+				Config: baseConfig(writerWithoutEnvVars),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr(
+						"chalk_unmanaged_cluster_background_persistence.test",
+						"writers.0.additional_env_vars.MY_VAR",
+					),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateClusterBackgroundPersistence")
+						require.Len(t, captured, 2)
+
+						req := captured[1].(*serverv1.CreateClusterBackgroundPersistenceRequest)
+						require.Len(t, req.Specs.Writers, 1)
+						assert.Empty(t, req.Specs.Writers[0].AdditionalEnvVars)
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
 func TestUnmanagedClusterBGPImport(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerBGP(t)
