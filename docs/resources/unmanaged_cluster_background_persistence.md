@@ -50,6 +50,7 @@ Required:
 
 Optional:
 
+- `additional_env_vars` (Map of String) Additional environment variables to set for the writer
 - `default_replica_count` (Number) Default replica count
 - `gke_spot` (Boolean) GKE spot instances
 - `hpa_specs` (Attributes) HPA specifications (see [below for nested schema](#nestedatt--writers--hpa_specs))

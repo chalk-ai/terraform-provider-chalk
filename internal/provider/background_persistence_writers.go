@@ -156,6 +156,11 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 		Computed:            true,
 		Default:             stringdefault.StaticString("0.0"),
 	},
+	"additional_env_vars": schema.MapAttribute{
+		MarkdownDescription: "Additional environment variables to set for the writer",
+		Optional:            true,
+		ElementType:         types.StringType,
+	},
 }
 
 var bgpWritersSchemaAttribute = schema.ListNestedAttribute{
@@ -208,6 +213,7 @@ var bgpWriterObjectType = types.ObjectType{
 		"storage_cache_prefix":                types.StringType,
 		"results_writer_skip_producing_feature_metrics": types.BoolType,
 		"query_table_write_drop_ratio":                  types.StringType,
+		"additional_env_vars":                           types.MapType{ElemType: types.StringType},
 	},
 }
 
@@ -280,6 +286,14 @@ func bgpWritersTFToProto(ctx context.Context, writersList types.List) ([]*server
 			protoWriter.ResultsWriterSkipProducingFeatureMetrics = &val
 		}
 
+		if !writer.AdditionalEnvVars.IsNull() && !writer.AdditionalEnvVars.IsUnknown() {
+			var envVars map[string]string
+			diags.Append(writer.AdditionalEnvVars.ElementsAs(ctx, &envVars, false)...)
+			if !diags.HasError() {
+				protoWriter.AdditionalEnvVars = envVars
+			}
+		}
+
 		if writer.HpaSpecs != nil {
 			protoWriter.HpaSpecs = &serverv1.BackgroundPersistenceWriterHpaSpecs{
 				HpaPubsubSubscriptionId: writer.HpaSpecs.HpaPubsubSubscriptionId.ValueString(),
@@ -331,7 +345,7 @@ func bgpWritersTFToProto(ctx context.Context, writersList types.List) ([]*server
 
 		protoWriters = append(protoWriters, protoWriter)
 	}
-	return protoWriters, nil
+	return protoWriters, diags
 }
 
 // bgpWritersProtoToTF converts a proto writers slice to a TF list.
@@ -340,7 +354,10 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 		return types.ListValueMust(bgpWriterObjectType, []attr.Value{}), nil
 	}
 
-	var tfWriters []BackgroundPersistenceWriterModel
+	var (
+		diags     diag.Diagnostics
+		tfWriters []BackgroundPersistenceWriterModel
+	)
 	for _, protoWriter := range protoWriters {
 		tfWriter := BackgroundPersistenceWriterModel{
 			Name:              types.StringValue(protoWriter.Name),
@@ -428,6 +445,14 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 			tfWriter.ResultsWriterSkipProducingFeatureMetrics = types.BoolNull()
 		}
 
+		if len(protoWriter.AdditionalEnvVars) > 0 {
+			mapVal, mapDiags := types.MapValueFrom(ctx, types.StringType, protoWriter.AdditionalEnvVars)
+			diags.Append(mapDiags...)
+			tfWriter.AdditionalEnvVars = mapVal
+		} else {
+			tfWriter.AdditionalEnvVars = types.MapNull(types.StringType)
+		}
+
 		if protoWriter.HpaSpecs != nil {
 			tfWriter.HpaSpecs = &BackgroundPersistenceWriterHpaModel{
 				HpaPubsubSubscriptionId: types.StringValue(protoWriter.HpaSpecs.HpaPubsubSubscriptionId),
@@ -498,5 +523,10 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 
 		tfWriters = append(tfWriters, tfWriter)
 	}
-	return types.ListValueFrom(ctx, bgpWriterObjectType, tfWriters)
+	if diags.HasError() {
+		return types.ListNull(bgpWriterObjectType), diags
+	}
+	listVal, listDiags := types.ListValueFrom(ctx, bgpWriterObjectType, tfWriters)
+	diags.Append(listDiags...)
+	return listVal, diags
 }
