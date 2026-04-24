@@ -383,11 +383,15 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 		}
 	}
 
-	// Update routing
+	// Update routing. The server omits this field for ~60% of legacy/imported
+	// gateways (per the prod snapshot in /tmp/chalk_public_cluster_gateways.json,
+	// 54/89 return nil). Fall back to the schema default "PUBLIC" so state
+	// agrees with the Default and plan does not repeat-diff on import. See
+	// INF-1288.
 	if specs.Routing != nil {
 		data.Routing = types.StringValue(*specs.Routing)
 	} else {
-		data.Routing = types.StringNull()
+		data.Routing = types.StringValue("PUBLIC")
 	}
 
 	// Update load balancer class
