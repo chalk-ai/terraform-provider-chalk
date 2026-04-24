@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -30,6 +31,7 @@ func decodeSingleWriter(t *testing.T, w *serverv1.BackgroundPersistenceWriterSpe
 // including the formerly-Optional+Computed+Default ones, should decode to
 // null so HCL omission matches state.
 func TestBgpWritersProtoToTF_MinimalServerResponse(t *testing.T) {
+	t.Parallel()
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:                "go-metrics-bus-writer",
 		BusSubscriberType:   "GO_METRICS_BUS_WRITER",
@@ -49,6 +51,7 @@ func TestBgpWritersProtoToTF_MinimalServerResponse(t *testing.T) {
 // populated hpa_specs shape in production (~120/150 populated writers): only
 // hpa_max_replicas is set alongside the required pubsub id.
 func TestBgpWritersProtoToTF_HpaSpecsMaxReplicasOnly(t *testing.T) {
+	t.Parallel()
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:              "online-writer",
 		BusSubscriberType: "ONLINE_WRITER",
@@ -69,6 +72,7 @@ func TestBgpWritersProtoToTF_HpaSpecsMaxReplicasOnly(t *testing.T) {
 // TestBgpWritersProtoToTF_HpaMinReplicasZero ensures a real non-default value of 0
 // (observed in 14 real-world configs) is preserved, not coerced to null.
 func TestBgpWritersProtoToTF_HpaMinReplicasZero(t *testing.T) {
+	t.Parallel()
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:              "rust-offline-writer",
 		BusSubscriberType: "RUST_OFFLINE_WRITER",
@@ -89,6 +93,7 @@ func TestBgpWritersProtoToTF_HpaMinReplicasZero(t *testing.T) {
 // TestBgpWritersProtoToTF_HpaMaxReplicasZero is a symmetry guard for the zero case
 // on max_replicas (observed in 2 real-world configs).
 func TestBgpWritersProtoToTF_HpaMaxReplicasZero(t *testing.T) {
+	t.Parallel()
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:              "offline-writer",
 		BusSubscriberType: "OFFLINE_WRITER",
@@ -108,6 +113,7 @@ func TestBgpWritersProtoToTF_HpaMaxReplicasZero(t *testing.T) {
 // TestBgpWritersProtoToTF_FullyPopulatedHpaSpecs guards the happy path — a writer
 // with all four hpa sub-fields set.
 func TestBgpWritersProtoToTF_FullyPopulatedHpaSpecs(t *testing.T) {
+	t.Parallel()
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:              "online-writer",
 		BusSubscriberType: "ONLINE_WRITER",
@@ -130,14 +136,18 @@ func TestBgpWritersProtoToTF_FullyPopulatedHpaSpecs(t *testing.T) {
 // TestBgpWritersProtoToTF_GkeSpotExplicit covers both truthy and falsy server values
 // (both appear in production).
 func TestBgpWritersProtoToTF_GkeSpotExplicit(t *testing.T) {
+	t.Parallel()
 	for _, v := range []bool{true, false} {
-		w := &serverv1.BackgroundPersistenceWriterSpecs{
-			Name:              "writer",
-			BusSubscriberType: "ONLINE_WRITER",
-			GkeSpot:           new(v),
-		}
-		m := decodeSingleWriter(t, w)
-		assert.Equal(t, types.BoolValue(v), m.GkeSpot, "gke_spot=%v preserved", v)
+		t.Run(fmt.Sprintf("gke_spot=%v", v), func(t *testing.T) {
+			t.Parallel()
+			w := &serverv1.BackgroundPersistenceWriterSpecs{
+				Name:              "writer",
+				BusSubscriberType: "ONLINE_WRITER",
+				GkeSpot:           new(v),
+			}
+			m := decodeSingleWriter(t, w)
+			assert.Equal(t, types.BoolValue(v), m.GkeSpot)
+		})
 	}
 }
 
@@ -145,6 +155,7 @@ func TestBgpWritersProtoToTF_GkeSpotExplicit(t *testing.T) {
 // round-trip untouched — e.g. load_writer_configmap=false and
 // query_table_write_drop_ratio="0.0" appear in 32 real cases each.
 func TestBgpWritersProtoToTF_ExplicitServerValues(t *testing.T) {
+	t.Parallel()
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:                                     "go-metrics-bus-writer",
 		BusSubscriberType:                        "GO_METRICS_BUS_WRITER",
@@ -163,6 +174,7 @@ func TestBgpWritersProtoToTF_ExplicitServerValues(t *testing.T) {
 // semantic equality for a fully-populated writer. Guards the decoder from drifting
 // away from the encoder.
 func TestBgpWritersProtoToTF_ProtoRoundTrip(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	original := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:                                     "online-writer",
