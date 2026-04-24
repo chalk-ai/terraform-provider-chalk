@@ -7,10 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"golang.org/x/exp/maps"
@@ -55,34 +52,24 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 			"hpa_min_replicas": schema.Int64Attribute{
 				MarkdownDescription: "HPA minimum replicas",
 				Optional:            true,
-				Computed:            true,
-				Default:             int64default.StaticInt64(1),
 			},
 			"hpa_max_replicas": schema.Int64Attribute{
 				MarkdownDescription: "HPA maximum replicas",
 				Optional:            true,
-				Computed:            true,
-				Default:             int64default.StaticInt64(10),
 			},
 			"hpa_target_average_value": schema.Int64Attribute{
 				MarkdownDescription: "HPA target average value",
 				Optional:            true,
-				Computed:            true,
-				Default:             int64default.StaticInt64(5),
 			},
 		},
 	},
 	"gke_spot": schema.BoolAttribute{
 		MarkdownDescription: "GKE spot instances",
 		Optional:            true,
-		Computed:            true,
-		Default:             booldefault.StaticBool(false),
 	},
 	"load_writer_configmap": schema.BoolAttribute{
 		MarkdownDescription: "Load writer configmap",
 		Optional:            true,
-		Computed:            true,
-		Default:             booldefault.StaticBool(false),
 	},
 	"version": schema.StringAttribute{
 		MarkdownDescription: "Writer version",
@@ -105,8 +92,6 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 	"default_replica_count": schema.Int64Attribute{
 		MarkdownDescription: "Default replica count",
 		Optional:            true,
-		Computed:            true,
-		Default:             int64default.StaticInt64(1),
 	},
 	"kafka_consumer_group_override": schema.StringAttribute{
 		MarkdownDescription: "Kafka consumer group override",
@@ -147,14 +132,10 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 	"results_writer_skip_producing_feature_metrics": schema.BoolAttribute{
 		MarkdownDescription: "Results writer skip producing feature metrics",
 		Optional:            true,
-		Computed:            true,
-		Default:             booldefault.StaticBool(false),
 	},
 	"query_table_write_drop_ratio": schema.StringAttribute{
 		MarkdownDescription: "Query table write drop ratio",
 		Optional:            true,
-		Computed:            true,
-		Default:             stringdefault.StaticString("0.0"),
 	},
 	"additional_env_vars": schema.MapAttribute{
 		MarkdownDescription: "Additional environment variables to set for the writer",
