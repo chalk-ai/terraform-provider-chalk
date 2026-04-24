@@ -24,27 +24,36 @@ Chalk cluster gateway resource
 
 ### Optional
 
-- `additional_dns_names` (List of String) Additional DNS names for Envoy gateway
-- `allow_collocation_with_chalk_workloads` (Boolean) Allow collocation with Chalk workloads
-- `dns_hostname` (String) DNS hostname
+- `additional_dns_names` (List of String) Additional DNS names for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.
+- `allow_collocation_with_chalk_workloads` (Boolean) Allow collocation with Chalk workloads. Envoy-only; mutually exclusive with the `gcp` block.
+- `dns_hostname` (String) DNS hostname for the Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block. For GCP-backed gateways, set `gcp.dns_hostname` instead.
 - `gateway_class_name` (String) Gateway class name
 - `gateway_name` (String) Name of the gateway
+- `gcp` (Attributes) GCP gateway provider configuration. Mutually exclusive with the envoy-flavoured top-level fields (`timeout_duration`, `dns_hostname`, `replicas`, `min_available`, `letsencrypt_cluster_issuer`, `additional_dns_names`, `nodepool`, `allow_collocation_with_chalk_workloads`). (see [below for nested schema](#nestedatt--gcp))
 - `ip_allowlist` (List of String) IP allowlist for the gateway
-- `letsencrypt_cluster_issuer` (String) Let's Encrypt cluster issuer for Envoy gateway
+- `letsencrypt_cluster_issuer` (String) Let's Encrypt cluster issuer for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.
 - `listeners` (Attributes List) Gateway listeners configuration (see [below for nested schema](#nestedatt--listeners))
 - `load_balancer_class` (String) Load balancer class for the gateway service (e.g., 'service.k8s.aws/nlb')
-- `min_available` (Number) Minimum available replicas for Envoy gateway
+- `min_available` (Number) Minimum available replicas for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.
 - `namespace` (String) Kubernetes namespace for the gateway
-- `nodepool` (String) Nodepool for the gateway
-- `replicas` (Number) Number of replicas for Envoy gateway
+- `nodepool` (String) Nodepool for the gateway. Envoy-only; mutually exclusive with the `gcp` block.
+- `replicas` (Number) Number of replicas for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.
 - `routing` (String) Routing type for the gateway (e.g., 'PUBLIC', 'PRIVATE', 'PRIVATELINK')
 - `service_annotations` (Map of String) Service annotations
-- `timeout_duration` (String) Timeout duration for Envoy gateway
+- `timeout_duration` (String) Timeout duration for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.
 - `tls_certificate` (Attributes) TLS certificate configuration (see [below for nested schema](#nestedatt--tls_certificate))
 
 ### Read-Only
 
 - `id` (String) Gateway identifier
+
+<a id="nestedatt--gcp"></a>
+### Nested Schema for `gcp`
+
+Optional:
+
+- `dns_hostname` (String) DNS hostname for the GCP-managed gateway.
+
 
 <a id="nestedatt--listeners"></a>
 ### Nested Schema for `listeners`

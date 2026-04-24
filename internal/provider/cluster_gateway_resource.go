@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -23,6 +24,7 @@ import (
 
 var _ resource.Resource = &ClusterGatewayResource{}
 var _ resource.ResourceWithImportState = &ClusterGatewayResource{}
+var _ resource.ResourceWithConfigValidators = &ClusterGatewayResource{}
 
 func NewClusterGatewayResource() resource.Resource {
 	return &ClusterGatewayResource{}
@@ -44,6 +46,10 @@ type TLSCertificateConfigModel struct {
 	SecretNamespace types.String `tfsdk:"secret_namespace"`
 }
 
+type GCPGatewayProviderConfigModel struct {
+	DNSHostname types.String `tfsdk:"dns_hostname"`
+}
+
 type ClusterGatewayResourceModel struct {
 	Id types.String `tfsdk:"id"`
 
@@ -52,7 +58,7 @@ type ClusterGatewayResourceModel struct {
 	GatewayName      types.String `tfsdk:"gateway_name"`
 	GatewayClassName types.String `tfsdk:"gateway_class_name"`
 
-	// Flattened Envoy config fields
+	// Flattened Envoy config fields (envoy-only; mutually exclusive with the `gcp` block below)
 	TimeoutDuration                    types.String `tfsdk:"timeout_duration"`
 	DNSHostname                        types.String `tfsdk:"dns_hostname"`
 	Replicas                           types.Int64  `tfsdk:"replicas"`
@@ -61,6 +67,9 @@ type ClusterGatewayResourceModel struct {
 	AdditionalDNSNames                 types.List   `tfsdk:"additional_dns_names"`
 	Nodepool                           types.String `tfsdk:"nodepool"`
 	AllowCollocationWithChalkWorkloads types.Bool   `tfsdk:"allow_collocation_with_chalk_workloads"`
+
+	// GCP provider config (mutually exclusive with the envoy-flavoured fields above)
+	GCP *GCPGatewayProviderConfigModel `tfsdk:"gcp"`
 
 	// Optional fields
 	IPAllowlist        types.List                 `tfsdk:"ip_allowlist"`
@@ -146,7 +155,7 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				},
 			},
 			"timeout_duration": schema.StringAttribute{
-				MarkdownDescription: "Timeout duration for Envoy gateway",
+				MarkdownDescription: "Timeout duration for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -154,7 +163,7 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				},
 			},
 			"dns_hostname": schema.StringAttribute{
-				MarkdownDescription: "DNS hostname",
+				MarkdownDescription: "DNS hostname for the Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block. For GCP-backed gateways, set `gcp.dns_hostname` instead.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -162,7 +171,7 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				},
 			},
 			"replicas": schema.Int64Attribute{
-				MarkdownDescription: "Number of replicas for Envoy gateway",
+				MarkdownDescription: "Number of replicas for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{
@@ -170,7 +179,7 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				},
 			},
 			"min_available": schema.Int64Attribute{
-				MarkdownDescription: "Minimum available replicas for Envoy gateway",
+				MarkdownDescription: "Minimum available replicas for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{
@@ -178,7 +187,7 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				},
 			},
 			"letsencrypt_cluster_issuer": schema.StringAttribute{
-				MarkdownDescription: "Let's Encrypt cluster issuer for Envoy gateway",
+				MarkdownDescription: "Let's Encrypt cluster issuer for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -186,17 +195,31 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				},
 			},
 			"additional_dns_names": schema.ListAttribute{
-				MarkdownDescription: "Additional DNS names for Envoy gateway",
+				MarkdownDescription: "Additional DNS names for Envoy gateway. Envoy-only; mutually exclusive with the `gcp` block.",
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
 			"nodepool": schema.StringAttribute{
-				MarkdownDescription: "Nodepool for the gateway",
+				MarkdownDescription: "Nodepool for the gateway. Envoy-only; mutually exclusive with the `gcp` block.",
 				Optional:            true,
 			},
 			"allow_collocation_with_chalk_workloads": schema.BoolAttribute{
-				MarkdownDescription: "Allow collocation with Chalk workloads",
+				MarkdownDescription: "Allow collocation with Chalk workloads. Envoy-only; mutually exclusive with the `gcp` block.",
 				Optional:            true,
+			},
+			"gcp": schema.SingleNestedAttribute{
+				MarkdownDescription: "GCP gateway provider configuration. Mutually exclusive with the envoy-flavoured top-level fields (`timeout_duration`, `dns_hostname`, `replicas`, `min_available`, `letsencrypt_cluster_issuer`, `additional_dns_names`, `nodepool`, `allow_collocation_with_chalk_workloads`).",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"dns_hostname": schema.StringAttribute{
+						MarkdownDescription: "DNS hostname for the GCP-managed gateway.",
+						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
+					},
+				},
 			},
 			"ip_allowlist": schema.ListAttribute{
 				MarkdownDescription: "IP allowlist for the gateway",
@@ -258,6 +281,56 @@ func (r *ClusterGatewayResource) Configure(ctx context.Context, req resource.Con
 	r.client = client
 }
 
+// buildGatewayProviderConfig dispatches on the oneof branch the user populated.
+// When `data.GCP` is set, the GCP branch is emitted; otherwise the envoy branch is always
+// emitted (possibly empty) — matching pre-oneof behaviour so gateways with no explicit envoy
+// fields still serialize as envoy-backed.
+func buildGatewayProviderConfig(ctx context.Context, data *ClusterGatewayResourceModel, diags *diag.Diagnostics) *serverv1.GatewayProviderConfig {
+	if data.GCP != nil {
+		return &serverv1.GatewayProviderConfig{
+			Config: &serverv1.GatewayProviderConfig_Gcp{
+				Gcp: &serverv1.GCPGatewayProviderConfig{
+					DnsHostname: data.GCP.DNSHostname.ValueString(),
+				},
+			},
+		}
+	}
+
+	envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
+	envoyConfig.TimeoutDuration = data.TimeoutDuration.ValueStringPointer()
+	envoyConfig.DnsHostname = data.DNSHostname.ValueStringPointer()
+	if !data.Replicas.IsNull() {
+		val := int32(data.Replicas.ValueInt64())
+		envoyConfig.Replicas = &val
+	}
+	if !data.MinAvailable.IsNull() {
+		val := int32(data.MinAvailable.ValueInt64())
+		envoyConfig.MinAvailable = &val
+	}
+	envoyConfig.LetsencryptClusterIssuer = data.LetsencryptClusterIssuer.ValueStringPointer()
+	if !data.AdditionalDNSNames.IsNull() {
+		var dnsNames []string
+		d := data.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil
+		}
+		envoyConfig.AdditionalDnsNames = dnsNames
+	}
+	if !data.Nodepool.IsNull() {
+		envoyConfig.Nodepool = data.Nodepool.ValueString()
+	}
+	// Only set if explicitly true, leave unset (default false) otherwise
+	if !data.AllowCollocationWithChalkWorkloads.IsNull() && data.AllowCollocationWithChalkWorkloads.ValueBool() {
+		envoyConfig.AllowColocationWithChalkWorkloads = true
+	}
+	return &serverv1.GatewayProviderConfig{
+		Config: &serverv1.GatewayProviderConfig_Envoy{
+			Envoy: envoyConfig,
+		},
+	}
+}
+
 // updateModelFromSpecs updates the terraform model with values from the API response specs
 func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data *ClusterGatewayResourceModel, specs *serverv1.EnvoyGatewaySpecs, diags *diag.Diagnostics) {
 	if specs == nil {
@@ -316,8 +389,10 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 		data.ServiceAnnotations = types.MapValueMust(types.StringType, annotations)
 	}
 
-	// Update flattened Envoy config fields
-	if specs.Config != nil && specs.Config.GetEnvoy() != nil {
+	// Update the GatewayProviderConfig oneof. Exactly one of envoy / gcp is populated on the wire;
+	// when the server returns one branch we null out the other so Terraform state matches the truth.
+	switch {
+	case specs.Config != nil && specs.Config.GetEnvoy() != nil:
 		envoyConfig := specs.Config.GetEnvoy()
 
 		if envoyConfig.TimeoutDuration != nil {
@@ -372,6 +447,24 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 		} else {
 			data.AllowCollocationWithChalkWorkloads = types.BoolNull()
 		}
+
+		data.GCP = nil
+
+	case specs.Config != nil && specs.Config.GetGcp() != nil:
+		gcpConfig := specs.Config.GetGcp()
+		data.GCP = &GCPGatewayProviderConfigModel{
+			DNSHostname: types.StringValue(gcpConfig.DnsHostname),
+		}
+		// Null every envoy-flavoured field so Terraform state reflects that the server is on the
+		// GCP branch and there's no phantom envoy config hanging around from a prior apply.
+		data.TimeoutDuration = types.StringNull()
+		data.DNSHostname = types.StringNull()
+		data.Replicas = types.Int64Null()
+		data.MinAvailable = types.Int64Null()
+		data.LetsencryptClusterIssuer = types.StringNull()
+		data.AdditionalDNSNames = types.ListNull(types.StringType)
+		data.Nodepool = types.StringNull()
+		data.AllowCollocationWithChalkWorkloads = types.BoolNull()
 	}
 
 	// Update TLS certificate
@@ -444,39 +537,10 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 		}
 	}
 
-	// Convert flattened Envoy config
-	envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
-	envoyConfig.TimeoutDuration = data.TimeoutDuration.ValueStringPointer()
-	envoyConfig.DnsHostname = data.DNSHostname.ValueStringPointer()
-	if !data.Replicas.IsNull() {
-		val := int32(data.Replicas.ValueInt64())
-		envoyConfig.Replicas = &val
-	}
-	if !data.MinAvailable.IsNull() {
-		val := int32(data.MinAvailable.ValueInt64())
-		envoyConfig.MinAvailable = &val
-	}
-	envoyConfig.LetsencryptClusterIssuer = data.LetsencryptClusterIssuer.ValueStringPointer()
-	if !data.AdditionalDNSNames.IsNull() {
-		var dnsNames []string
-		diags := data.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		envoyConfig.AdditionalDnsNames = dnsNames
-	}
-	if !data.Nodepool.IsNull() {
-		envoyConfig.Nodepool = data.Nodepool.ValueString()
-	}
-	// Only set if explicitly true, leave unset (default false) otherwise
-	if !data.AllowCollocationWithChalkWorkloads.IsNull() && data.AllowCollocationWithChalkWorkloads.ValueBool() {
-		envoyConfig.AllowColocationWithChalkWorkloads = true
-	}
-	createReq.Specs.Config = &serverv1.GatewayProviderConfig{
-		Config: &serverv1.GatewayProviderConfig_Envoy{
-			Envoy: envoyConfig,
-		},
+	// Build the gateway provider config oneof (envoy or gcp based on data.GCP)
+	createReq.Specs.Config = buildGatewayProviderConfig(ctx, &data, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// Convert IP allowlist
@@ -635,39 +699,10 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 		}
 	}
 
-	// Convert flattened Envoy config
-	envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
-	envoyConfig.TimeoutDuration = data.TimeoutDuration.ValueStringPointer()
-	envoyConfig.DnsHostname = data.DNSHostname.ValueStringPointer()
-	if !data.Replicas.IsNull() {
-		val := int32(data.Replicas.ValueInt64())
-		envoyConfig.Replicas = &val
-	}
-	if !data.MinAvailable.IsNull() {
-		val := int32(data.MinAvailable.ValueInt64())
-		envoyConfig.MinAvailable = &val
-	}
-	envoyConfig.LetsencryptClusterIssuer = data.LetsencryptClusterIssuer.ValueStringPointer()
-	if !data.AdditionalDNSNames.IsNull() {
-		var dnsNames []string
-		diags := data.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		envoyConfig.AdditionalDnsNames = dnsNames
-	}
-	if !data.Nodepool.IsNull() {
-		envoyConfig.Nodepool = data.Nodepool.ValueString()
-	}
-	// Only set if explicitly true, leave unset (default false) otherwise
-	if !data.AllowCollocationWithChalkWorkloads.IsNull() && data.AllowCollocationWithChalkWorkloads.ValueBool() {
-		envoyConfig.AllowColocationWithChalkWorkloads = true
-	}
-	createReq.Specs.Config = &serverv1.GatewayProviderConfig{
-		Config: &serverv1.GatewayProviderConfig_Envoy{
-			Envoy: envoyConfig,
-		},
+	// Build the gateway provider config oneof (envoy or gcp based on data.GCP)
+	createReq.Specs.Config = buildGatewayProviderConfig(ctx, &data, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// Convert IP allowlist
@@ -746,4 +781,29 @@ func (r *ClusterGatewayResource) Delete(ctx context.Context, req resource.Delete
 
 func (r *ClusterGatewayResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// clusterGatewayEnvoyOnlyPaths lists every top-level attribute that only makes sense on an envoy-backed
+// gateway. Keeping the list in one place lets both ConfigValidators and the mapping code stay in sync
+// when new envoy fields are added.
+var clusterGatewayEnvoyOnlyPaths = []string{
+	"timeout_duration",
+	"dns_hostname",
+	"replicas",
+	"min_available",
+	"letsencrypt_cluster_issuer",
+	"additional_dns_names",
+	"nodepool",
+	"allow_collocation_with_chalk_workloads",
+}
+
+func (r *ClusterGatewayResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	validators := make([]resource.ConfigValidator, 0, len(clusterGatewayEnvoyOnlyPaths))
+	for _, attrName := range clusterGatewayEnvoyOnlyPaths {
+		validators = append(validators, resourcevalidator.Conflicting(
+			path.MatchRoot("gcp"),
+			path.MatchRoot(attrName),
+		))
+	}
+	return validators
 }
