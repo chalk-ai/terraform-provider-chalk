@@ -11,9 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func gwStrPtr(s string) *string { return &s }
-func gwInt32Ptr(i int32) *int32 { return &i }
-
 // TestUpdateModelFromSpecs_RoutingPopulation covers the INF-1288 bug surface.
 //
 // The bug: Read populates state from the server response via updateModelFromSpecs.
@@ -38,11 +35,11 @@ func TestUpdateModelFromSpecs_RoutingPopulation(t *testing.T) {
 		// 54/89 production gateways — the reproducer from the Linear issue.
 		{"nil routing defaults to PUBLIC", nil, types.StringValue("PUBLIC")},
 		// 29/89 production gateways.
-		{"explicit PUBLIC", gwStrPtr("PUBLIC"), types.StringValue("PUBLIC")},
+		{"explicit PUBLIC", new("PUBLIC"), types.StringValue("PUBLIC")},
 		// 6/89 production gateways.
-		{"explicit PRIVATE", gwStrPtr("PRIVATE"), types.StringValue("PRIVATE")},
+		{"explicit PRIVATE", new("PRIVATE"), types.StringValue("PRIVATE")},
 		// Valid value documented in the schema but not currently observed in prod.
-		{"explicit PRIVATELINK", gwStrPtr("PRIVATELINK"), types.StringValue("PRIVATELINK")},
+		{"explicit PRIVATELINK", new("PRIVATELINK"), types.StringValue("PRIVATELINK")},
 	}
 
 	for _, tc := range tests {
@@ -74,8 +71,8 @@ func TestUpdateModelFromSpecs_LoadBalancerClass(t *testing.T) {
 		expected types.String
 	}{
 		{"nil stays null", nil, types.StringNull()},
-		{"explicit service.k8s.aws/nlb", gwStrPtr("service.k8s.aws/nlb"), types.StringValue("service.k8s.aws/nlb")},
-		{"explicit eks.amazonaws.com/nlb", gwStrPtr("eks.amazonaws.com/nlb"), types.StringValue("eks.amazonaws.com/nlb")},
+		{"explicit service.k8s.aws/nlb", new("service.k8s.aws/nlb"), types.StringValue("service.k8s.aws/nlb")},
+		{"explicit eks.amazonaws.com/nlb", new("eks.amazonaws.com/nlb"), types.StringValue("eks.amazonaws.com/nlb")},
 	}
 
 	for _, tc := range tests {
@@ -138,7 +135,7 @@ func TestUpdateModelFromSpecs_CommonProductionShapes(t *testing.T) {
 			Config: &serverv1.GatewayProviderConfig{
 				Config: &serverv1.GatewayProviderConfig_Envoy{
 					Envoy: &serverv1.EnvoyGatewayProviderConfig{
-						TimeoutDuration: gwStrPtr("300s"),
+						TimeoutDuration: new("300s"),
 					},
 				},
 			},
@@ -169,11 +166,11 @@ func TestUpdateModelFromSpecs_CommonProductionShapes(t *testing.T) {
 			Config: &serverv1.GatewayProviderConfig{
 				Config: &serverv1.GatewayProviderConfig_Envoy{
 					Envoy: &serverv1.EnvoyGatewayProviderConfig{
-						TimeoutDuration:          gwStrPtr("300s"),
-						DnsHostname:              gwStrPtr("gahid.fetch.example.chalk.ai"),
-						Replicas:                 gwInt32Ptr(2),
-						MinAvailable:             gwInt32Ptr(1),
-						LetsencryptClusterIssuer: gwStrPtr("chalk-letsencrypt-issuer"),
+						TimeoutDuration:          new("300s"),
+						DnsHostname:              new("gahid.fetch.example.chalk.ai"),
+						Replicas:                 new(int32(2)),
+						MinAvailable:             new(int32(1)),
+						LetsencryptClusterIssuer: new("chalk-letsencrypt-issuer"),
 					},
 				},
 			},
@@ -182,7 +179,7 @@ func TestUpdateModelFromSpecs_CommonProductionShapes(t *testing.T) {
 				"external-dns.alpha.kubernetes.io/hostname":         "*.gahid.fetch.example.chalk.ai",
 				"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
 			},
-			LoadBalancerClass: gwStrPtr("service.k8s.aws/nlb"),
+			LoadBalancerClass: new("service.k8s.aws/nlb"),
 		}
 
 		r.updateModelFromSpecs(context.Background(), data, specs, &diags)
@@ -214,8 +211,8 @@ func TestUpdateModelFromSpecs_CommonProductionShapes(t *testing.T) {
 			Namespace:         "chalk-envoy",
 			GatewayName:       "chalk-gw-internal",
 			GatewayClassName:  "chalk-gw-internal-class",
-			Routing:           gwStrPtr("PRIVATE"),
-			LoadBalancerClass: gwStrPtr("eks.amazonaws.com/nlb"),
+			Routing:           new("PRIVATE"),
+			LoadBalancerClass: new("eks.amazonaws.com/nlb"),
 		}
 
 		r.updateModelFromSpecs(context.Background(), data, specs, &diags)
