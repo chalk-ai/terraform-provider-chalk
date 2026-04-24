@@ -11,7 +11,9 @@ import (
 )
 
 // ptr is a tiny helper for taking the address of a literal in tests.
-func ptr[T any](v T) *T { return &v }
+//
+//go:fix inline
+func ptr[T any](v T) *T { return new(v) }
 
 // decodeSingleWriter runs bgpWritersProtoToTF for a single writer and returns
 // the decoded Go model plus any diagnostics.
@@ -75,7 +77,7 @@ func TestBgpWritersProtoToTF_HpaSpecsMaxReplicasOnly(t *testing.T) {
 		Name:              "online-writer",
 		BusSubscriberType: "ONLINE_WRITER",
 		HpaSpecs: &serverv1.BackgroundPersistenceWriterHpaSpecs{
-			HpaMaxReplicas: ptr(int32(1)),
+			HpaMaxReplicas: new(int32(1)),
 		},
 	}
 	m := decodeSingleWriter(t, w)
@@ -94,8 +96,8 @@ func TestBgpWritersProtoToTF_HpaMinReplicasZero(t *testing.T) {
 		Name:              "rust-offline-writer",
 		BusSubscriberType: "RUST_OFFLINE_WRITER",
 		HpaSpecs: &serverv1.BackgroundPersistenceWriterHpaSpecs{
-			HpaMinReplicas: ptr(int32(0)),
-			HpaMaxReplicas: ptr(int32(4)),
+			HpaMinReplicas: new(int32(0)),
+			HpaMaxReplicas: new(int32(4)),
 		},
 	}
 	m := decodeSingleWriter(t, w)
@@ -113,7 +115,7 @@ func TestBgpWritersProtoToTF_HpaMaxReplicasZero(t *testing.T) {
 		Name:              "offline-writer",
 		BusSubscriberType: "OFFLINE_WRITER",
 		HpaSpecs: &serverv1.BackgroundPersistenceWriterHpaSpecs{
-			HpaMaxReplicas: ptr(int32(0)),
+			HpaMaxReplicas: new(int32(0)),
 		},
 	}
 	m := decodeSingleWriter(t, w)
@@ -130,9 +132,9 @@ func TestBgpWritersProtoToTF_FullyPopulatedHpaSpecs(t *testing.T) {
 		BusSubscriberType: "ONLINE_WRITER",
 		HpaSpecs: &serverv1.BackgroundPersistenceWriterHpaSpecs{
 			HpaPubsubSubscriptionId: "chalk-port-prod-result-bus-sub-onlinewriter",
-			HpaMinReplicas:          ptr(int32(2)),
-			HpaMaxReplicas:          ptr(int32(64)),
-			HpaTargetAverageValue:   ptr(int32(1000)),
+			HpaMinReplicas:          new(int32(2)),
+			HpaMaxReplicas:          new(int32(64)),
+			HpaTargetAverageValue:   new(int32(1000)),
 		},
 	}
 	m := decodeSingleWriter(t, w)
@@ -151,7 +153,7 @@ func TestBgpWritersProtoToTF_GkeSpotExplicit(t *testing.T) {
 		w := &serverv1.BackgroundPersistenceWriterSpecs{
 			Name:              "writer",
 			BusSubscriberType: "ONLINE_WRITER",
-			GkeSpot:           ptr(v),
+			GkeSpot:           new(v),
 		}
 		m := decodeSingleWriter(t, w)
 		assert.Equal(t, types.BoolValue(v), m.GkeSpot, "gke_spot=%v preserved", v)
@@ -166,9 +168,9 @@ func TestBgpWritersProtoToTF_ExplicitDefaultValues(t *testing.T) {
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:                                     "go-metrics-bus-writer",
 		BusSubscriberType:                        "GO_METRICS_BUS_WRITER",
-		LoadWriterConfigmap:                      ptr(false),
+		LoadWriterConfigmap:                      new(false),
 		QueryTableWriteDropRatio:                 "0.0",
-		ResultsWriterSkipProducingFeatureMetrics: ptr(false),
+		ResultsWriterSkipProducingFeatureMetrics: new(false),
 	}
 	m := decodeSingleWriter(t, w)
 
@@ -189,11 +191,11 @@ func TestBgpWritersProtoToTF_ProtoRoundTrip(t *testing.T) {
 		ImageOverride:                            "custom-image:v1",
 		Version:                                  "v1.2.3",
 		QueryTableWriteDropRatio:                 "0.5",
-		GkeSpot:                                  ptr(true),
-		LoadWriterConfigmap:                      ptr(true),
-		ResultsWriterSkipProducingFeatureMetrics: ptr(true),
-		MaxBatchSize:                             ptr(int32(100)),
-		MessageProcessingConcurrency:             ptr(int32(8)),
+		GkeSpot:                                  new(true),
+		LoadWriterConfigmap:                      new(true),
+		ResultsWriterSkipProducingFeatureMetrics: new(true),
+		MaxBatchSize:                             new(int32(100)),
+		MessageProcessingConcurrency:             new(int32(8)),
 		KafkaConsumerGroupOverride:               "group-override",
 		OfflineStoreInserterDbType:               "bigquery",
 		StorageCachePrefix:                       "cache/",
@@ -205,9 +207,9 @@ func TestBgpWritersProtoToTF_ProtoRoundTrip(t *testing.T) {
 		Limit:                                    &serverv1.KubeResourceConfig{Cpu: "1", Memory: "2Gi"},
 		HpaSpecs: &serverv1.BackgroundPersistenceWriterHpaSpecs{
 			HpaPubsubSubscriptionId: "sub-id",
-			HpaMinReplicas:          ptr(int32(2)),
-			HpaMaxReplicas:          ptr(int32(10)),
-			HpaTargetAverageValue:   ptr(int32(100)),
+			HpaMinReplicas:          new(int32(2)),
+			HpaMaxReplicas:          new(int32(10)),
+			HpaTargetAverageValue:   new(int32(100)),
 		},
 		AdditionalEnvVars: map[string]string{"FOO": "bar"},
 	}
