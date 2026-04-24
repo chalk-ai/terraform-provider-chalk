@@ -93,11 +93,14 @@ Optional:
 <a id="nestedatt--writers--hpa_specs"></a>
 ### Nested Schema for `writers.hpa_specs`
 
+Required:
+
+- `hpa_pubsub_subscription_id` (String) HPA pubsub subscription ID
+
 Optional:
 
 - `hpa_max_replicas` (Number) HPA maximum replicas
 - `hpa_min_replicas` (Number) HPA minimum replicas
-- `hpa_pubsub_subscription_id` (String) HPA pubsub subscription ID
 - `hpa_target_average_value` (Number) HPA target average value
 
 

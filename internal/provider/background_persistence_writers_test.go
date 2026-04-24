@@ -25,11 +25,10 @@ func decodeSingleWriter(t *testing.T, w *serverv1.BackgroundPersistenceWriterSpe
 	return models[0]
 }
 
-// TestBgpWritersProtoToTF_MinimalServerResponse covers the most common real-world
-// shape: server returns only name, bus_subscriber_type, request, default_replica_count.
-// Every Computed+Default attribute MUST be populated with the schema default,
-// otherwise the terraform-plugin-framework re-applies defaults during plan and
-// produces spurious "+" additions. (INF-1286.)
+// TestBgpWritersProtoToTF_MinimalServerResponse: server returns only name,
+// bus_subscriber_type, request, default_replica_count. All other attributes,
+// including the formerly-Optional+Computed+Default ones, should decode to
+// null so HCL omission matches state.
 func TestBgpWritersProtoToTF_MinimalServerResponse(t *testing.T) {
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:                "go-metrics-bus-writer",
@@ -39,68 +38,52 @@ func TestBgpWritersProtoToTF_MinimalServerResponse(t *testing.T) {
 	}
 	m := decodeSingleWriter(t, w)
 
-	assert.Equal(t, types.BoolValue(false), m.GkeSpot, "gke_spot default")
-	assert.Equal(t, types.BoolValue(false), m.LoadWriterConfigmap, "load_writer_configmap default")
-	assert.Equal(t, types.BoolValue(false), m.ResultsWriterSkipProducingFeatureMetrics, "results_writer_skip_producing_feature_metrics default")
-	assert.Equal(t, types.StringValue("0.0"), m.QueryTableWriteDropRatio, "query_table_write_drop_ratio default")
+	assert.Equal(t, types.BoolNull(), m.GkeSpot)
+	assert.Equal(t, types.BoolNull(), m.LoadWriterConfigmap)
+	assert.Equal(t, types.BoolNull(), m.ResultsWriterSkipProducingFeatureMetrics)
+	assert.Equal(t, types.StringNull(), m.QueryTableWriteDropRatio)
 	assert.Nil(t, m.HpaSpecs, "hpa_specs should remain nil when server didn't send it")
 }
 
-// TestBgpWritersProtoToTF_EmptyHpaSpecs covers the exact failure mode described
-// in INF-1286: server returns hpa_specs: {} with all sub-fields nil. Every
-// Computed+Default sub-field must be populated with the schema default.
-func TestBgpWritersProtoToTF_EmptyHpaSpecs(t *testing.T) {
-	w := &serverv1.BackgroundPersistenceWriterSpecs{
-		Name:              "go-metrics-bus-writer",
-		BusSubscriberType: "GO_METRICS_BUS_WRITER",
-		HpaSpecs:          &serverv1.BackgroundPersistenceWriterHpaSpecs{},
-	}
-	m := decodeSingleWriter(t, w)
-
-	require.NotNil(t, m.HpaSpecs, "empty HpaSpecs from server must be preserved as non-nil state")
-	assert.Equal(t, types.StringNull(), m.HpaSpecs.HpaPubsubSubscriptionId, "empty pubsub id should be null")
-	assert.Equal(t, types.Int64Value(1), m.HpaSpecs.HpaMinReplicas, "hpa_min_replicas default")
-	assert.Equal(t, types.Int64Value(10), m.HpaSpecs.HpaMaxReplicas, "hpa_max_replicas default")
-	assert.Equal(t, types.Int64Value(5), m.HpaSpecs.HpaTargetAverageValue, "hpa_target_average_value default")
-}
-
-// TestBgpWritersProtoToTF_HpaSpecsMaxReplicasOnly covers the most common populated
-// hpa_specs shape in production (120/150 populated writers): only hpa_max_replicas
-// is set, the other three sub-fields are nil.
+// TestBgpWritersProtoToTF_HpaSpecsMaxReplicasOnly covers the most common
+// populated hpa_specs shape in production (~120/150 populated writers): only
+// hpa_max_replicas is set alongside the required pubsub id.
 func TestBgpWritersProtoToTF_HpaSpecsMaxReplicasOnly(t *testing.T) {
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:              "online-writer",
 		BusSubscriberType: "ONLINE_WRITER",
 		HpaSpecs: &serverv1.BackgroundPersistenceWriterHpaSpecs{
-			HpaMaxReplicas: new(int32(1)),
+			HpaPubsubSubscriptionId: "chalk-port-prod-result-bus-sub-onlinewriter",
+			HpaMaxReplicas:          new(int32(1)),
 		},
 	}
 	m := decodeSingleWriter(t, w)
 
 	require.NotNil(t, m.HpaSpecs)
-	assert.Equal(t, types.Int64Value(1), m.HpaSpecs.HpaMaxReplicas, "server value preserved")
-	assert.Equal(t, types.Int64Value(1), m.HpaSpecs.HpaMinReplicas, "default applied")
-	assert.Equal(t, types.Int64Value(5), m.HpaSpecs.HpaTargetAverageValue, "default applied")
-	assert.Equal(t, types.StringNull(), m.HpaSpecs.HpaPubsubSubscriptionId, "empty pubsub id is null")
+	assert.Equal(t, types.StringValue("chalk-port-prod-result-bus-sub-onlinewriter"), m.HpaSpecs.HpaPubsubSubscriptionId)
+	assert.Equal(t, types.Int64Value(1), m.HpaSpecs.HpaMaxReplicas)
+	assert.Equal(t, types.Int64Null(), m.HpaSpecs.HpaMinReplicas)
+	assert.Equal(t, types.Int64Null(), m.HpaSpecs.HpaTargetAverageValue)
 }
 
 // TestBgpWritersProtoToTF_HpaMinReplicasZero ensures a real non-default value of 0
-// (observed in 14 real-world configs) is NOT collapsed to the schema default of 1.
+// (observed in 14 real-world configs) is preserved, not coerced to null.
 func TestBgpWritersProtoToTF_HpaMinReplicasZero(t *testing.T) {
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:              "rust-offline-writer",
 		BusSubscriberType: "RUST_OFFLINE_WRITER",
 		HpaSpecs: &serverv1.BackgroundPersistenceWriterHpaSpecs{
-			HpaMinReplicas: new(int32(0)),
-			HpaMaxReplicas: new(int32(4)),
+			HpaPubsubSubscriptionId: "sub-id",
+			HpaMinReplicas:          new(int32(0)),
+			HpaMaxReplicas:          new(int32(4)),
 		},
 	}
 	m := decodeSingleWriter(t, w)
 
 	require.NotNil(t, m.HpaSpecs)
-	assert.Equal(t, types.Int64Value(0), m.HpaSpecs.HpaMinReplicas, "0 must be preserved, not replaced by default")
+	assert.Equal(t, types.Int64Value(0), m.HpaSpecs.HpaMinReplicas, "0 must be preserved")
 	assert.Equal(t, types.Int64Value(4), m.HpaSpecs.HpaMaxReplicas)
-	assert.Equal(t, types.Int64Value(5), m.HpaSpecs.HpaTargetAverageValue, "default applied")
+	assert.Equal(t, types.Int64Null(), m.HpaSpecs.HpaTargetAverageValue)
 }
 
 // TestBgpWritersProtoToTF_HpaMaxReplicasZero is a symmetry guard for the zero case
@@ -110,17 +93,20 @@ func TestBgpWritersProtoToTF_HpaMaxReplicasZero(t *testing.T) {
 		Name:              "offline-writer",
 		BusSubscriberType: "OFFLINE_WRITER",
 		HpaSpecs: &serverv1.BackgroundPersistenceWriterHpaSpecs{
-			HpaMaxReplicas: new(int32(0)),
+			HpaPubsubSubscriptionId: "sub-id",
+			HpaMaxReplicas:          new(int32(0)),
 		},
 	}
 	m := decodeSingleWriter(t, w)
 
 	require.NotNil(t, m.HpaSpecs)
-	assert.Equal(t, types.Int64Value(0), m.HpaSpecs.HpaMaxReplicas, "0 must be preserved, not replaced by default")
+	assert.Equal(t, types.Int64Value(0), m.HpaSpecs.HpaMaxReplicas, "0 must be preserved")
+	assert.Equal(t, types.Int64Null(), m.HpaSpecs.HpaMinReplicas)
+	assert.Equal(t, types.Int64Null(), m.HpaSpecs.HpaTargetAverageValue)
 }
 
 // TestBgpWritersProtoToTF_FullyPopulatedHpaSpecs guards the happy path — a writer
-// with all four hpa sub-fields set to non-default values.
+// with all four hpa sub-fields set.
 func TestBgpWritersProtoToTF_FullyPopulatedHpaSpecs(t *testing.T) {
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:              "online-writer",
@@ -155,11 +141,10 @@ func TestBgpWritersProtoToTF_GkeSpotExplicit(t *testing.T) {
 	}
 }
 
-// TestBgpWritersProtoToTF_ExplicitDefaultValues guards that when the server returns
-// the same value as the schema default, state matches it (already worked — regression
-// guard, real cases: 32 writers each for load_writer_configmap=false and
-// query_table_write_drop_ratio="0.0").
-func TestBgpWritersProtoToTF_ExplicitDefaultValues(t *testing.T) {
+// TestBgpWritersProtoToTF_ExplicitServerValues guards that concrete server values
+// round-trip untouched — e.g. load_writer_configmap=false and
+// query_table_write_drop_ratio="0.0" appear in 32 real cases each.
+func TestBgpWritersProtoToTF_ExplicitServerValues(t *testing.T) {
 	w := &serverv1.BackgroundPersistenceWriterSpecs{
 		Name:                                     "go-metrics-bus-writer",
 		BusSubscriberType:                        "GO_METRICS_BUS_WRITER",

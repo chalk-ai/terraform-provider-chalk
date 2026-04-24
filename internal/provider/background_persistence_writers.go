@@ -7,10 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"golang.org/x/exp/maps"
@@ -50,39 +47,29 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 		Attributes: map[string]schema.Attribute{
 			"hpa_pubsub_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "HPA pubsub subscription ID",
-				Optional:            true,
+				Required:            true,
 			},
 			"hpa_min_replicas": schema.Int64Attribute{
 				MarkdownDescription: "HPA minimum replicas",
 				Optional:            true,
-				Computed:            true,
-				Default:             int64default.StaticInt64(1),
 			},
 			"hpa_max_replicas": schema.Int64Attribute{
 				MarkdownDescription: "HPA maximum replicas",
 				Optional:            true,
-				Computed:            true,
-				Default:             int64default.StaticInt64(10),
 			},
 			"hpa_target_average_value": schema.Int64Attribute{
 				MarkdownDescription: "HPA target average value",
 				Optional:            true,
-				Computed:            true,
-				Default:             int64default.StaticInt64(5),
 			},
 		},
 	},
 	"gke_spot": schema.BoolAttribute{
 		MarkdownDescription: "GKE spot instances",
 		Optional:            true,
-		Computed:            true,
-		Default:             booldefault.StaticBool(false),
 	},
 	"load_writer_configmap": schema.BoolAttribute{
 		MarkdownDescription: "Load writer configmap",
 		Optional:            true,
-		Computed:            true,
-		Default:             booldefault.StaticBool(false),
 	},
 	"version": schema.StringAttribute{
 		MarkdownDescription: "Writer version",
@@ -105,8 +92,6 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 	"default_replica_count": schema.Int64Attribute{
 		MarkdownDescription: "Default replica count",
 		Optional:            true,
-		Computed:            true,
-		Default:             int64default.StaticInt64(1),
 	},
 	"kafka_consumer_group_override": schema.StringAttribute{
 		MarkdownDescription: "Kafka consumer group override",
@@ -147,14 +132,10 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 	"results_writer_skip_producing_feature_metrics": schema.BoolAttribute{
 		MarkdownDescription: "Results writer skip producing feature metrics",
 		Optional:            true,
-		Computed:            true,
-		Default:             booldefault.StaticBool(false),
 	},
 	"query_table_write_drop_ratio": schema.StringAttribute{
 		MarkdownDescription: "Query table write drop ratio",
 		Optional:            true,
-		Computed:            true,
-		Default:             stringdefault.StaticString("0.0"),
 	},
 	"additional_env_vars": schema.MapAttribute{
 		MarkdownDescription: "Additional environment variables to set for the writer",
@@ -409,29 +390,25 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 		} else {
 			tfWriter.StorageCachePrefix = types.StringNull()
 		}
-		// Optional+Computed+Default("0.0"): fall back to the schema default when
-		// the server omits the field, otherwise the framework reapplies the
-		// default on every plan and shows "+" noise on imported resources.
 		if protoWriter.QueryTableWriteDropRatio != "" {
 			tfWriter.QueryTableWriteDropRatio = types.StringValue(protoWriter.QueryTableWriteDropRatio)
 		} else {
-			tfWriter.QueryTableWriteDropRatio = types.StringValue("0.0")
+			tfWriter.QueryTableWriteDropRatio = types.StringNull()
 		}
 		if protoWriter.KafkaConsumerGroupOverride != "" {
 			tfWriter.KafkaConsumerGroupOverride = types.StringValue(protoWriter.KafkaConsumerGroupOverride)
 		} else {
 			tfWriter.KafkaConsumerGroupOverride = types.StringNull()
 		}
-		// Optional+Computed+Default(false) — see note above.
 		if protoWriter.GkeSpot != nil {
 			tfWriter.GkeSpot = types.BoolValue(*protoWriter.GkeSpot)
 		} else {
-			tfWriter.GkeSpot = types.BoolValue(false)
+			tfWriter.GkeSpot = types.BoolNull()
 		}
 		if protoWriter.LoadWriterConfigmap != nil {
 			tfWriter.LoadWriterConfigmap = types.BoolValue(*protoWriter.LoadWriterConfigmap)
 		} else {
-			tfWriter.LoadWriterConfigmap = types.BoolValue(false)
+			tfWriter.LoadWriterConfigmap = types.BoolNull()
 		}
 		if protoWriter.MaxBatchSize != nil {
 			tfWriter.MaxBatchSize = types.Int64Value(int64(*protoWriter.MaxBatchSize))
@@ -446,7 +423,7 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 		if protoWriter.ResultsWriterSkipProducingFeatureMetrics != nil {
 			tfWriter.ResultsWriterSkipProducingFeatureMetrics = types.BoolValue(*protoWriter.ResultsWriterSkipProducingFeatureMetrics)
 		} else {
-			tfWriter.ResultsWriterSkipProducingFeatureMetrics = types.BoolValue(false)
+			tfWriter.ResultsWriterSkipProducingFeatureMetrics = types.BoolNull()
 		}
 
 		if len(protoWriter.AdditionalEnvVars) > 0 {
@@ -457,31 +434,24 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 			tfWriter.AdditionalEnvVars = types.MapNull(types.StringType)
 		}
 
-		// When the server returns a non-nil HpaSpecs — including the common empty
-		// `{}` shape — populate every Computed+Default sub-field so the framework
-		// does not reapply defaults on the next plan. HpaPubsubSubscriptionId is
-		// Optional on the schema: treat empty string from the server as null.
 		if protoWriter.HpaSpecs != nil {
-			tfWriter.HpaSpecs = &BackgroundPersistenceWriterHpaModel{}
-			if protoWriter.HpaSpecs.HpaPubsubSubscriptionId != "" {
-				tfWriter.HpaSpecs.HpaPubsubSubscriptionId = types.StringValue(protoWriter.HpaSpecs.HpaPubsubSubscriptionId)
-			} else {
-				tfWriter.HpaSpecs.HpaPubsubSubscriptionId = types.StringNull()
+			tfWriter.HpaSpecs = &BackgroundPersistenceWriterHpaModel{
+				HpaPubsubSubscriptionId: types.StringValue(protoWriter.HpaSpecs.HpaPubsubSubscriptionId),
 			}
 			if protoWriter.HpaSpecs.HpaMinReplicas != nil {
 				tfWriter.HpaSpecs.HpaMinReplicas = types.Int64Value(int64(*protoWriter.HpaSpecs.HpaMinReplicas))
 			} else {
-				tfWriter.HpaSpecs.HpaMinReplicas = types.Int64Value(1)
+				tfWriter.HpaSpecs.HpaMinReplicas = types.Int64Null()
 			}
 			if protoWriter.HpaSpecs.HpaMaxReplicas != nil {
 				tfWriter.HpaSpecs.HpaMaxReplicas = types.Int64Value(int64(*protoWriter.HpaSpecs.HpaMaxReplicas))
 			} else {
-				tfWriter.HpaSpecs.HpaMaxReplicas = types.Int64Value(10)
+				tfWriter.HpaSpecs.HpaMaxReplicas = types.Int64Null()
 			}
 			if protoWriter.HpaSpecs.HpaTargetAverageValue != nil {
 				tfWriter.HpaSpecs.HpaTargetAverageValue = types.Int64Value(int64(*protoWriter.HpaSpecs.HpaTargetAverageValue))
 			} else {
-				tfWriter.HpaSpecs.HpaTargetAverageValue = types.Int64Value(5)
+				tfWriter.HpaSpecs.HpaTargetAverageValue = types.Int64Null()
 			}
 		}
 
