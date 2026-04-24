@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -19,7 +20,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var _ resource.Resource = &EnvironmentResource{}
@@ -51,7 +54,7 @@ type EnvironmentResourceModel struct {
 	OnlineStoreSecret        types.String `tfsdk:"online_store_secret"`
 	OnlineStoreKind          types.String `tfsdk:"online_store_kind"`
 	FeatureStoreSecret       types.String `tfsdk:"feature_store_secret"`
-	SpecsConfigJson          types.String `tfsdk:"specs_config_json"`
+	SpecsConfigJson          jsontypes.Normalized `tfsdk:"specs_config_json"`
 	Managed                  types.Bool   `tfsdk:"managed"`
 
 	//TODO remove, deprecated
@@ -145,6 +148,7 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 			},
 			"specs_config_json": schema.StringAttribute{
 				MarkdownDescription: "Specs config JSON",
+				CustomType:          jsontypes.NormalizedType{},
 				Optional:            true,
 				Computed:            true,
 			},
@@ -529,10 +533,30 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 	// Note: managed is a Terraform-only field that controls bootstrap behavior
 	// It is not returned by the server and is preserved from the existing state
 
-	// Note: specs_config_json is not directly available in the Environment message
-	// It is preserved from the existing state during Read operations
+	if err := applySpecConfigJsonToState(&data, e); err != nil {
+		resp.Diagnostics.AddError("Failed to marshal spec_config_json", err.Error())
+		return
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// applySpecConfigJsonToState maps e.SpecConfigJson (a map[string]*structpb.Value
+// from the Environment proto) onto data.SpecsConfigJson. An empty/missing map
+// becomes a null value in state, matching the behavior of the newer
+// baseUpdateStateFromEnvironment in environment_resource_base.go.
+func applySpecConfigJsonToState(data *EnvironmentResourceModel, e *serverv1.Environment) error {
+	if len(e.SpecConfigJson) == 0 {
+		data.SpecsConfigJson = jsontypes.NewNormalizedNull()
+		return nil
+	}
+	st := &structpb.Struct{Fields: e.SpecConfigJson}
+	b, err := protojson.Marshal(st)
+	if err != nil {
+		return err
+	}
+	data.SpecsConfigJson = jsontypes.NewNormalizedValue(string(b))
+	return nil
 }
 
 func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
