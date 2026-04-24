@@ -10,11 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ptr is a tiny helper for taking the address of a literal in tests.
-//
-//go:fix inline
-func ptr[T any](v T) *T { return new(v) }
-
 // decodeSingleWriter runs bgpWritersProtoToTF for a single writer and returns
 // the decoded Go model plus any diagnostics.
 func decodeSingleWriter(t *testing.T, w *serverv1.BackgroundPersistenceWriterSpecs) BackgroundPersistenceWriterModel {
