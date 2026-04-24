@@ -50,7 +50,7 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 		Attributes: map[string]schema.Attribute{
 			"hpa_pubsub_subscription_id": schema.StringAttribute{
 				MarkdownDescription: "HPA pubsub subscription ID",
-				Required:            true,
+				Optional:            true,
 			},
 			"hpa_min_replicas": schema.Int64Attribute{
 				MarkdownDescription: "HPA minimum replicas",
@@ -409,25 +409,29 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 		} else {
 			tfWriter.StorageCachePrefix = types.StringNull()
 		}
+		// Optional+Computed+Default("0.0"): fall back to the schema default when
+		// the server omits the field, otherwise the framework reapplies the
+		// default on every plan and shows "+" noise on imported resources.
 		if protoWriter.QueryTableWriteDropRatio != "" {
 			tfWriter.QueryTableWriteDropRatio = types.StringValue(protoWriter.QueryTableWriteDropRatio)
 		} else {
-			tfWriter.QueryTableWriteDropRatio = types.StringNull()
+			tfWriter.QueryTableWriteDropRatio = types.StringValue("0.0")
 		}
 		if protoWriter.KafkaConsumerGroupOverride != "" {
 			tfWriter.KafkaConsumerGroupOverride = types.StringValue(protoWriter.KafkaConsumerGroupOverride)
 		} else {
 			tfWriter.KafkaConsumerGroupOverride = types.StringNull()
 		}
+		// Optional+Computed+Default(false) — see note above.
 		if protoWriter.GkeSpot != nil {
 			tfWriter.GkeSpot = types.BoolValue(*protoWriter.GkeSpot)
 		} else {
-			tfWriter.GkeSpot = types.BoolNull()
+			tfWriter.GkeSpot = types.BoolValue(false)
 		}
 		if protoWriter.LoadWriterConfigmap != nil {
 			tfWriter.LoadWriterConfigmap = types.BoolValue(*protoWriter.LoadWriterConfigmap)
 		} else {
-			tfWriter.LoadWriterConfigmap = types.BoolNull()
+			tfWriter.LoadWriterConfigmap = types.BoolValue(false)
 		}
 		if protoWriter.MaxBatchSize != nil {
 			tfWriter.MaxBatchSize = types.Int64Value(int64(*protoWriter.MaxBatchSize))
@@ -442,7 +446,7 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 		if protoWriter.ResultsWriterSkipProducingFeatureMetrics != nil {
 			tfWriter.ResultsWriterSkipProducingFeatureMetrics = types.BoolValue(*protoWriter.ResultsWriterSkipProducingFeatureMetrics)
 		} else {
-			tfWriter.ResultsWriterSkipProducingFeatureMetrics = types.BoolNull()
+			tfWriter.ResultsWriterSkipProducingFeatureMetrics = types.BoolValue(false)
 		}
 
 		if len(protoWriter.AdditionalEnvVars) > 0 {
@@ -453,24 +457,31 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 			tfWriter.AdditionalEnvVars = types.MapNull(types.StringType)
 		}
 
+		// When the server returns a non-nil HpaSpecs — including the common empty
+		// `{}` shape — populate every Computed+Default sub-field so the framework
+		// does not reapply defaults on the next plan. HpaPubsubSubscriptionId is
+		// Optional on the schema: treat empty string from the server as null.
 		if protoWriter.HpaSpecs != nil {
-			tfWriter.HpaSpecs = &BackgroundPersistenceWriterHpaModel{
-				HpaPubsubSubscriptionId: types.StringValue(protoWriter.HpaSpecs.HpaPubsubSubscriptionId),
+			tfWriter.HpaSpecs = &BackgroundPersistenceWriterHpaModel{}
+			if protoWriter.HpaSpecs.HpaPubsubSubscriptionId != "" {
+				tfWriter.HpaSpecs.HpaPubsubSubscriptionId = types.StringValue(protoWriter.HpaSpecs.HpaPubsubSubscriptionId)
+			} else {
+				tfWriter.HpaSpecs.HpaPubsubSubscriptionId = types.StringNull()
 			}
 			if protoWriter.HpaSpecs.HpaMinReplicas != nil {
 				tfWriter.HpaSpecs.HpaMinReplicas = types.Int64Value(int64(*protoWriter.HpaSpecs.HpaMinReplicas))
 			} else {
-				tfWriter.HpaSpecs.HpaMinReplicas = types.Int64Null()
+				tfWriter.HpaSpecs.HpaMinReplicas = types.Int64Value(1)
 			}
 			if protoWriter.HpaSpecs.HpaMaxReplicas != nil {
 				tfWriter.HpaSpecs.HpaMaxReplicas = types.Int64Value(int64(*protoWriter.HpaSpecs.HpaMaxReplicas))
 			} else {
-				tfWriter.HpaSpecs.HpaMaxReplicas = types.Int64Null()
+				tfWriter.HpaSpecs.HpaMaxReplicas = types.Int64Value(10)
 			}
 			if protoWriter.HpaSpecs.HpaTargetAverageValue != nil {
 				tfWriter.HpaSpecs.HpaTargetAverageValue = types.Int64Value(int64(*protoWriter.HpaSpecs.HpaTargetAverageValue))
 			} else {
-				tfWriter.HpaSpecs.HpaTargetAverageValue = types.Int64Null()
+				tfWriter.HpaSpecs.HpaTargetAverageValue = types.Int64Value(5)
 			}
 		}
 
