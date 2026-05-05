@@ -140,6 +140,7 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id     = "test-kube-cluster"
   service_account_name = "test-sa"
   namespace           = "default"
+  autodiscover_key    = "test-autodiscover-key"
 ` + testBGPWritersHCL + `
   kafka = {
     sasl_secret       = "my-sasl-secret"
@@ -157,6 +158,7 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "kafka.sasl_secret", "my-sasl-secret"),
 					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "kafka.bootstrap_servers", "kafka:9092"),
 					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "kafka.dlq_topic", "my-dlq-topic"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "autodiscover_key", "test-autodiscover-key"),
 					resource.TestCheckNoResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "google_pubsub"),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("CreateClusterBackgroundPersistence")
@@ -166,6 +168,8 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 						assert.Equal(t, "my-sasl-secret", req.Specs.KafkaSaslSecret)
 						assert.Equal(t, "kafka:9092", req.Specs.KafkaBootstrapServers)
 						assert.Equal(t, "my-dlq-topic", req.Specs.CommonPersistenceSpecs.KafkaDlqTopic)
+						require.NotNil(t, req.Specs.AutodiscoverKey)
+						assert.Equal(t, "test-autodiscover-key", req.Specs.GetAutodiscoverKey())
 						return nil
 					},
 				),
@@ -187,6 +191,7 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id     = "test-kube-cluster"
   service_account_name = "test-sa"
   namespace           = "default"
+  autodiscover_key    = "original-autodiscover-key"
 ` + testBGPWritersHCL + `
   kafka = {
     sasl_secret       = "my-sasl-secret"
@@ -207,6 +212,7 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
   kube_cluster_id     = "test-kube-cluster"
   service_account_name = "test-sa"
   namespace           = "default"
+  autodiscover_key    = "updated-autodiscover-key"
 ` + testBGPWritersHCL + `
   kafka = {
     sasl_secret       = "my-sasl-secret"
@@ -221,12 +227,15 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "kafka.dlq_topic", "updated-dlq-topic"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "autodiscover_key", "updated-autodiscover-key"),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("CreateClusterBackgroundPersistence")
 						require.Len(t, captured, 2, "Expected two CreateClusterBackgroundPersistence calls (create + update upsert)")
 
 						req := captured[1].(*serverv1.CreateClusterBackgroundPersistenceRequest)
 						assert.Equal(t, "updated-dlq-topic", req.Specs.CommonPersistenceSpecs.KafkaDlqTopic)
+						require.NotNil(t, req.Specs.AutodiscoverKey)
+						assert.Equal(t, "updated-autodiscover-key", req.Specs.GetAutodiscoverKey())
 						return nil
 					},
 				),
