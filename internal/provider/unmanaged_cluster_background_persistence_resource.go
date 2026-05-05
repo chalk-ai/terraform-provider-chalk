@@ -38,6 +38,7 @@ type UnmanagedClusterBGPersistenceModel struct {
 	ServiceAccountName                          types.String          `tfsdk:"service_account_name"`
 	Namespace                                   types.String          `tfsdk:"namespace"`
 	ApiServerHost                               types.String          `tfsdk:"api_server_host"`
+	AutodiscoverKey                             types.String          `tfsdk:"autodiscover_key"`
 	OfflineStoreSnowflakeStorageIntegrationName types.String          `tfsdk:"offline_store_snowflake_storage_integration_name"`
 	OfflineStoreUploadBucketName                types.String          `tfsdk:"offline_store_upload_bucket_name"`
 	BusWriterImageGo                            types.String          `tfsdk:"bus_writer_image_go"`
@@ -254,6 +255,10 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Schema(ctx context.Conte
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"autodiscover_key": schema.StringAttribute{
+				MarkdownDescription: "Key used by Chalk to auto-discover background persistence resources.",
+				Optional:            true,
+			},
 			"offline_store_snowflake_storage_integration_name": schema.StringAttribute{
 				MarkdownDescription: "Snowflake storage integration name",
 				Optional:            true,
@@ -362,6 +367,9 @@ func buildUnmanagedBGPProtoRequest(ctx context.Context, data *UnmanagedClusterBG
 
 	if !data.ApiServerHost.IsNull() && !data.ApiServerHost.IsUnknown() {
 		deploymentSpecs.ApiServerHost = data.ApiServerHost.ValueString()
+	}
+	if !data.AutodiscoverKey.IsNull() && !data.AutodiscoverKey.IsUnknown() {
+		deploymentSpecs.AutodiscoverKey = data.AutodiscoverKey.ValueStringPointer()
 	}
 	if !data.OfflineStoreSnowflakeStorageIntegrationName.IsNull() {
 		deploymentSpecs.SnowflakeStorageIntegrationName = data.OfflineStoreSnowflakeStorageIntegrationName.ValueString()
@@ -539,6 +547,11 @@ func (r *UnmanagedClusterBackgroundPersistenceResource) Read(ctx context.Context
 			data.ApiServerHost = types.StringValue(bg.Specs.ApiServerHost)
 		} else {
 			data.ApiServerHost = types.StringNull()
+		}
+		if bg.Specs.AutodiscoverKey != nil {
+			data.AutodiscoverKey = types.StringValue(bg.Specs.GetAutodiscoverKey())
+		} else {
+			data.AutodiscoverKey = types.StringNull()
 		}
 		if bg.Specs.SnowflakeStorageIntegrationName != "" {
 			data.OfflineStoreSnowflakeStorageIntegrationName = types.StringValue(bg.Specs.SnowflakeStorageIntegrationName)

@@ -28,6 +28,7 @@ Chalk unmanaged cluster background persistence resource.
 ### Optional
 
 - `api_server_host` (String) API server host. Defaults to the provider's `api_server` if not set.
+- `autodiscover_key` (String) Key used by Chalk to auto-discover background persistence resources.
 - `bus_writer_image_bswl` (String) BSWL bus writer image. Only set this if instructed to by Chalk.
 - `bus_writer_image_go` (String) Go bus writer image. Only set this if instructed to by Chalk.
 - `bus_writer_image_python` (String) Python bus writer image. Only set this if instructed to by Chalk.
