@@ -244,6 +244,7 @@ var allDatasourceCtors = []func() datasource.DataSource{
 	NewManagedAWSVPCDataSource,
 	NewAWSCloudCredentialsDataSource,
 	NewKubernetesClusterDataSource,
+	NewManagedEnvironmentDataSource,
 }
 
 func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resource {
