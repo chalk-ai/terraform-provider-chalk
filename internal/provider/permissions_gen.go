@@ -38,5 +38,7 @@ var resourcePermissionsMarkdown = map[string]string{
 // datasourcePermissionsMarkdown maps Terraform data-source type names to their
 // required-permissions documentation, appended to each schema's MarkdownDescription.
 var datasourcePermissionsMarkdown = map[string]string{
-	"chalk_environment": "**Required permissions:** `deploy.read`",
+	"chalk_environment":                              "**Required permissions:** `deploy.read`",
+	"chalk_managed_environment":                      "**Required permissions:** `deploy.read`",
+	"chalk_unmanaged_cluster_background_persistence": "**Required permissions:** `deploy.read`",
 }
