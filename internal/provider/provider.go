@@ -242,6 +242,7 @@ var allDatasourceCtors = []func() datasource.DataSource{
 	NewOfflineStoreConnectionTestDataSource,
 	NewManagedClusterDataSource,
 	NewManagedAWSVPCDataSource,
+	NewAWSCloudCredentialsDataSource,
 }
 
 func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resource {
