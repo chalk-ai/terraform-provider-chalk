@@ -36,3 +36,9 @@ terraform.tfvars
 # OS files
 .DS_Store
 Thumbs.db
+
+# Project lifecycle artifacts (per claude-files/PROJECT-LIFECYCLE-GUIDE.md)
+plan/
+DEVELOPMENT.md
+DEVELOPMENT-HISTORY.md
+*.ignore.md

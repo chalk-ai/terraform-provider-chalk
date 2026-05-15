@@ -240,6 +240,7 @@ var allResourceCtors = []func() resource.Resource{
 var allDatasourceCtors = []func() datasource.DataSource{
 	NewEnvironmentDataSource,
 	NewOfflineStoreConnectionTestDataSource,
+	NewManagedClusterDataSource,
 }
 
 func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resource {
