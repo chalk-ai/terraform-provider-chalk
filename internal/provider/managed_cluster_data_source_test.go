@@ -17,9 +17,6 @@ data "chalk_managed_cluster" "test" {
 }
 `
 
-//go:fix inline
-func strPtr(s string) *string { return new(s) }
-
 // TestManagedClusterDataSource_AllAttributes verifies the data source surfaces
 // every attribute the resource declares.
 func TestManagedClusterDataSource_AllAttributes(t *testing.T) {
