@@ -251,6 +251,7 @@ var allDatasourceCtors = []func() datasource.DataSource{
 	NewUnmanagedEnvironmentDataSource,
 	NewGCPCloudCredentialsDataSource,
 	NewAzureCloudCredentialsDataSource,
+	NewOfflineStoreConnectionDataSource,
 }
 
 func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resource {
