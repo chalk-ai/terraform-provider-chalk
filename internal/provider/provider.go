@@ -246,6 +246,7 @@ var allDatasourceCtors = []func() datasource.DataSource{
 	NewKubernetesClusterDataSource,
 	NewManagedEnvironmentDataSource,
 	NewUnmanagedClusterBackgroundPersistenceDataSource,
+	NewClusterBackgroundPersistenceDataSource,
 }
 
 func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resource {
