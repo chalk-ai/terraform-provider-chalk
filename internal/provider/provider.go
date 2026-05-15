@@ -248,6 +248,7 @@ var allDatasourceCtors = []func() datasource.DataSource{
 	NewUnmanagedClusterBackgroundPersistenceDataSource,
 	NewClusterBackgroundPersistenceDataSource,
 	NewProjectDataSource,
+	NewUnmanagedEnvironmentDataSource,
 }
 
 func (p *ChalkProvider) Resources(ctx context.Context) []func() resource.Resource {

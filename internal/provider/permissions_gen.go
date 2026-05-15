@@ -42,4 +42,5 @@ var datasourcePermissionsMarkdown = map[string]string{
 	"chalk_environment":                              "**Required permissions:** `deploy.read`",
 	"chalk_managed_environment":                      "**Required permissions:** `deploy.read`",
 	"chalk_unmanaged_cluster_background_persistence": "**Required permissions:** `deploy.read`",
+	"chalk_unmanaged_environment":                    "**Required permissions:** `deploy.read`",
 }
