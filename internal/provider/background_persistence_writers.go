@@ -142,6 +142,10 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 		Optional:            true,
 		ElementType:         types.StringType,
 	},
+	"nodepool": schema.StringAttribute{
+		MarkdownDescription: "Nodepool to pin the writer to. On GCP this becomes a GKE node selector plus toleration; on AWS it maps to the Karpenter nodepool. When unset, the writer runs on the default nodepool.",
+		Optional:            true,
+	},
 }
 
 var bgpWritersSchemaAttribute = schema.ListNestedAttribute{
@@ -194,6 +198,7 @@ var bgpWriterObjectType = types.ObjectType{
 		"storage_cache_prefix":                types.StringType,
 		"results_writer_skip_producing_feature_metrics": types.BoolType,
 		"query_table_write_drop_ratio":                  types.StringType,
+		"nodepool":                                      types.StringType,
 		"additional_env_vars":                           types.MapType{ElemType: types.StringType},
 	},
 }
@@ -242,6 +247,9 @@ func bgpWritersTFToProto(ctx context.Context, writersList types.List) ([]*server
 		}
 		if !writer.QueryTableWriteDropRatio.IsNull() {
 			protoWriter.QueryTableWriteDropRatio = writer.QueryTableWriteDropRatio.ValueString()
+		}
+		if !writer.Nodepool.IsNull() {
+			protoWriter.Nodepool = writer.Nodepool.ValueString()
 		}
 		if !writer.GkeSpot.IsNull() {
 			val := writer.GkeSpot.ValueBool()
@@ -394,6 +402,11 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 			tfWriter.QueryTableWriteDropRatio = types.StringValue(protoWriter.QueryTableWriteDropRatio)
 		} else {
 			tfWriter.QueryTableWriteDropRatio = types.StringNull()
+		}
+		if protoWriter.Nodepool != "" {
+			tfWriter.Nodepool = types.StringValue(protoWriter.Nodepool)
+		} else {
+			tfWriter.Nodepool = types.StringNull()
 		}
 		if protoWriter.KafkaConsumerGroupOverride != "" {
 			tfWriter.KafkaConsumerGroupOverride = types.StringValue(protoWriter.KafkaConsumerGroupOverride)
