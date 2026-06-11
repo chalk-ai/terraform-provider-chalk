@@ -170,6 +170,70 @@ func TestBgpWritersProtoToTF_ExplicitServerValues(t *testing.T) {
 	assert.Equal(t, types.BoolValue(false), m.ResultsWriterSkipProducingFeatureMetrics)
 }
 
+// TestBgpWritersProtoToTF_NodepoolOmitted: server omits nodepool (empty string)
+// -> model decodes to null so an HCL omission produces no perpetual diff.
+func TestBgpWritersProtoToTF_NodepoolOmitted(t *testing.T) {
+	t.Parallel()
+	w := &serverv1.BackgroundPersistenceWriterSpecs{
+		Name:              "offline-writer",
+		BusSubscriberType: "OFFLINE_WRITER",
+	}
+	m := decodeSingleWriter(t, w)
+	assert.Equal(t, types.StringNull(), m.Nodepool)
+}
+
+// TestBgpWritersProtoToTF_NodepoolExplicit: server returns a nodepool ->
+// model carries it. This is the INF-1286 phantom-drift guard: Read must
+// populate nodepool from the server spec.
+func TestBgpWritersProtoToTF_NodepoolExplicit(t *testing.T) {
+	t.Parallel()
+	w := &serverv1.BackgroundPersistenceWriterSpecs{
+		Name:              "offline-writer",
+		BusSubscriberType: "OFFLINE_WRITER",
+		Nodepool:          "offline-writer-spot-8",
+	}
+	m := decodeSingleWriter(t, w)
+	assert.Equal(t, types.StringValue("offline-writer-spot-8"), m.Nodepool)
+}
+
+// TestBgpWritersTFToProto_NodepoolNullNoChurn: a null nodepool encodes to an
+// empty proto string (left unset), matching every other optional string field
+// so an omitted attribute never produces a write/churn.
+func TestBgpWritersTFToProto_NodepoolNullNoChurn(t *testing.T) {
+	t.Parallel()
+	w := &serverv1.BackgroundPersistenceWriterSpecs{
+		Name:              "offline-writer",
+		BusSubscriberType: "OFFLINE_WRITER",
+	}
+	m := decodeSingleWriter(t, w)
+	require.Equal(t, types.StringNull(), m.Nodepool)
+
+	ctx := context.Background()
+	list, diags := bgpWritersProtoToTF(ctx, []*serverv1.BackgroundPersistenceWriterSpecs{w})
+	require.False(t, diags.HasError())
+	out, diags := bgpWritersTFToProto(ctx, list)
+	require.False(t, diags.HasError())
+	require.Len(t, out, 1)
+	assert.Equal(t, "", out[0].Nodepool)
+}
+
+// TestWriterNodepoolRoundTrip: proto -> TF -> proto preserves nodepool.
+func TestWriterNodepoolRoundTrip(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	original := &serverv1.BackgroundPersistenceWriterSpecs{
+		Name:              "offline-writer",
+		BusSubscriberType: "OFFLINE_WRITER",
+		Nodepool:          "offline-writer-spot-8",
+	}
+	list, diags := bgpWritersProtoToTF(ctx, []*serverv1.BackgroundPersistenceWriterSpecs{original})
+	require.False(t, diags.HasError(), "decode diagnostics: %v", diags)
+	out, diags := bgpWritersTFToProto(ctx, list)
+	require.False(t, diags.HasError(), "encode diagnostics: %v", diags)
+	require.Len(t, out, 1)
+	assert.Equal(t, original.Nodepool, out[0].Nodepool)
+}
+
 // TestBgpWritersProtoToTF_ProtoRoundTrip converts proto -> TF -> proto and asserts
 // semantic equality for a fully-populated writer. Guards the decoder from drifting
 // away from the encoder.
@@ -195,6 +259,7 @@ func TestBgpWritersProtoToTF_ProtoRoundTrip(t *testing.T) {
 		MetadataSqlSslCaCertSecret:               "secret-ca",
 		MetadataSqlSslClientCertSecret:           "secret-client-cert",
 		MetadataSqlSslClientKeySecret:            "secret-client-key",
+		Nodepool:                                 "offline-writer-spot-8",
 		Request:                                  &serverv1.KubeResourceConfig{Cpu: "500m", Memory: "1Gi"},
 		Limit:                                    &serverv1.KubeResourceConfig{Cpu: "1", Memory: "2Gi"},
 		HpaSpecs: &serverv1.BackgroundPersistenceWriterHpaSpecs{
@@ -232,6 +297,7 @@ func TestBgpWritersProtoToTF_ProtoRoundTrip(t *testing.T) {
 	assert.Equal(t, original.MetadataSqlSslCaCertSecret, roundTripped.MetadataSqlSslCaCertSecret)
 	assert.Equal(t, original.MetadataSqlSslClientCertSecret, roundTripped.MetadataSqlSslClientCertSecret)
 	assert.Equal(t, original.MetadataSqlSslClientKeySecret, roundTripped.MetadataSqlSslClientKeySecret)
+	assert.Equal(t, original.Nodepool, roundTripped.Nodepool)
 	assert.Equal(t, original.Request.Cpu, roundTripped.Request.Cpu)
 	assert.Equal(t, original.Request.Memory, roundTripped.Request.Memory)
 	assert.Equal(t, original.Limit.Cpu, roundTripped.Limit.Cpu)

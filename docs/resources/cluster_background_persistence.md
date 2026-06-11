@@ -83,6 +83,7 @@ Optional:
 - `metadata_sql_ssl_client_cert_secret` (String) Metadata SQL SSL client cert secret
 - `metadata_sql_ssl_client_key_secret` (String) Metadata SQL SSL client key secret
 - `metadata_sql_uri_secret` (String) Metadata SQL URI secret
+- `nodepool` (String) Nodepool to pin the writer to. On GCP this becomes a GKE node selector plus toleration; on AWS it maps to the Karpenter nodepool. When unset, the writer runs on the default nodepool.
 - `offline_store_inserter_db_type` (String) Offline store inserter DB type
 - `query_table_write_drop_ratio` (String) Query table write drop ratio
 - `request` (Attributes) Resource requests (see [below for nested schema](#nestedatt--writers--request))
