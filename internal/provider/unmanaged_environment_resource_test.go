@@ -144,7 +144,7 @@ resource "chalk_unmanaged_environment" "test" {
   project_id              = "test-project"
   kube_cluster_id         = "test-cluster-id"
   kube_job_namespace      = "test-namespace"
-  private_pip_repositories = "https://pypi.example.com"
+  private_pip_repositories = "{\"index-url\":\"https://pypi.example.com\"}"
 }
 `,
 			},
@@ -155,7 +155,7 @@ resource "chalk_unmanaged_environment" "test" {
   project_id              = "test-project"
   kube_cluster_id         = "test-cluster-id"
   kube_job_namespace      = "test-namespace"
-  private_pip_repositories = "https://pypi2.example.com"
+  private_pip_repositories = "{\"index-url\":\"https://pypi2.example.com\"}"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -168,7 +168,7 @@ resource "chalk_unmanaged_environment" "test" {
 						assert.Equal(t, []string{"private_pip_repositories"}, req.UpdateMask.Paths,
 							"Expected only 'private_pip_repositories' in field mask")
 						require.NotNil(t, req.Environment.PrivatePipRepositories)
-						assert.Equal(t, "https://pypi2.example.com", *req.Environment.PrivatePipRepositories)
+						assert.Equal(t, "{\"index-url\":\"https://pypi2.example.com\"}", *req.Environment.PrivatePipRepositories)
 
 						return nil
 					},

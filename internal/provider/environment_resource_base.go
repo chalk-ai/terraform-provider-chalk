@@ -32,7 +32,7 @@ type BaseEnvironmentModel struct {
 	AdditionalEnvVars        types.Map            `tfsdk:"additional_env_vars"`
 	EnvironmentBuckets       types.Object         `tfsdk:"environment_buckets"`
 	SpecsConfigJson          jsontypes.Normalized `tfsdk:"specs_config_json"`
-	PrivatePipRepositories   types.String         `tfsdk:"private_pip_repositories"`
+	PrivatePipRepositories   jsontypes.Normalized `tfsdk:"private_pip_repositories"`
 	PinnedBaseImage          types.String         `tfsdk:"pinned_base_image"`
 	DefaultBuildProfile      types.String         `tfsdk:"default_build_profile"`
 	CustomerMetadata         jsontypes.Normalized `tfsdk:"customer_metadata"`
@@ -135,6 +135,7 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 		},
 		"private_pip_repositories": schema.StringAttribute{
 			MarkdownDescription: "Private pip repositories",
+			CustomType:          jsontypes.NormalizedType{},
 			Optional:            true,
 		},
 		"pinned_base_image": schema.StringAttribute{
@@ -269,7 +270,11 @@ func baseUpdateStateFromEnvironment(data *BaseEnvironmentModel, e *serverv1.Envi
 	data.ServiceUrl = types.StringPointerValue(e.ServiceUrl)
 	data.OnlineStoreKind = types.StringPointerValue(e.OnlineStoreKind)
 	data.OnlineStoreSecret = types.StringPointerValue(e.OnlineStoreSecret)
-	data.PrivatePipRepositories = types.StringPointerValue(e.PrivatePipRepositories)
+	if e.PrivatePipRepositories != nil {
+		data.PrivatePipRepositories = jsontypes.NewNormalizedValue(*e.PrivatePipRepositories)
+	} else {
+		data.PrivatePipRepositories = jsontypes.NewNormalizedNull()
+	}
 	data.PinnedBaseImage = types.StringPointerValue(e.PinnedBaseImage)
 	if e.DefaultBuildProfile != nil && *e.DefaultBuildProfile != serverv1.DeploymentBuildProfile_DEPLOYMENT_BUILD_PROFILE_UNSPECIFIED {
 		data.DefaultBuildProfile = types.StringValue(e.DefaultBuildProfile.String())
