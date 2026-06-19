@@ -53,7 +53,7 @@ data "chalk_environment" "example" {
 - `engine_docker_registry_path` (String) Engine Docker registry path
 - `engine_kube_cluster_name` (String) Engine Kubernetes cluster name
 - `environment_buckets` (Object) Environment object storage buckets (see [below for nested schema](#nestedatt--environment_buckets))
-- `feature_store_secret` (String) Feature store secret
+- `feature_store_secret` (String) Feature store secret reference
 - `grpc_engine_url` (String) gRPC engine URL
 - `is_sandbox` (Boolean) Is sandbox environment
 - `kube_cluster_mode` (String) Kubernetes cluster mode
@@ -64,10 +64,10 @@ data "chalk_environment" "example" {
 - `metadata_server_metrics_store_secret` (String) Metadata server metrics store secret
 - `metrics_bus_topic` (String) Metrics bus topic
 - `name` (String) Environment name
-- `offline_store_secret` (String) Offline store secret
+- `offline_store_secret` (String) Offline store secret reference
 - `online_persistence_mode` (String) Online persistence mode
 - `online_store_kind` (String) Online store kind for the environment
-- `online_store_secret` (String) Online store secret
+- `online_store_secret` (String) Online store secret reference
 - `pinned_base_image` (String) Pinned base image
 - `postgres_secret` (String) Postgres secret
 - `private_pip_repositories` (String) Private pip repositories

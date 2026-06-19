@@ -121,18 +121,16 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 				},
 			},
 			"online_store_secret": schema.StringAttribute{
-				MarkdownDescription: "Online store secret",
+				MarkdownDescription: "Online store secret reference",
 				Optional:            true,
-				Sensitive:           true,
 			},
 			"online_store_kind": schema.StringAttribute{
 				MarkdownDescription: "Online store kind",
 				Optional:            true,
 			},
 			"feature_store_secret": schema.StringAttribute{
-				MarkdownDescription: "Feature store secret",
+				MarkdownDescription: "Feature store secret reference",
 				Optional:            true,
-				Sensitive:           true,
 			},
 			"private_pip_repositories": schema.StringAttribute{
 				MarkdownDescription: "Private pip repositories",

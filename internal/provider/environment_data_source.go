@@ -126,15 +126,15 @@ func (d *EnvironmentDataSource) Schema(ctx context.Context, req datasource.Schem
 				Computed:            true,
 			},
 			"offline_store_secret": schema.StringAttribute{
-				MarkdownDescription: "Offline store secret",
+				MarkdownDescription: "Offline store secret reference",
 				Computed:            true,
 			},
 			"online_store_secret": schema.StringAttribute{
-				MarkdownDescription: "Online store secret",
+				MarkdownDescription: "Online store secret reference",
 				Computed:            true,
 			},
 			"feature_store_secret": schema.StringAttribute{
-				MarkdownDescription: "Feature store secret",
+				MarkdownDescription: "Feature store secret reference",
 				Computed:            true,
 			},
 			"postgres_secret": schema.StringAttribute{

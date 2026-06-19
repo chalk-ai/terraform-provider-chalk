@@ -36,7 +36,7 @@ Chalk unmanaged environment resource
 - `kube_cluster_mode` (String) Kubernetes cluster mode (unmanaged environments only)
 - `kube_service_account_name` (String) Kubernetes service account name
 - `online_store_kind` (String) Online store kind
-- `online_store_secret` (String, Sensitive) Online store secret
+- `online_store_secret` (String) Online store secret reference
 - `pinned_base_image` (String) Pinned base image for deployments
 - `private_pip_repositories` (String) Private pip repositories
 - `service_url` (String) Service URL (set by server if not provided)
