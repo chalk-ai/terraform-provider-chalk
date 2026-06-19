@@ -39,7 +39,7 @@ Chalk environment resource
 - `kube_service_account_name` (String) Kubernetes service account name
 - `managed` (Boolean) Whether to bootstrap cloud infrastructure
 - `online_store_kind` (String) Online store kind
-- `online_store_secret` (String, Sensitive) Online store secret
+- `online_store_secret` (String) Online store secret
 - `private_pip_repositories` (String) Private pip repositories
 - `service_url` (String) Service URL
 - `source_bundle_bucket` (String) Source bundle bucket

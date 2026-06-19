@@ -97,7 +97,6 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 		"online_store_secret": schema.StringAttribute{
 			MarkdownDescription: "Online store secret",
 			Optional:            true,
-			Sensitive:           true,
 		},
 		"additional_env_vars": schema.MapAttribute{
 			MarkdownDescription: "Additional environment variables",

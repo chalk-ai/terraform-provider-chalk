@@ -123,7 +123,6 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 			"online_store_secret": schema.StringAttribute{
 				MarkdownDescription: "Online store secret",
 				Optional:            true,
-				Sensitive:           true,
 			},
 			"online_store_kind": schema.StringAttribute{
 				MarkdownDescription: "Online store kind",
