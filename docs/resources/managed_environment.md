@@ -34,7 +34,7 @@ Chalk managed environment resource
 - `id` (String) Environment identifier; server-generated (immutable)
 - `kube_job_namespace` (String) Kubernetes job namespace (immutable; auto-assigned by server if not provided)
 - `online_store_kind` (String) Online store kind
-- `online_store_secret` (String) Online store secret
+- `online_store_secret` (String) Online store secret reference
 - `pinned_base_image` (String) Pinned base image for deployments
 - `private_pip_repositories` (String) Private pip repositories
 - `service_url` (String) Service URL (set by server if not provided)

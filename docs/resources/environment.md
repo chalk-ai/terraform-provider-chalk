@@ -33,13 +33,13 @@ Chalk environment resource
 - `branch_url` (String) Branch URL
 - `engine_docker_registry_path` (String) Engine Docker registry path
 - `environment_buckets` (Attributes) Environment object storage configuration (see [below for nested schema](#nestedatt--environment_buckets))
-- `feature_store_secret` (String) Feature store secret
+- `feature_store_secret` (String) Feature store secret reference
 - `kube_cluster_id` (String) Kubernetes cluster ID
 - `kube_job_namespace` (String) Kubernetes job namespace
 - `kube_service_account_name` (String) Kubernetes service account name
 - `managed` (Boolean) Whether to bootstrap cloud infrastructure
 - `online_store_kind` (String) Online store kind
-- `online_store_secret` (String) Online store secret
+- `online_store_secret` (String) Online store secret reference
 - `private_pip_repositories` (String) Private pip repositories
 - `service_url` (String) Service URL
 - `source_bundle_bucket` (String) Source bundle bucket
