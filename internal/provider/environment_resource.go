@@ -131,7 +131,6 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 			"feature_store_secret": schema.StringAttribute{
 				MarkdownDescription: "Feature store secret",
 				Optional:            true,
-				Sensitive:           true,
 			},
 			"private_pip_repositories": schema.StringAttribute{
 				MarkdownDescription: "Private pip repositories",
