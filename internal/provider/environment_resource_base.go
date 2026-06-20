@@ -137,6 +137,7 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 			MarkdownDescription: "Private pip repositories",
 			CustomType:          jsontypes.NormalizedType{},
 			Optional:            true,
+			Computed:            true,
 		},
 		"pinned_base_image": schema.StringAttribute{
 			MarkdownDescription: "Pinned base image for deployments",
@@ -157,6 +158,7 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 			MarkdownDescription: "Customer metadata as a JSON object",
 			CustomType:          jsontypes.NormalizedType{},
 			Optional:            true,
+			Computed:            true,
 		},
 	}
 }
