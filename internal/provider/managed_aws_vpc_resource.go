@@ -3,9 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
 	"github.com/chalk-ai/terraform-provider-chalk/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -17,6 +19,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+)
+
+// vpcPollInterval is how often we poll the server while waiting for a managed
+// VPC to be applied or deleted. vpcPollTimeout bounds how long we wait before
+// giving up. They are vars (not consts) so tests can shorten them.
+var (
+	vpcPollInterval = 10 * time.Second
+	vpcPollTimeout  = 30 * time.Minute
 )
 
 var _ resource.Resource = &ManagedAWSVPCResource{}
@@ -226,14 +236,32 @@ func (r *ManagedAWSVPCResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	diags = r.updateModelFromProto(ctx, &data, vpc.Msg.Vpc)
+	// The VPC is provisioned asynchronously. Poll until it reaches a terminal
+	// lifecycle status: ACTIVE on success, FAILED otherwise.
+	created := vpc.Msg.Vpc
+	finalVpc, waitErr := r.waitForVPCActive(ctx, cc, created.GetId())
+	if finalVpc == nil {
+		// We never observed a fresh status (e.g. transport error or timeout);
+		// fall back to the create response so the resource is still tracked.
+		finalVpc = created
+	}
+
+	diags = r.updateModelFromProto(ctx, &data, finalVpc)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Trace(ctx, "created a chalk_managed_aws_vpc resource")
+	// Persist state before returning any wait error so that the partially
+	// created VPC is recorded and Terraform taints it (replacing it on the next
+	// apply) instead of leaking an untracked resource.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if waitErr != nil {
+		resp.Diagnostics.AddError("Error Waiting for Managed VPC", fmt.Sprintf("Managed VPC %s did not become active: %v", created.GetId(), waitErr))
+		return
+	}
+
+	tflog.Trace(ctx, "created a chalk_managed_aws_vpc resource")
 }
 
 func (r *ManagedAWSVPCResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -297,18 +325,132 @@ func (r *ManagedAWSVPCResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	cc := r.client.NewCloudComponentsClient(ctx)
+	id := data.Id.ValueString()
 	_, err := cc.DeleteCloudComponentVpc(ctx, connect.NewRequest(&serverv1.DeleteCloudComponentVpcRequest{
-		Id: data.Id.ValueString(),
+		Id: id,
 	}))
 	if err != nil {
-		resp.Diagnostics.AddError("Error Deleting Managed VPC", fmt.Sprintf("Could not delete managed VPC %s: %v", data.Id.ValueString(), err))
+		resp.Diagnostics.AddError("Error Deleting Managed VPC", fmt.Sprintf("Could not delete managed VPC %s: %v", id, err))
 		return
 	}
+
+	// Deletion is asynchronous: the server keeps reporting the VPC with a
+	// DELETING status until teardown is confirmed. Poll until it reaches the
+	// terminal DELETED status or can no longer be fetched so that Delete only
+	// returns once the VPC is actually gone.
+	err = pollUntilDeleted(ctx, vpcPollInterval, vpcPollTimeout, func(ctx context.Context) (componentStatus, error) {
+		vpc, err := cc.GetCloudComponentVpc(ctx, connect.NewRequest(&serverv1.GetCloudComponentVpcRequest{
+			Id: id,
+		}))
+		if err != nil {
+			if isNotFoundErr(err) {
+				return componentStatus{found: false}, nil
+			}
+			return componentStatus{}, err
+		}
+		return componentStatus{found: true, status: vpc.Msg.Vpc.GetStatus(), statusError: vpc.Msg.Vpc.GetStatusError()}, nil
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("Error Waiting for Managed VPC Deletion", fmt.Sprintf("Managed VPC %s was deleted but did not disappear: %v", id, err))
+		return
+	}
+
 	tflog.Trace(ctx, "deleted chalk_managed_aws_vpc resource")
 }
 
 func (r *ManagedAWSVPCResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// waitForVPCActive polls GetCloudComponentVpc until the VPC reaches a terminal
+// lifecycle status. It returns the latest VPC response together with a nil
+// error once the status is ACTIVE, or the response and a non-nil error when the
+// status is FAILED. On a transport error or timeout it returns a nil response
+// and the error.
+func (r *ManagedAWSVPCResource) waitForVPCActive(
+	ctx context.Context,
+	cc serverv1connect.CloudComponentsServiceClient,
+	id string,
+) (*serverv1.CloudComponentVpcResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, vpcPollTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(vpcPollInterval)
+	defer ticker.Stop()
+
+	for {
+		resp, err := cc.GetCloudComponentVpc(ctx, connect.NewRequest(&serverv1.GetCloudComponentVpcRequest{
+			Id: id,
+		}))
+		if err != nil {
+			return nil, err
+		}
+		vpc := resp.Msg.Vpc
+
+		if terminal, failure := terminalStatus(vpc.GetStatus(), vpc.GetStatusError()); terminal {
+			return vpc, failure
+		}
+
+		tflog.Trace(ctx, "waiting for managed VPC to become active", map[string]any{
+			"id":     id,
+			"status": vpc.GetStatus(),
+		})
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("timed out after %s waiting for status %s: %w", vpcPollTimeout, cloudComponentStatusActive, ctx.Err())
+		case <-ticker.C:
+		}
+	}
+}
+
+// componentStatus is the lifecycle snapshot fetched while polling a managed
+// cloud component during deletion.
+type componentStatus struct {
+	// found reports whether the component could still be fetched (Get did not
+	// return not-found).
+	found bool
+	// status / statusError are the lifecycle status and failure detail when
+	// found is true.
+	status      string
+	statusError string
+}
+
+// pollUntilDeleted repeatedly invokes get until the component has finished
+// tearing down. Deletion is only complete once the component can no longer be
+// fetched OR it reports the terminal DELETED status; a DELETING (or any other
+// in-flight) status keeps polling. This matters because the server keeps the
+// metadata record around — reporting DELETING — until the deployer confirms
+// teardown, so we must not treat a still-deleting cluster as gone. A FAILED
+// status or a transport error aborts the wait. It gives up once timeout elapses.
+func pollUntilDeleted(ctx context.Context, interval, timeout time.Duration, get func(context.Context) (componentStatus, error)) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		cur, err := get(ctx)
+		if err != nil {
+			return err
+		}
+
+		if done, failure := deletionComplete(cur.found, cur.status, cur.statusError); done {
+			return failure
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timed out after %s waiting for resource to be deleted (last status %q): %w", timeout, cur.status, ctx.Err())
+		case <-ticker.C:
+		}
+	}
+}
+
+// isNotFoundErr reports whether err is a connect not-found error.
+func isNotFoundErr(err error) bool {
+	return err != nil && connect.CodeOf(err) == connect.CodeNotFound
 }
 
 var subnetAttrTypes = map[string]attr.Type{

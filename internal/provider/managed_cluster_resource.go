@@ -3,9 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
 	"github.com/chalk-ai/terraform-provider-chalk/client"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -14,6 +16,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+)
+
+// clusterPollInterval is how often we poll the server while waiting for a
+// managed cluster to be applied or deleted. clusterPollTimeout bounds how long
+// we wait before giving up. They are vars (not consts) so tests can shorten
+// them.
+var (
+	clusterPollInterval = 10 * time.Second
+	clusterPollTimeout  = 90 * time.Minute
 )
 
 var _ resource.Resource = &ManagedClusterResource{}
@@ -142,12 +153,32 @@ func (r *ManagedClusterResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	// Update with created values
-	r.updateModelFromProto(&data, cluster.Msg.Cluster)
+	// The cluster is provisioned asynchronously. Poll until it reaches a
+	// terminal lifecycle status: ACTIVE on success, FAILED otherwise.
+	created := cluster.Msg.Cluster
+	finalCluster, waitErr := r.waitForClusterActive(ctx, cc, created.GetId())
+	if finalCluster == nil {
+		// We never observed a fresh status (e.g. transport error or timeout);
+		// fall back to the create response so the resource is still tracked.
+		finalCluster = created
+	}
+
+	// Update with the latest values.
+	r.updateModelFromProto(&data, finalCluster)
+
+	// Persist state before returning any wait error so that the partially
+	// created cluster is recorded and Terraform taints it (replacing it on the
+	// next apply) instead of leaking an untracked resource.
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if waitErr != nil {
+		resp.Diagnostics.AddError(
+			"Error Waiting for Managed Cluster",
+			fmt.Sprintf("Managed cluster %s did not become active: %v", created.GetId(), waitErr),
+		)
+		return
+	}
 
 	tflog.Trace(ctx, "created a chalk_managed_cluster resource")
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *ManagedClusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -224,15 +255,41 @@ func (r *ManagedClusterResource) Delete(ctx context.Context, req resource.Delete
 	// Create cloud components client
 	cc := r.client.NewCloudComponentsClient(ctx)
 
+	id := data.Id.ValueString()
 	deleteReq := &serverv1.DeleteCloudComponentClusterRequest{
-		Id: data.Id.ValueString(),
+		Id: id,
 	}
 
 	_, err := cc.DeleteCloudComponentCluster(ctx, connect.NewRequest(deleteReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Managed Cluster",
-			fmt.Sprintf("Could not delete managed cluster %s: %v", data.Id.ValueString(), err),
+			fmt.Sprintf("Could not delete managed cluster %s: %v", id, err),
+		)
+		return
+	}
+
+	// Deletion is asynchronous: the server keeps reporting the cluster with a
+	// DELETING status until the deployer confirms teardown. Poll until it
+	// reaches the terminal DELETED status or can no longer be fetched so that
+	// Delete only returns once the cluster is actually gone (rather than as soon
+	// as it enters DELETING).
+	err = pollUntilDeleted(ctx, clusterPollInterval, clusterPollTimeout, func(ctx context.Context) (componentStatus, error) {
+		cluster, err := cc.GetCloudComponentCluster(ctx, connect.NewRequest(&serverv1.GetCloudComponentClusterRequest{
+			Id: id,
+		}))
+		if err != nil {
+			if isNotFoundErr(err) {
+				return componentStatus{found: false}, nil
+			}
+			return componentStatus{}, err
+		}
+		return componentStatus{found: true, status: cluster.Msg.Cluster.GetStatus(), statusError: cluster.Msg.Cluster.GetStatusError()}, nil
+	})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Waiting for Managed Cluster Deletion",
+			fmt.Sprintf("Managed cluster %s was deleted but did not disappear: %v", id, err),
 		)
 		return
 	}
@@ -242,6 +299,48 @@ func (r *ManagedClusterResource) Delete(ctx context.Context, req resource.Delete
 
 func (r *ManagedClusterResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// waitForClusterActive polls GetCloudComponentCluster until the cluster reaches
+// a terminal lifecycle status. It returns the latest cluster response together
+// with a nil error once the status is ACTIVE, or the response and a non-nil
+// error when the status is FAILED. On a transport error or timeout it returns a
+// nil response and the error.
+func (r *ManagedClusterResource) waitForClusterActive(
+	ctx context.Context,
+	cc serverv1connect.CloudComponentsServiceClient,
+	id string,
+) (*serverv1.CloudComponentClusterResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, clusterPollTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(clusterPollInterval)
+	defer ticker.Stop()
+
+	for {
+		resp, err := cc.GetCloudComponentCluster(ctx, connect.NewRequest(&serverv1.GetCloudComponentClusterRequest{
+			Id: id,
+		}))
+		if err != nil {
+			return nil, err
+		}
+		cluster := resp.Msg.Cluster
+
+		if terminal, failure := terminalStatus(cluster.GetStatus(), cluster.GetStatusError()); terminal {
+			return cluster, failure
+		}
+
+		tflog.Trace(ctx, "waiting for managed cluster to become active", map[string]any{
+			"id":     id,
+			"status": cluster.GetStatus(),
+		})
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("timed out after %s waiting for status %s: %w", clusterPollTimeout, cloudComponentStatusActive, ctx.Err())
+		case <-ticker.C:
+		}
+	}
 }
 
 func (r *ManagedClusterResource) updateModelFromProto(model *ManagedClusterResourceModel, cluster *serverv1.CloudComponentClusterResponse) {

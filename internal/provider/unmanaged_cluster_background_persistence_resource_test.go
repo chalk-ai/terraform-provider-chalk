@@ -599,3 +599,46 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 		},
 	})
 }
+
+func TestUnmanagedClusterBGPDelete(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerBGP(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_unmanaged_cluster_background_persistence" "test" {
+  kube_cluster_id     = "test-kube-cluster"
+  service_account_name = "test-sa"
+  namespace           = "default"
+` + testBGPWritersHCL + `
+  kafka = {
+    sasl_secret       = "my-sasl-secret"
+    bootstrap_servers = "kafka:9092"
+    dlq_topic         = "my-dlq-topic"
+    offline_store_bus_upload_topic_id          = "upload-topic"
+    offline_store_bus_streaming_write_topic_id = "streaming-topic"
+    metrics_bus_topic_id = "metrics-topic"
+    result_bus_topic_id  = "result-topic"
+  }
+}
+`,
+				Check: resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "id", "test-bgp-id"),
+			},
+			{
+				// Removing the resource triggers Delete, which must call
+				// DeleteClusterBackgroundPersistence with the stored id.
+				Config: providerConfig(server.URL),
+				Check: func(s *terraform.State) error {
+					captured := server.GetCapturedRequests("DeleteClusterBackgroundPersistence")
+					require.Len(t, captured, 1, "Expected exactly one DeleteClusterBackgroundPersistence call")
+					req := captured[0].(*serverv1.DeleteClusterBackgroundPersistenceRequest)
+					assert.Equal(t, "test-bgp-id", req.GetId())
+					return nil
+				},
+			},
+		},
+	})
+}
