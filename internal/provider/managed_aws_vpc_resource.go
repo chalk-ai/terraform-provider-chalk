@@ -24,9 +24,15 @@ import (
 // vpcPollInterval is how often we poll the server while waiting for a managed
 // VPC to be applied or deleted. vpcPollTimeout bounds how long we wait before
 // giving up. They are vars (not consts) so tests can shorten them.
+//
+// vpcPollTimeout must be strictly longer than the server's vpcDeploymentTimeout
+// (30m, see go-api-server/cloudcomponents/lifecycle.go): the server lazily
+// flips a stuck deployment to FAILED once that deadline passes, so we keep
+// polling past it to observe the server's terminal status instead of timing out
+// first and reporting a less useful error.
 var (
 	vpcPollInterval = 10 * time.Second
-	vpcPollTimeout  = 30 * time.Minute
+	vpcPollTimeout  = 35 * time.Minute
 )
 
 var _ resource.Resource = &ManagedAWSVPCResource{}
@@ -239,7 +245,7 @@ func (r *ManagedAWSVPCResource) Create(ctx context.Context, req resource.CreateR
 	// The VPC is provisioned asynchronously. Poll until it reaches a terminal
 	// lifecycle status: ACTIVE on success, FAILED otherwise.
 	created := vpc.Msg.Vpc
-	finalVpc, waitErr := r.waitForVPCActive(ctx, cc, created.GetId())
+	finalVpc, waitErr := waitForCloudVpcActive(ctx, cc, created.GetId())
 	if finalVpc == nil {
 		// We never observed a fresh status (e.g. transport error or timeout);
 		// fall back to the create response so the resource is still tracked.
@@ -362,12 +368,13 @@ func (r *ManagedAWSVPCResource) ImportState(ctx context.Context, req resource.Im
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// waitForVPCActive polls GetCloudComponentVpc until the VPC reaches a terminal
-// lifecycle status. It returns the latest VPC response together with a nil
-// error once the status is ACTIVE, or the response and a non-nil error when the
-// status is FAILED. On a transport error or timeout it returns a nil response
-// and the error.
-func (r *ManagedAWSVPCResource) waitForVPCActive(
+// waitForCloudVpcActive polls GetCloudComponentVpc until the VPC reaches a
+// terminal lifecycle status. It returns the latest VPC response together with a
+// nil error once the status is ACTIVE, or the response and a non-nil error when
+// the status is FAILED. On a transport error or timeout it returns a nil
+// response and the error. It is shared by the AWS and GCP managed VPC resources,
+// which use the same CloudComponents endpoints and response type.
+func waitForCloudVpcActive(
 	ctx context.Context,
 	cc serverv1connect.CloudComponentsServiceClient,
 	id string,

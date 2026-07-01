@@ -22,9 +22,15 @@ import (
 // managed cluster to be applied or deleted. clusterPollTimeout bounds how long
 // we wait before giving up. They are vars (not consts) so tests can shorten
 // them.
+//
+// clusterPollTimeout must be strictly longer than the server's
+// clusterDeploymentTimeout (90m, see go-api-server/cloudcomponents/lifecycle.go):
+// the server lazily flips a stuck deployment to FAILED once that deadline
+// passes, so we keep polling past it to observe the server's terminal status
+// instead of timing out first and reporting a less useful error.
 var (
 	clusterPollInterval = 10 * time.Second
-	clusterPollTimeout  = 90 * time.Minute
+	clusterPollTimeout  = 95 * time.Minute
 )
 
 var _ resource.Resource = &ManagedClusterResource{}
