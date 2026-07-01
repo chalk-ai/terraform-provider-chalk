@@ -21,13 +21,13 @@ func clusterResponse(status string, statusErr string) *serverv1.CloudComponentCl
 		Id:                "cluster-test-id",
 		Kind:              "EKS_STANDARD",
 		Managed:           true,
-		CloudCredentialId: proto.String("cc-test-id"),
-		VpcId:             proto.String("vpc-test-id"),
+		CloudCredentialId: new("cc-test-id"),
+		VpcId:             new("vpc-test-id"),
 		Status:            status,
 		Spec:              &serverv1.CloudComponentCluster{Name: "test-cluster"},
 	}
 	if statusErr != "" {
-		resp.StatusError = proto.String(statusErr)
+		resp.StatusError = new(statusErr)
 	}
 	return resp
 }

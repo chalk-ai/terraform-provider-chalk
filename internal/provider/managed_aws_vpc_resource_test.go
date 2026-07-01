@@ -28,7 +28,7 @@ func vpcResponse(status string, statusErr string) *serverv1.CloudComponentVpcRes
 		Name:              "test-vpc",
 		Kind:              "aws",
 		Managed:           true,
-		CloudCredentialId: proto.String("cc-test-id"),
+		CloudCredentialId: new("cc-test-id"),
 		Status:            status,
 		Spec: &serverv1.CloudComponentVpc{
 			Name: "test-vpc",
@@ -48,7 +48,7 @@ func vpcResponse(status string, statusErr string) *serverv1.CloudComponentVpcRes
 		},
 	}
 	if statusErr != "" {
-		resp.StatusError = proto.String(statusErr)
+		resp.StatusError = new(statusErr)
 	}
 	return resp
 }

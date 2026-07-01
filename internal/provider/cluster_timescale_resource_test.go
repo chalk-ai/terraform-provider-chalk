@@ -624,7 +624,7 @@ func TestClusterTimescaleResourceDNSHostnameComputed(t *testing.T) {
 		// Mirror the server's hydrateTimescaleDefaults: derive a hostname when
 		// the client did not send one.
 		if currentSpecs.GetDnsHostname() == "" {
-			currentSpecs.DnsHostname = proto.String("test-env-id.db.example.com")
+			currentSpecs.DnsHostname = new("test-env-id.db.example.com")
 		}
 		return &serverv1.CreateClusterTimescaleDBResponse{ClusterTimescaleId: "test-cluster-id", Specs: currentSpecs}, nil
 	})
