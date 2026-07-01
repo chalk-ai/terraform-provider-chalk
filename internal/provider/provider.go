@@ -233,6 +233,9 @@ var allResourceCtors = []func() resource.Resource{
 	NewEnvironmentOfflineStoreConnectionBindingResource,
 	NewUnmanagedClusterBackgroundPersistenceResource,
 	NewScalingGroupResource,
+	NewCloudStorageResource,
+	NewEnvironmentCloudStorageBindingResource,
+	NewClusterCloudStorageBindingResource,
 }
 
 // allDatasourceCtors is the canonical list of data-source constructors. It is
