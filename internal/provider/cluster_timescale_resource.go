@@ -274,10 +274,12 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 				ElementType:         types.StringType,
 			},
 			"dns_hostname": schema.StringAttribute{
-				MarkdownDescription: "DNS hostname",
+				MarkdownDescription: "DNS hostname. If unset, the server derives `{env}.db.{cluster_dns_zone}` when the cluster has a DNS zone, otherwise it is left unset. Changing this forces replacement.",
 				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"bootstrap_cloud_resources": schema.BoolAttribute{
@@ -388,7 +390,7 @@ func buildClusterTimescaleSpecs(ctx context.Context, data *ClusterTimescaleResou
 		val := data.ServiceType.ValueString()
 		specs.ServiceType = &val
 	}
-	if !data.DNSHostname.IsNull() {
+	if !data.DNSHostname.IsNull() && !data.DNSHostname.IsUnknown() {
 		val := data.DNSHostname.ValueString()
 		specs.DnsHostname = &val
 	}

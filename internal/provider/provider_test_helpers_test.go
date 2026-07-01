@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -25,6 +26,12 @@ import (
 // field handling, state management) that wouldn't be found in simple unit tests.
 func TestMain(m *testing.M) {
 	os.Setenv("TF_ACC", "1")
+	// Shorten managed-resource poll intervals so tests that exercise the
+	// apply/delete polling loops run quickly. The production timeouts are left
+	// untouched. Set here (not per-test) to avoid races between parallel tests
+	// mutating these shared package vars.
+	vpcPollInterval = time.Millisecond
+	clusterPollInterval = time.Millisecond
 	os.Exit(m.Run())
 }
 

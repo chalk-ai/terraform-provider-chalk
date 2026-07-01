@@ -4,14 +4,14 @@ page_title: "chalk_managed_cluster Resource - chalk"
 subcategory: ""
 description: |-
   Chalk managed Kubernetes cluster resource. Creates a fully managed cluster using the provided cloud credentials.
-  Required permissions: project.create
+  Required permissions: project.create (team-scoped)
 ---
 
 # chalk_managed_cluster (Resource)
 
 Chalk managed Kubernetes cluster resource. Creates a fully managed cluster using the provided cloud credentials.
 
-**Required permissions:** `project.create`
+**Required permissions:** `project.create` *(team-scoped)*
 
 
 

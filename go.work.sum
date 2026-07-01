@@ -576,10 +576,12 @@ github.com/bwesterb/go-ristretto v1.2.3 h1:1w53tCkGhCQ5djbat3+MH0BAQ5Kfgbt56UZQ/
 github.com/bwesterb/go-ristretto v1.2.3/go.mod h1:fUIoIZaG73pV5biE2Blr2xEzDoMj7NFEuV9ekS419A0=
 github.com/campoy/embedmd v1.0.0 h1:V4kI2qTJJLf4J29RzI/MAt2c3Bl4dQSYPuflzwFH2hY=
 github.com/campoy/embedmd v1.0.0/go.mod h1:oxyr9RCiSXg0M3VJ3ks0UGfp98BpSSGr0kpiX3MzVl8=
+github.com/chalk-ai/chalk-go v1.2.266/go.mod h1:gTPHLtBchDKA9s7NxAKWxaLGUda2QwtvAOprhTjQrD4=
 github.com/chalk-ai/chalk-go/gen v1.2.167 h1:oNzseXGEkZPCF5TYRDbuw8APsyg3fdKUHmK2SvU4E7w=
 github.com/chalk-ai/chalk-go/gen v1.2.167/go.mod h1:crb/1Cp35Whrw6GmuHFimZwmabaIVJ+n+PGA5X17tQk=
 github.com/chalk-ai/chalk-go/gen v1.2.174 h1:GQGPasDIuiX+jE55NzsqlxPVRgmuPZlm/NUdnf/Yb2Q=
 github.com/chalk-ai/chalk-go/gen v1.2.174/go.mod h1:crb/1Cp35Whrw6GmuHFimZwmabaIVJ+n+PGA5X17tQk=
+github.com/chalk-ai/chalk-go/gen v1.2.266/go.mod h1:Cd47/VOgt1NJD9LOeSGxiypc8hLOGZ4y8NTO13uVnzc=
 github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 h1:aQ3y1lwWyqYPiWZThqv1aFbZMiM9vblcSArJRf2Irls=
 github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443/go.mod h1:W+zGtBO5Y1IgJhy4+A9GOqVhqLpfZi+vwmdNXUehLA8=
 github.com/cncf/xds/go v0.0.0-20251022180443-0feb69152e9f h1:Y8xYupdHxryycyPlc9Y+bSQAYZnetRJ70VMVKm5CKI0=

@@ -4,14 +4,14 @@ page_title: "chalk_environment_background_persistence_deployment_binding Resourc
 subcategory: ""
 description: |-
   Manages a binding between a Chalk environment and a background persistence deployment.
-  Required permissions: project.create
+  Required permissions: project.create (team-scoped)
 ---
 
 # chalk_environment_background_persistence_deployment_binding (Resource)
 
 Manages a binding between a Chalk environment and a background persistence deployment.
 
-**Required permissions:** `project.create`
+**Required permissions:** `project.create` *(team-scoped)*
 
 
 

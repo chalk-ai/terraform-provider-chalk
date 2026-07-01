@@ -738,10 +738,29 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 }
 
 func (r *ClusterGatewayResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// Note: According to the proto definition, there's no DeleteClusterGateway method
-	// This means the gateway lifecycle might be managed differently
-	// For now, we'll just remove it from Terraform state
-	tflog.Trace(ctx, "cluster gateway deletion - removing from terraform state only (no API delete available)")
+	var data ClusterGatewayResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	bc := r.client.NewBuilderClient(ctx)
+
+	deleteReq := &serverv1.DeleteClusterGatewayRequest{
+		Id: data.Id.ValueString(),
+	}
+
+	_, err := bc.DeleteClusterGateway(ctx, connect.NewRequest(deleteReq))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Deleting Chalk Cluster Gateway",
+			fmt.Sprintf("Could not delete cluster gateway %s: %v", data.Id.ValueString(), err),
+		)
+		return
+	}
+
+	tflog.Trace(ctx, "deleted chalk cluster gateway resource")
 }
 
 func (r *ClusterGatewayResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

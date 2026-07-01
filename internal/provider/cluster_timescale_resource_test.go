@@ -9,6 +9,7 @@ import (
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/chalk-go/testserver"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -602,6 +603,105 @@ resource "chalk_cluster_timescale" "test" {
 }
 `,
 				ExpectError: regexp.MustCompile("quota exceeded"),
+			},
+		},
+	})
+}
+
+// TestClusterTimescaleResourceDNSHostnameComputed verifies that when the config
+// omits dns_hostname, the server-derived value is reflected into state
+// (Optional + Computed) and re-applying the same config produces no diff.
+func TestClusterTimescaleResourceDNSHostnameComputed(t *testing.T) {
+	t.Parallel()
+
+	server := testserver.NewMockBuilderServer(t)
+	t.Cleanup(func() { server.Close() })
+
+	var currentSpecs *serverv1.ClusterTimescaleSpecs
+	server.OnCreateClusterTimescaleDB().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		createReq := req.(*serverv1.CreateClusterTimescaleDBRequest)
+		currentSpecs = proto.Clone(createReq.Specs).(*serverv1.ClusterTimescaleSpecs)
+		// Mirror the server's hydrateTimescaleDefaults: derive a hostname when
+		// the client did not send one.
+		if currentSpecs.GetDnsHostname() == "" {
+			currentSpecs.DnsHostname = new("test-env-id.db.example.com")
+		}
+		return &serverv1.CreateClusterTimescaleDBResponse{ClusterTimescaleId: "test-cluster-id", Specs: currentSpecs}, nil
+	})
+	server.OnGetClusterTimescaleDB().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		return &serverv1.GetClusterTimescaleDBResponse{Id: "test-cluster-id", Specs: currentSpecs}, nil
+	})
+	server.OnDeleteClusterTimescaleDB().Return(&serverv1.DeleteClusterTimescaleDBResponse{})
+
+	config := providerConfig(server.URL) + `
+resource "chalk_cluster_timescale" "test" {
+  environment_id    = "test-env-id"
+  storage           = "30Gi"
+  database_replicas = 1
+  timescale_image   = "timescale/timescaledb:latest-pg14"
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// The server-derived hostname lands in state even though the
+					// config omitted it.
+					resource.TestCheckResourceAttr("chalk_cluster_timescale.test", "dns_hostname", "test-env-id.db.example.com"),
+					func(s *terraform.State) error {
+						req := server.GetCapturedRequests("CreateClusterTimescaleDB")[0].(*serverv1.CreateClusterTimescaleDBRequest)
+						// The client did not send a hostname; the server computed it.
+						assert.Empty(t, req.Specs.GetDnsHostname(), "client should not send a dns_hostname when config omits it")
+						return nil
+					},
+				),
+			},
+			{
+				// Re-applying the identical config must not plan any change: the
+				// computed hostname is held stable by UseStateForUnknown.
+				Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
+// TestClusterTimescaleResourceDNSHostnameNullStaysNull verifies that when the
+// server returns no hostname (e.g. the cluster has no DNS zone), dns_hostname
+// stays null and does not produce a perpetual diff.
+func TestClusterTimescaleResourceDNSHostnameNullStaysNull(t *testing.T) {
+	t.Parallel()
+
+	// The default mock echoes the create specs back, so an omitted hostname
+	// round-trips as nil (mirroring a cluster with no DNS zone).
+	server := setupMockBuilderServerTimescale(t)
+
+	config := providerConfig(server.URL) + `
+resource "chalk_cluster_timescale" "test" {
+  environment_id    = "test-env-id"
+  storage           = "30Gi"
+  database_replicas = 1
+  timescale_image   = "timescale/timescaledb:latest-pg14"
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  resource.TestCheckNoResourceAttr("chalk_cluster_timescale.test", "dns_hostname"),
+			},
+			{
+				Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
 			},
 		},
 	})

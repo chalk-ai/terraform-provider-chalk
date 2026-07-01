@@ -716,10 +716,29 @@ func (r *ClusterBackgroundPersistenceResource) Update(ctx context.Context, req r
 }
 
 func (r *ClusterBackgroundPersistenceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// Note: According to the proto definition, there's no DeleteClusterBackgroundPersistence method
-	// This means the background persistence lifecycle might be managed differently
-	// For now, we'll just remove it from Terraform state
-	tflog.Trace(ctx, "cluster background persistence deletion - removing from terraform state only (no API delete available)")
+	var data ClusterBackgroundPersistenceResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	bc := r.client.NewBuilderClient(ctx)
+
+	deleteReq := &serverv1.DeleteClusterBackgroundPersistenceRequest{
+		Id: data.Id.ValueString(),
+	}
+
+	_, err := bc.DeleteClusterBackgroundPersistence(ctx, connect.NewRequest(deleteReq))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Deleting Chalk Cluster Background Persistence",
+			fmt.Sprintf("Could not delete cluster background persistence %s: %v", data.Id.ValueString(), err),
+		)
+		return
+	}
+
+	tflog.Trace(ctx, "deleted chalk cluster background persistence resource")
 }
 
 func (r *ClusterBackgroundPersistenceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
