@@ -4,14 +4,14 @@ page_title: "chalk_managed_aws_vpc Resource - chalk"
 subcategory: ""
 description: |-
   Chalk managed AWS VPC resource. Creates a fully managed VPC using the provided cloud credentials.
-  Required permissions: team.admin, project.create
+  Required permissions: team.admin (team-scoped), project.create (team-scoped)
 ---
 
 # chalk_managed_aws_vpc (Resource)
 
 Chalk managed AWS VPC resource. Creates a fully managed VPC using the provided cloud credentials.
 
-**Required permissions:** `team.admin`, `project.create`
+**Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*
 
 
 

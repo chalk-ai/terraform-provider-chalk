@@ -33,7 +33,7 @@ Chalk cluster TimescaleDB resource
 - `connection_pool_size` (String) Connection pool size
 - `database_name` (String) Database name
 - `database_replicas` (Number) Number of database replicas
-- `dns_hostname` (String) DNS hostname
+- `dns_hostname` (String) DNS hostname. If unset, the server derives `{env}.db.{cluster_dns_zone}` when the cluster has a DNS zone, otherwise it is left unset. Changing this forces replacement.
 - `gateway_id` (String) Gateway ID for the TimescaleDB
 - `gateway_port` (Number) Gateway port for the TimescaleDB
 - `instance_type` (String) Instance type
