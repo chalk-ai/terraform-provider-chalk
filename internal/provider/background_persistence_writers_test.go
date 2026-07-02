@@ -234,6 +234,45 @@ func TestWriterNodepoolRoundTrip(t *testing.T) {
 	assert.Equal(t, original.Nodepool, out[0].Nodepool)
 }
 
+// TestBgpWritersProtoToTF_EmptyLimitMapsToNull is the regression guard for the
+// "limit = {} -> null" perpetual plan diff: the server returns a non-nil but
+// all-empty KubeResourceConfig{} for limit/request the user never set. Decoding
+// that as a non-nil empty {} would never equal the config's null. The decoder
+// must collapse an all-empty object to nil (null in state).
+func TestBgpWritersProtoToTF_EmptyLimitMapsToNull(t *testing.T) {
+	t.Parallel()
+	w := &serverv1.BackgroundPersistenceWriterSpecs{
+		Name:              "go-metrics-bus-writer",
+		BusSubscriberType: "GO_METRICS_BUS_WRITER",
+		Limit:             &serverv1.KubeResourceConfig{},
+		Request:           &serverv1.KubeResourceConfig{},
+	}
+	m := decodeSingleWriter(t, w)
+
+	assert.Nil(t, m.Limit, "an all-empty server limit must decode to nil (null), not {}")
+	assert.Nil(t, m.Request, "an all-empty server request must decode to nil (null), not {}")
+}
+
+// TestBgpWritersProtoToTF_PartialLimitPreserved ensures a partially-populated
+// limit/request keeps its set fields and nulls only the empty ones — the guard
+// must not swallow a genuinely-configured object.
+func TestBgpWritersProtoToTF_PartialLimitPreserved(t *testing.T) {
+	t.Parallel()
+	w := &serverv1.BackgroundPersistenceWriterSpecs{
+		Name:              "offline-writer",
+		BusSubscriberType: "OFFLINE_WRITER",
+		Limit:             &serverv1.KubeResourceConfig{Cpu: "1000m"},
+	}
+	m := decodeSingleWriter(t, w)
+
+	require.NotNil(t, m.Limit)
+	assert.Equal(t, types.StringValue("1000m"), m.Limit.CPU)
+	assert.Equal(t, types.StringNull(), m.Limit.Memory)
+	assert.Equal(t, types.StringNull(), m.Limit.EphemeralStorage)
+	assert.Equal(t, types.StringNull(), m.Limit.Storage)
+	assert.Nil(t, m.Request, "request the server didn't send stays nil")
+}
+
 // TestBgpWritersProtoToTF_ProtoRoundTrip converts proto -> TF -> proto and asserts
 // semantic equality for a fully-populated writer. Guards the decoder from drifting
 // away from the encoder.
