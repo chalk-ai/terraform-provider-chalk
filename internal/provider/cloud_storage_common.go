@@ -81,7 +81,7 @@ type cloudStorageResourceModel struct {
 // otherwise it is a Required, replace-only input.
 func cloudStorageSchema(managed bool) schema.Schema {
 	var markdown string
-	uriAttr := schema.StringAttribute{}
+	var uriAttr schema.StringAttribute
 	if managed {
 		markdown = "Registers a Chalk-managed cloud storage: Chalk owns the bucket and derives its `uri`, so you only supply the cloud credential.\n\n" +
 			"Every attribute is replace-only (there is no update RPC). **Create-time bucket access check:** creating this resource performs a live access check using the referenced `cloud_credential_id`; apply fails unless that credential can reach the storage, so the credential must exist first."
