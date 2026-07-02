@@ -40,7 +40,7 @@ resource "chalk_managed_cloud_storage" "datasets" {
 
 ### Optional
 
-- `kind` (String) Cloud storage kind. One of `gcs`, `s3`, `abs` (Azure Blob Storage), or `mock`. Optional: when omitted, Chalk infers it from the cloud credential. Changing this forces a new resource.
+- `kind` (String) Cloud storage kind. One of `gcs`, `s3`, or `abs` (Azure Blob Storage). Optional: when omitted, Chalk infers it from the cloud credential. Changing this forces a new resource.
 
 ### Read-Only
 
