@@ -22,7 +22,7 @@ func testStorageResponse(managed bool, uri string) *serverv1.CloudComponentStora
 		TeamId:            "team-1",
 		Kind:              "s3",
 		Managed:           managed,
-		CloudCredentialId: proto.String("cred-1"),
+		CloudCredentialId: new("cred-1"),
 		Spec:              &serverv1.CloudComponentStorage{Uri: uri},
 		CreatedAt:         ts,
 		UpdatedAt:         ts,
