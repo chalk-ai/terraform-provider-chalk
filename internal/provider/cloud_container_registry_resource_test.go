@@ -14,34 +14,29 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func testRegistryResponse(kind, name string, cfg *serverv1.CloudContainerRegistryConfig) *serverv1.CloudComponentContainerRegistryResponse {
+func testRegistryResponse(managed bool, kind, name string) *serverv1.CloudComponentContainerRegistryResponse {
 	ts := timestamppb.New(time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC))
 	return &serverv1.CloudComponentContainerRegistryResponse{
 		Id:                "registry-id-1",
 		Name:              name,
 		TeamId:            "team-1",
 		Kind:              kind,
-		Managed:           false,
+		Managed:           managed,
 		CloudCredentialId: new("cred-1"),
-		Spec:              &serverv1.CloudComponentContainerRegistry{Name: name, Config: cfg},
+		Spec:              &serverv1.CloudComponentContainerRegistry{Name: name},
 		CreatedAt:         ts,
 		UpdatedAt:         ts,
 	}
 }
 
-// TestCloudContainerRegistryCreateGAR verifies the create/read/import lifecycle for
-// a GAR registry, and that kind is derived from the config block.
-func TestCloudContainerRegistryCreateGAR(t *testing.T) {
+// TestUnmanagedContainerRegistryCreate verifies the create/read/import lifecycle
+// and that kind is derived by the server from name.
+func TestUnmanagedContainerRegistryCreate(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
-	cfg := &serverv1.CloudContainerRegistryConfig{
-		Config: &serverv1.CloudContainerRegistryConfig_Gar{
-			Gar: &serverv1.GarContainerRegistryConfig{RepositoryName: "my-images"},
-		},
-	}
-	resp := testRegistryResponse("gar", "us-central1-docker.pkg.dev/my-project/my-repo", cfg)
+	resp := testRegistryResponse(false, "gar", "us-docker.pkg.dev/my-project/my-repo")
 	server.OnCreateCloudComponentContainerRegistry().Return(&serverv1.CreateCloudComponentContainerRegistryResponse{ContainerRegistry: resp})
 	server.OnGetCloudComponentContainerRegistry().Return(&serverv1.GetCloudComponentContainerRegistryResponse{ContainerRegistry: resp})
 	server.OnDeleteCloudComponentContainerRegistry().Return(&serverv1.DeleteCloudComponentContainerRegistryResponse{})
@@ -51,28 +46,22 @@ func TestCloudContainerRegistryCreateGAR(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: providerConfig(server.URL) + `
-resource "chalk_cloud_container_registry" "test" {
-  name                = "us-central1-docker.pkg.dev/my-project/my-repo"
+resource "chalk_unmanaged_container_registry" "test" {
+  name                = "us-docker.pkg.dev/my-project/my-repo"
   cloud_credential_id = "cred-1"
-  config = {
-    gar = {
-      repository_name = "my-images"
-    }
-  }
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "name", "us-central1-docker.pkg.dev/my-project/my-repo"),
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "cloud_credential_id", "cred-1"),
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "kind", "gar"),
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "managed", "false"),
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "id", "registry-id-1"),
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "team_id", "team-1"),
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "config.gar.repository_name", "my-images"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_container_registry.test", "name", "us-docker.pkg.dev/my-project/my-repo"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_container_registry.test", "cloud_credential_id", "cred-1"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_container_registry.test", "kind", "gar"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_container_registry.test", "managed", "false"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_container_registry.test", "id", "registry-id-1"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_container_registry.test", "team_id", "team-1"),
 				),
 			},
 			{
-				ResourceName:      "chalk_cloud_container_registry.test",
+				ResourceName:      "chalk_unmanaged_container_registry.test",
 				ImportState:       true,
 				ImportStateId:     "registry-id-1",
 				ImportStateVerify: true,
@@ -81,19 +70,14 @@ resource "chalk_cloud_container_registry" "test" {
 	})
 }
 
-// TestCloudContainerRegistryCreateECR verifies the ECR variant, including the
-// optional registry_id round-trip.
-func TestCloudContainerRegistryCreateECR(t *testing.T) {
+// TestManagedContainerRegistryCreate verifies the managed resource: no name input,
+// name is computed, managed is true.
+func TestManagedContainerRegistryCreate(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
-	cfg := &serverv1.CloudContainerRegistryConfig{
-		Config: &serverv1.CloudContainerRegistryConfig_Ecr{
-			Ecr: &serverv1.EcrContainerRegistryConfig{RegistryId: "123456789012", RepositoryName: "my-images"},
-		},
-	}
-	resp := testRegistryResponse("ecr", "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-repo", cfg)
+	resp := testRegistryResponse(true, "ecr", "123456789012.dkr.ecr.us-east-1.amazonaws.com/chalk-managed")
 	server.OnCreateCloudComponentContainerRegistry().Return(&serverv1.CreateCloudComponentContainerRegistryResponse{ContainerRegistry: resp})
 	server.OnGetCloudComponentContainerRegistry().Return(&serverv1.GetCloudComponentContainerRegistryResponse{ContainerRegistry: resp})
 	server.OnDeleteCloudComponentContainerRegistry().Return(&serverv1.DeleteCloudComponentContainerRegistryResponse{})
@@ -103,113 +87,26 @@ func TestCloudContainerRegistryCreateECR(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: providerConfig(server.URL) + `
-resource "chalk_cloud_container_registry" "test" {
-  name                = "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-repo"
+resource "chalk_managed_container_registry" "test" {
   cloud_credential_id = "cred-1"
-  config = {
-    ecr = {
-      registry_id     = "123456789012"
-      repository_name = "my-images"
-    }
-  }
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "kind", "ecr"),
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "config.ecr.registry_id", "123456789012"),
-					resource.TestCheckResourceAttr("chalk_cloud_container_registry.test", "config.ecr.repository_name", "my-images"),
+					resource.TestCheckResourceAttr("chalk_managed_container_registry.test", "cloud_credential_id", "cred-1"),
+					resource.TestCheckResourceAttr("chalk_managed_container_registry.test", "managed", "true"),
+					// name is derived and set by the server.
+					resource.TestCheckResourceAttr("chalk_managed_container_registry.test", "name", "123456789012.dkr.ecr.us-east-1.amazonaws.com/chalk-managed"),
+					resource.TestCheckResourceAttr("chalk_managed_container_registry.test", "kind", "ecr"),
+					resource.TestCheckResourceAttr("chalk_managed_container_registry.test", "id", "registry-id-1"),
 				),
 			},
 		},
 	})
 }
 
-// TestCloudContainerRegistryInvalidNameForKind verifies plan-time validation that
-// the registry name path matches the kind implied by the config block.
-func TestCloudContainerRegistryInvalidNameForKind(t *testing.T) {
-	t.Parallel()
-	server := testserver.NewMockBuilderServer(t)
-	t.Cleanup(func() { server.Close() })
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
-		Steps: []resource.TestStep{
-			{
-				Config: providerConfig(server.URL) + `
-resource "chalk_cloud_container_registry" "test" {
-  name                = "not-a-valid-gar-path"
-  cloud_credential_id = "cred-1"
-  config = {
-    gar = {
-      repository_name = "my-images"
-    }
-  }
-}
-`,
-				ExpectError: regexp.MustCompile(`Invalid registry name for kind`),
-			},
-		},
-	})
-}
-
-// TestCloudContainerRegistryAmbiguousConfig verifies that setting more than one
-// config block fails at plan time.
-func TestCloudContainerRegistryAmbiguousConfig(t *testing.T) {
-	t.Parallel()
-	server := testserver.NewMockBuilderServer(t)
-	t.Cleanup(func() { server.Close() })
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
-		Steps: []resource.TestStep{
-			{
-				Config: providerConfig(server.URL) + `
-resource "chalk_cloud_container_registry" "test" {
-  name                = "us-central1-docker.pkg.dev/my-project/my-repo"
-  cloud_credential_id = "cred-1"
-  config = {
-    gar = {
-      repository_name = "my-images"
-    }
-    acr = {
-      repository_name = "my-images"
-    }
-  }
-}
-`,
-				ExpectError: regexp.MustCompile(`Ambiguous container registry config`),
-			},
-		},
-	})
-}
-
-// TestCloudContainerRegistryMissingConfig verifies that an empty config block
-// (none of gar/ecr/acr set) fails at plan time.
-func TestCloudContainerRegistryMissingConfig(t *testing.T) {
-	t.Parallel()
-	server := testserver.NewMockBuilderServer(t)
-	t.Cleanup(func() { server.Close() })
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
-		Steps: []resource.TestStep{
-			{
-				Config: providerConfig(server.URL) + `
-resource "chalk_cloud_container_registry" "test" {
-  name                = "us-central1-docker.pkg.dev/my-project/my-repo"
-  cloud_credential_id = "cred-1"
-  config              = {}
-}
-`,
-				ExpectError: regexp.MustCompile(`Missing container registry config`),
-			},
-		},
-	})
-}
-
-// TestCloudContainerRegistryAccessDenied verifies the create-time access-check
+// TestUnmanagedContainerRegistryAccessDenied verifies the create-time access-check
 // failure surfaces as a clear diagnostic.
-func TestCloudContainerRegistryAccessDenied(t *testing.T) {
+func TestUnmanagedContainerRegistryAccessDenied(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
@@ -223,14 +120,9 @@ func TestCloudContainerRegistryAccessDenied(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: providerConfig(server.URL) + `
-resource "chalk_cloud_container_registry" "test" {
-  name                = "us-central1-docker.pkg.dev/my-project/my-repo"
+resource "chalk_unmanaged_container_registry" "test" {
+  name                = "us-docker.pkg.dev/my-project/my-repo"
   cloud_credential_id = "cred-1"
-  config = {
-    gar = {
-      repository_name = "my-images"
-    }
-  }
 }
 `,
 				ExpectError: regexp.MustCompile(`registry is not reachable`),
@@ -239,18 +131,13 @@ resource "chalk_cloud_container_registry" "test" {
 	})
 }
 
-// TestCloudContainerRegistryReadNotFound verifies removal from state on not_found.
-func TestCloudContainerRegistryReadNotFound(t *testing.T) {
+// TestUnmanagedContainerRegistryReadNotFound verifies removal from state on not_found.
+func TestUnmanagedContainerRegistryReadNotFound(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
-	cfg := &serverv1.CloudContainerRegistryConfig{
-		Config: &serverv1.CloudContainerRegistryConfig_Gar{
-			Gar: &serverv1.GarContainerRegistryConfig{RepositoryName: "my-images"},
-		},
-	}
-	resp := testRegistryResponse("gar", "us-central1-docker.pkg.dev/my-project/my-repo", cfg)
+	resp := testRegistryResponse(false, "gar", "us-docker.pkg.dev/my-project/my-repo")
 	server.OnCreateCloudComponentContainerRegistry().Return(&serverv1.CreateCloudComponentContainerRegistryResponse{ContainerRegistry: resp})
 	server.OnDeleteCloudComponentContainerRegistry().Return(&serverv1.DeleteCloudComponentContainerRegistryResponse{})
 
@@ -264,14 +151,9 @@ func TestCloudContainerRegistryReadNotFound(t *testing.T) {
 	})
 
 	config := providerConfig(server.URL) + `
-resource "chalk_cloud_container_registry" "test" {
-  name                = "us-central1-docker.pkg.dev/my-project/my-repo"
+resource "chalk_unmanaged_container_registry" "test" {
+  name                = "us-docker.pkg.dev/my-project/my-repo"
   cloud_credential_id = "cred-1"
-  config = {
-    gar = {
-      repository_name = "my-images"
-    }
-  }
 }
 `
 	resource.Test(t, resource.TestCase{

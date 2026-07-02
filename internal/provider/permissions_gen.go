@@ -6,7 +6,6 @@ package provider
 var resourcePermissionsMarkdown = map[string]string{
 	"chalk_aws_cloud_credentials":                                 "**Required permissions:** `project.create`",
 	"chalk_azure_cloud_credentials":                               "**Required permissions:** `project.create`",
-	"chalk_cloud_container_registry":                              "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_cluster_background_persistence":                        "**Required permissions:** `team.admin`, `deploy.read`",
 	"chalk_cluster_background_persistence_deployment_binding":     "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_cluster_dataset_cloud_storage_binding":                 "**Required permissions:** `project.create` *(team-scoped)*",
@@ -35,6 +34,7 @@ var resourcePermissionsMarkdown = map[string]string{
 	"chalk_managed_aws_vpc":                                       "**Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*",
 	"chalk_managed_cloud_storage":                                 "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_managed_cluster":                                       "**Required permissions:** `project.create` *(team-scoped)*",
+	"chalk_managed_container_registry":                            "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_managed_environment":                                   "**Required permissions:** `environment.create` *(team-scoped)*",
 	"chalk_managed_gcp_vpc":                                       "**Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*",
 	"chalk_offline_store_connection":                              "**Required permissions:** `deploy.create`, `deploy.read`",
@@ -45,6 +45,7 @@ var resourcePermissionsMarkdown = map[string]string{
 	"chalk_telemetry_binding":                                     "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_unmanaged_cloud_storage":                               "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_unmanaged_cluster_background_persistence":              "**Required permissions:** `team.admin`, `deploy.read`",
+	"chalk_unmanaged_container_registry":                          "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_unmanaged_environment":                                 "**Required permissions:** `environment.create` *(team-scoped)*",
 }
 
