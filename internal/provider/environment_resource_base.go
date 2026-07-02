@@ -110,10 +110,8 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 				" **Deprecated:** use the environment-scoped cloud storage bindings" +
 				" (`chalk_environment_dataset_cloud_storage_binding`, `chalk_environment_plan_stages_cloud_storage_binding`," +
 				" `chalk_environment_source_bundle_cloud_storage_binding`, `chalk_environment_model_registry_cloud_storage_binding`) instead.",
-			DeprecationMessage: "environment_buckets is deprecated; use the environment-scoped cloud storage bindings " +
-				"(chalk_environment_dataset_cloud_storage_binding, chalk_environment_plan_stages_cloud_storage_binding, " +
-				"chalk_environment_source_bundle_cloud_storage_binding, chalk_environment_model_registry_cloud_storage_binding) instead.",
-			Optional: true,
+			DeprecationMessage: "environment_buckets is deprecated; use the environment-scoped cloud storage bindings instead.",
+			Optional:           true,
 			Attributes: map[string]schema.Attribute{
 				"dataset_bucket": schema.StringAttribute{
 					MarkdownDescription: "Dataset bucket; required for 'chalk apply' to work.",

@@ -31,7 +31,7 @@ Chalk unmanaged environment resource
 - `customer_metadata` (String) Customer metadata as a JSON object
 - `default_build_profile` (String) Default deployment build profile
 - `engine_docker_registry_path` (String) Engine Docker registry path (immutable)
-- `environment_buckets` (Attributes) Environment object storage configuration; required for 'chalk apply' to work. Note that the buckets provided must be created externally first, and should have a CORS policy set that allows GET access from the Chalk frontend. (see [below for nested schema](#nestedatt--environment_buckets))
+- `environment_buckets` (Attributes, Deprecated) Environment object storage configuration; required for 'chalk apply' to work. Note that the buckets provided must be created externally first, and should have a CORS policy set that allows GET access from the Chalk frontend. **Deprecated:** use the environment-scoped cloud storage bindings (`chalk_environment_dataset_cloud_storage_binding`, `chalk_environment_plan_stages_cloud_storage_binding`, `chalk_environment_source_bundle_cloud_storage_binding`, `chalk_environment_model_registry_cloud_storage_binding`) instead. (see [below for nested schema](#nestedatt--environment_buckets))
 - `id` (String) Environment identifier; server-generated (immutable)
 - `kube_cluster_mode` (String) Kubernetes cluster mode (unmanaged environments only)
 - `kube_service_account_name` (String) Kubernetes service account name

@@ -35,12 +35,8 @@ var (
 	gcsStorageURIRegex            = regexp.MustCompile(`^gs://[a-z0-9][a-z0-9._-]*(?:/.*)?$`)
 	s3StorageURIRegex             = regexp.MustCompile(`^s3://[a-z0-9][a-z0-9.-]*(?:/.*)?$`)
 	azureBlobHTTPSStorageURIRegex = regexp.MustCompile(`^https://[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?$`)
-	azureABFSStorageURIRegex      = regexp.MustCompile(`^abfss?://[a-z0-9](?:[a-z0-9-]*[a-z0-9])?@[a-z0-9]+\.dfs\.core\.windows\.net(?:/.*)?$`)
-	// abfs(s) pointed at the blob endpoint without a `container@` prefix, e.g.
-	// abfs://<account>.blob.core.windows.net/<container>[/path]. The server accepts
-	// this form, so plan-time validation must too.
-	azureABFSBlobStorageURIRegex = regexp.MustCompile(`^abfss?://[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?$`)
-	mockStorageURIRegex          = regexp.MustCompile(`^mock://[a-z0-9][a-z0-9._-]*(?:/.*)?$`)
+	azureABFSStorageURIRegex      = regexp.MustCompile(`^abfss?://(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?@[a-z0-9]+\.dfs\.core\.windows\.net(?:/.*)?|[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?)$`)
+	mockStorageURIRegex           = regexp.MustCompile(`^mock://[a-z0-9][a-z0-9._-]*(?:/.*)?$`)
 )
 
 // validateStorageURIForKind enforces that the URI scheme matches the declared kind,
@@ -54,8 +50,7 @@ func validateStorageURIForKind(kind, uri string) (ok bool, reason string) {
 		return s3StorageURIRegex.MatchString(trimmed), "s3 storage uri must look like s3://bucket[/path]"
 	case cloudStorageKindAzure:
 		return azureBlobHTTPSStorageURIRegex.MatchString(trimmed) ||
-				azureABFSStorageURIRegex.MatchString(trimmed) ||
-				azureABFSBlobStorageURIRegex.MatchString(trimmed),
+				azureABFSStorageURIRegex.MatchString(trimmed),
 			"abs storage uri must look like https://<account>.blob.core.windows.net/<container>[/path], abfs://<account>.blob.core.windows.net/<container>[/path], or abfss://<container>@<account>.dfs.core.windows.net[/path]"
 	case cloudStorageKindMock:
 		return mockStorageURIRegex.MatchString(trimmed), "mock storage uri must look like mock://bucket[/path]"
