@@ -8,6 +8,7 @@ var resourcePermissionsMarkdown = map[string]string{
 	"chalk_azure_cloud_credentials":                               "**Required permissions:** `project.create`",
 	"chalk_cluster_background_persistence":                        "**Required permissions:** `team.admin`, `deploy.read`",
 	"chalk_cluster_background_persistence_deployment_binding":     "**Required permissions:** `project.create` *(team-scoped)*",
+	"chalk_cluster_container_registry_binding":                    "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_cluster_dataset_cloud_storage_binding":                 "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_cluster_gateway":                                       "**Required permissions:** `team.admin`, `deploy.read`",
 	"chalk_cluster_gateway_binding":                               "**Required permissions:** `project.create` *(team-scoped)*",

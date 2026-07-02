@@ -25,7 +25,6 @@ const (
 	cloudStorageKindGCS   = "gcs"
 	cloudStorageKindS3    = "s3"
 	cloudStorageKindAzure = "abs"
-	cloudStorageKindMock  = "mock"
 )
 
 // Storage URI patterns, kept in lockstep with the server-side validation in
@@ -35,8 +34,7 @@ var (
 	gcsStorageURIRegex            = regexp.MustCompile(`^gs://[a-z0-9][a-z0-9._-]*(?:/.*)?$`)
 	s3StorageURIRegex             = regexp.MustCompile(`^s3://[a-z0-9][a-z0-9.-]*(?:/.*)?$`)
 	azureBlobHTTPSStorageURIRegex = regexp.MustCompile(`^https://[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?$`)
-	azureABFSStorageURIRegex      = regexp.MustCompile(`^abfss?://[a-z0-9](?:[a-z0-9-]*[a-z0-9])?@[a-z0-9]+\.dfs\.core\.windows\.net(?:/.*)?$`)
-	mockStorageURIRegex           = regexp.MustCompile(`^mock://[a-z0-9][a-z0-9._-]*(?:/.*)?$`)
+	azureABFSStorageURIRegex      = regexp.MustCompile(`^abfss?://(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?@[a-z0-9]+\.dfs\.core\.windows\.net(?:/.*)?|[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?)$`)
 )
 
 // validateStorageURIForKind enforces that the URI scheme matches the declared kind,
@@ -49,12 +47,11 @@ func validateStorageURIForKind(kind, uri string) (ok bool, reason string) {
 	case cloudStorageKindS3:
 		return s3StorageURIRegex.MatchString(trimmed), "s3 storage uri must look like s3://bucket[/path]"
 	case cloudStorageKindAzure:
-		return azureBlobHTTPSStorageURIRegex.MatchString(trimmed) || azureABFSStorageURIRegex.MatchString(trimmed),
-			"abs storage uri must look like https://<account>.blob.core.windows.net/<container>[/path] or abfss://<container>@<account>.dfs.core.windows.net[/path]"
-	case cloudStorageKindMock:
-		return mockStorageURIRegex.MatchString(trimmed), "mock storage uri must look like mock://bucket[/path]"
+		return azureBlobHTTPSStorageURIRegex.MatchString(trimmed) ||
+				azureABFSStorageURIRegex.MatchString(trimmed),
+			"abs storage uri must look like https://<account>.blob.core.windows.net/<container>[/path], abfs://<account>.blob.core.windows.net/<container>[/path], or abfss://<container>@<account>.dfs.core.windows.net[/path]"
 	default:
-		return false, fmt.Sprintf("unsupported storage kind %q (expected one of gcs, s3, abs, mock)", kind)
+		return false, fmt.Sprintf("unsupported storage kind %q (expected one of gcs, s3, abs)", kind)
 	}
 }
 
@@ -97,7 +94,7 @@ func cloudStorageSchema(managed bool) schema.Schema {
 			"Every attribute is replace-only (there is no update RPC). **Create-time bucket access check:** creating this resource performs a live `Head` against the bucket using the referenced `cloud_credential_id`; apply fails unless that credential can already reach the bucket, so the credential (and the bucket's real IAM grants) must exist first."
 		uriAttr = schema.StringAttribute{
 			MarkdownDescription: "URI of the existing bucket (and optional path prefix), e.g. `s3://bucket/prefix`, `gs://bucket/prefix`, " +
-				"`https://<account>.blob.core.windows.net/<container>[/path]`, `abfss://<container>@<account>.dfs.core.windows.net[/path]`, or `mock://bucket`. " +
+				"or `abfs://<account>.blob.core.windows.net/<container>[/path]`. " +
 				"When `kind` is set, the scheme must match it. Changing this forces a new resource.",
 			Required: true,
 			PlanModifiers: []planmodifier.String{
@@ -115,12 +112,12 @@ func cloudStorageSchema(managed bool) schema.Schema {
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"kind": schema.StringAttribute{
-				MarkdownDescription: "Cloud storage kind. One of `gcs`, `s3`, `abs` (Azure Blob Storage), or `mock`. " +
+				MarkdownDescription: "Cloud storage kind. One of `gcs`, `s3`, or `abs` (Azure Blob Storage). " +
 					"Optional: when omitted, Chalk infers it from the cloud credential. Changing this forces a new resource.",
 				Optional: true,
 				Computed: true,
 				Validators: []validator.String{
-					stringvalidator.OneOf(cloudStorageKindGCS, cloudStorageKindS3, cloudStorageKindAzure, cloudStorageKindMock),
+					stringvalidator.OneOf(cloudStorageKindGCS, cloudStorageKindS3, cloudStorageKindAzure),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

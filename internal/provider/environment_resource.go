@@ -178,8 +178,12 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:            true,
 			},
 			"environment_buckets": schema.SingleNestedAttribute{
-				MarkdownDescription: "Environment object storage configuration",
-				Optional:            true,
+				MarkdownDescription: "Environment object storage configuration." +
+					" **Deprecated:** use the environment-scoped cloud storage bindings" +
+					" (`chalk_environment_dataset_cloud_storage_binding`, `chalk_environment_plan_stages_cloud_storage_binding`," +
+					" `chalk_environment_source_bundle_cloud_storage_binding`, `chalk_environment_model_registry_cloud_storage_binding`) instead.",
+				DeprecationMessage: "environment_buckets is deprecated; use the environment-scoped cloud storage bindings instead.",
+				Optional:           true,
 				Attributes: map[string]schema.Attribute{
 					"dataset_bucket": schema.StringAttribute{
 						MarkdownDescription: "Dataset bucket",

@@ -32,7 +32,7 @@ Chalk environment resource
 - `additional_env_vars` (Map of String) Additional environment variables
 - `branch_url` (String) Branch URL
 - `engine_docker_registry_path` (String) Engine Docker registry path
-- `environment_buckets` (Attributes) Environment object storage configuration (see [below for nested schema](#nestedatt--environment_buckets))
+- `environment_buckets` (Attributes, Deprecated) Environment object storage configuration. **Deprecated:** use the environment-scoped cloud storage bindings (`chalk_environment_dataset_cloud_storage_binding`, `chalk_environment_plan_stages_cloud_storage_binding`, `chalk_environment_source_bundle_cloud_storage_binding`, `chalk_environment_model_registry_cloud_storage_binding`) instead. (see [below for nested schema](#nestedatt--environment_buckets))
 - `feature_store_secret` (String) Feature store secret reference
 - `kube_cluster_id` (String) Kubernetes cluster ID
 - `kube_job_namespace` (String) Kubernetes job namespace

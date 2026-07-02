@@ -106,8 +106,12 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 		"environment_buckets": schema.SingleNestedAttribute{
 			MarkdownDescription: "Environment object storage configuration; required for 'chalk apply' to work." +
 				" Note that the buckets provided must be created externally first, and should have a CORS policy set" +
-				" that allows GET access from the Chalk frontend.",
-			Optional: true,
+				" that allows GET access from the Chalk frontend." +
+				" **Deprecated:** use the environment-scoped cloud storage bindings" +
+				" (`chalk_environment_dataset_cloud_storage_binding`, `chalk_environment_plan_stages_cloud_storage_binding`," +
+				" `chalk_environment_source_bundle_cloud_storage_binding`, `chalk_environment_model_registry_cloud_storage_binding`) instead.",
+			DeprecationMessage: "environment_buckets is deprecated; use the environment-scoped cloud storage bindings instead.",
+			Optional:           true,
 			Attributes: map[string]schema.Attribute{
 				"dataset_bucket": schema.StringAttribute{
 					MarkdownDescription: "Dataset bucket; required for 'chalk apply' to work.",
