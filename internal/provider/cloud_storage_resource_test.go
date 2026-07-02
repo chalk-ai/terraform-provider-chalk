@@ -14,67 +14,66 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func testCloudStorageResponse() *serverv1.CloudComponentStorageResponse {
+func testStorageResponse(managed bool, uri string) *serverv1.CloudComponentStorageResponse {
 	ts := timestamppb.New(time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC))
 	return &serverv1.CloudComponentStorageResponse{
 		Id:                "storage-id-1",
-		Name:              "s3://my-bucket/prefix",
+		Name:              uri,
 		TeamId:            "team-1",
 		Kind:              "s3",
-		Managed:           false,
-		CloudCredentialId: new("cred-1"),
-		Spec:              &serverv1.CloudComponentStorage{Uri: "s3://my-bucket/prefix"},
+		Managed:           managed,
+		CloudCredentialId: proto.String("cred-1"),
+		Spec:              &serverv1.CloudComponentStorage{Uri: uri},
 		CreatedAt:         ts,
 		UpdatedAt:         ts,
 	}
 }
 
-func setupMockServerCloudStorage(t *testing.T) *testserver.MockServer {
+// TestUnmanagedCloudStorageCreate verifies the create/read lifecycle and computed fields.
+func TestUnmanagedCloudStorageCreate(t *testing.T) {
+	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
-	server.OnCreateCloudComponentStorage().Return(&serverv1.CreateCloudComponentStorageResponse{Storage: testCloudStorageResponse()})
-	server.OnGetCloudComponentStorage().Return(&serverv1.GetCloudComponentStorageResponse{Storage: testCloudStorageResponse()})
+	resp := testStorageResponse(false, "s3://my-bucket/prefix")
+	server.OnCreateCloudComponentStorage().Return(&serverv1.CreateCloudComponentStorageResponse{Storage: resp})
+	server.OnGetCloudComponentStorage().Return(&serverv1.GetCloudComponentStorageResponse{Storage: resp})
 	server.OnDeleteCloudComponentStorage().Return(&serverv1.DeleteCloudComponentStorageResponse{})
-
-	return server
-}
-
-// TestCloudStorageCreate verifies the create/read lifecycle and computed fields.
-func TestCloudStorageCreate(t *testing.T) {
-	t.Parallel()
-	server := setupMockServerCloudStorage(t)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
 				Config: providerConfig(server.URL) + `
-resource "chalk_cloud_storage" "test" {
-  kind                = "s3"
+resource "chalk_unmanaged_cloud_storage" "test" {
   uri                 = "s3://my-bucket/prefix"
   cloud_credential_id = "cred-1"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_cloud_storage.test", "kind", "s3"),
-					resource.TestCheckResourceAttr("chalk_cloud_storage.test", "uri", "s3://my-bucket/prefix"),
-					resource.TestCheckResourceAttr("chalk_cloud_storage.test", "cloud_credential_id", "cred-1"),
-					resource.TestCheckResourceAttr("chalk_cloud_storage.test", "managed", "false"),
-					resource.TestCheckResourceAttr("chalk_cloud_storage.test", "id", "storage-id-1"),
-					// name is server-set to the uri.
-					resource.TestCheckResourceAttr("chalk_cloud_storage.test", "name", "s3://my-bucket/prefix"),
-					resource.TestCheckResourceAttr("chalk_cloud_storage.test", "team_id", "team-1"),
-					resource.TestCheckResourceAttrSet("chalk_cloud_storage.test", "created_at"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "uri", "s3://my-bucket/prefix"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "cloud_credential_id", "cred-1"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "managed", "false"),
+					// kind is inferred/echoed by the server.
+					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "kind", "s3"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "id", "storage-id-1"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "name", "s3://my-bucket/prefix"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "team_id", "team-1"),
 				),
+			},
+			{
+				ResourceName:      "chalk_unmanaged_cloud_storage.test",
+				ImportState:       true,
+				ImportStateId:     "storage-id-1",
+				ImportStateVerify: true,
 			},
 		},
 	})
 }
 
-// TestCloudStorageInvalidURIForKind verifies plan-time URI/kind validation fails
-// before any server call.
-func TestCloudStorageInvalidURIForKind(t *testing.T) {
+// TestUnmanagedCloudStorageInvalidURIForKind verifies plan-time URI/kind validation
+// fires only when kind is set.
+func TestUnmanagedCloudStorageInvalidURIForKind(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
@@ -84,7 +83,7 @@ func TestCloudStorageInvalidURIForKind(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: providerConfig(server.URL) + `
-resource "chalk_cloud_storage" "test" {
+resource "chalk_unmanaged_cloud_storage" "test" {
   kind                = "gcs"
   uri                 = "s3://wrong-scheme"
   cloud_credential_id = "cred-1"
@@ -96,47 +95,42 @@ resource "chalk_cloud_storage" "test" {
 	})
 }
 
-// TestCloudStorageReadNotFound verifies that a not_found on refresh removes the
-// resource from state so a subsequent plan recreates it.
-func TestCloudStorageReadNotFound(t *testing.T) {
+// TestManagedCloudStorageCreate verifies the managed resource: no uri input, uri is
+// computed, managed is true.
+func TestManagedCloudStorageCreate(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
-	server.OnCreateCloudComponentStorage().Return(&serverv1.CreateCloudComponentStorageResponse{Storage: testCloudStorageResponse()})
+	resp := testStorageResponse(true, "s3://chalk-managed/abc")
+	server.OnCreateCloudComponentStorage().Return(&serverv1.CreateCloudComponentStorageResponse{Storage: resp})
+	server.OnGetCloudComponentStorage().Return(&serverv1.GetCloudComponentStorageResponse{Storage: resp})
 	server.OnDeleteCloudComponentStorage().Return(&serverv1.DeleteCloudComponentStorageResponse{})
 
-	var getCallCount int
-	server.OnGetCloudComponentStorage().WithBehavior(func(req proto.Message) (proto.Message, error) {
-		getCallCount++
-		if getCallCount > 1 {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("storage not found"))
-		}
-		return &serverv1.GetCloudComponentStorageResponse{Storage: testCloudStorageResponse()}, nil
-	})
-
-	config := providerConfig(server.URL) + `
-resource "chalk_cloud_storage" "test" {
-  kind                = "s3"
-  uri                 = "s3://my-bucket/prefix"
-  cloud_credential_id = "cred-1"
-}
-`
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
-			{Config: config},
 			{
-				RefreshState:       true,
-				ExpectNonEmptyPlan: true,
+				Config: providerConfig(server.URL) + `
+resource "chalk_managed_cloud_storage" "test" {
+  cloud_credential_id = "cred-1"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "cloud_credential_id", "cred-1"),
+					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "managed", "true"),
+					// uri is derived and set by the server.
+					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "uri", "s3://chalk-managed/abc"),
+					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "id", "storage-id-1"),
+				),
 			},
 		},
 	})
 }
 
-// TestCloudStoragePermissionDenied verifies the create-time bucket-access failure
-// surfaces as a clear diagnostic.
-func TestCloudStoragePermissionDenied(t *testing.T) {
+// TestUnmanagedCloudStoragePermissionDenied verifies the create-time bucket-access
+// failure surfaces as a clear diagnostic.
+func TestUnmanagedCloudStoragePermissionDenied(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
@@ -150,13 +144,49 @@ func TestCloudStoragePermissionDenied(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: providerConfig(server.URL) + `
-resource "chalk_cloud_storage" "test" {
-  kind                = "s3"
+resource "chalk_unmanaged_cloud_storage" "test" {
   uri                 = "s3://my-bucket/prefix"
   cloud_credential_id = "cred-1"
 }
 `,
 				ExpectError: regexp.MustCompile(`bucket is not reachable`),
+			},
+		},
+	})
+}
+
+// TestUnmanagedCloudStorageReadNotFound verifies removal from state on not_found.
+func TestUnmanagedCloudStorageReadNotFound(t *testing.T) {
+	t.Parallel()
+	server := testserver.NewMockBuilderServer(t)
+	t.Cleanup(func() { server.Close() })
+
+	resp := testStorageResponse(false, "s3://my-bucket/prefix")
+	server.OnCreateCloudComponentStorage().Return(&serverv1.CreateCloudComponentStorageResponse{Storage: resp})
+	server.OnDeleteCloudComponentStorage().Return(&serverv1.DeleteCloudComponentStorageResponse{})
+
+	var getCallCount int
+	server.OnGetCloudComponentStorage().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		getCallCount++
+		if getCallCount > 1 {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("storage not found"))
+		}
+		return &serverv1.GetCloudComponentStorageResponse{Storage: resp}, nil
+	})
+
+	config := providerConfig(server.URL) + `
+resource "chalk_unmanaged_cloud_storage" "test" {
+  uri                 = "s3://my-bucket/prefix"
+  cloud_credential_id = "cred-1"
+}
+`
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: config},
+			{
+				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
