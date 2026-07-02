@@ -6,6 +6,7 @@ package provider
 var resourcePermissionsMarkdown = map[string]string{
 	"chalk_aws_cloud_credentials":                                 "**Required permissions:** `project.create`",
 	"chalk_azure_cloud_credentials":                               "**Required permissions:** `project.create`",
+	"chalk_cloud_container_registry":                              "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_cluster_background_persistence":                        "**Required permissions:** `team.admin`, `deploy.read`",
 	"chalk_cluster_background_persistence_deployment_binding":     "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_cluster_dataset_cloud_storage_binding":                 "**Required permissions:** `project.create` *(team-scoped)*",
