@@ -337,41 +337,6 @@ func bgpWritersTFToProto(ctx context.Context, writersList types.List) ([]*server
 	return protoWriters, diags
 }
 
-// kubeResourceConfigProtoToTF maps a proto KubeResourceConfig to its TF model.
-// A nil proto, or a non-nil proto with every field empty, maps to a nil model
-// (null in state). The server returns a non-nil empty KubeResourceConfig{} for
-// request/limit that the user never set (deployment-time defaults are applied to
-// a clone, but an empty object can still be persisted); decoding that as an empty
-// but non-nil {} would never equal the config's null and would cause a permanent
-// "{} -> null" plan diff. Collapsing all-empty to null keeps the round-trip clean.
-func kubeResourceConfigProtoToTF(c *serverv1.KubeResourceConfig) *KubeResourceConfigModel {
-	if c == nil {
-		return nil
-	}
-	if c.Cpu == "" && c.Memory == "" && c.EphemeralStorage == "" && c.Storage == "" {
-		return nil
-	}
-	m := &KubeResourceConfigModel{
-		CPU:              types.StringNull(),
-		Memory:           types.StringNull(),
-		EphemeralStorage: types.StringNull(),
-		Storage:          types.StringNull(),
-	}
-	if c.Cpu != "" {
-		m.CPU = types.StringValue(c.Cpu)
-	}
-	if c.Memory != "" {
-		m.Memory = types.StringValue(c.Memory)
-	}
-	if c.EphemeralStorage != "" {
-		m.EphemeralStorage = types.StringValue(c.EphemeralStorage)
-	}
-	if c.Storage != "" {
-		m.Storage = types.StringValue(c.Storage)
-	}
-	return m
-}
-
 // bgpWritersProtoToTF converts a proto writers slice to a TF list.
 func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.BackgroundPersistenceWriterSpecs) (types.List, diag.Diagnostics) {
 	if len(protoWriters) == 0 {
@@ -503,8 +468,52 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 			}
 		}
 
-		tfWriter.Request = kubeResourceConfigProtoToTF(protoWriter.Request)
-		tfWriter.Limit = kubeResourceConfigProtoToTF(protoWriter.Limit)
+		if protoWriter.Request != nil {
+			tfWriter.Request = &KubeResourceConfigModel{}
+			if protoWriter.Request.Cpu != "" {
+				tfWriter.Request.CPU = types.StringValue(protoWriter.Request.Cpu)
+			} else {
+				tfWriter.Request.CPU = types.StringNull()
+			}
+			if protoWriter.Request.Memory != "" {
+				tfWriter.Request.Memory = types.StringValue(protoWriter.Request.Memory)
+			} else {
+				tfWriter.Request.Memory = types.StringNull()
+			}
+			if protoWriter.Request.EphemeralStorage != "" {
+				tfWriter.Request.EphemeralStorage = types.StringValue(protoWriter.Request.EphemeralStorage)
+			} else {
+				tfWriter.Request.EphemeralStorage = types.StringNull()
+			}
+			if protoWriter.Request.Storage != "" {
+				tfWriter.Request.Storage = types.StringValue(protoWriter.Request.Storage)
+			} else {
+				tfWriter.Request.Storage = types.StringNull()
+			}
+		}
+		if protoWriter.Limit != nil {
+			tfWriter.Limit = &KubeResourceConfigModel{}
+			if protoWriter.Limit.Cpu != "" {
+				tfWriter.Limit.CPU = types.StringValue(protoWriter.Limit.Cpu)
+			} else {
+				tfWriter.Limit.CPU = types.StringNull()
+			}
+			if protoWriter.Limit.Memory != "" {
+				tfWriter.Limit.Memory = types.StringValue(protoWriter.Limit.Memory)
+			} else {
+				tfWriter.Limit.Memory = types.StringNull()
+			}
+			if protoWriter.Limit.EphemeralStorage != "" {
+				tfWriter.Limit.EphemeralStorage = types.StringValue(protoWriter.Limit.EphemeralStorage)
+			} else {
+				tfWriter.Limit.EphemeralStorage = types.StringNull()
+			}
+			if protoWriter.Limit.Storage != "" {
+				tfWriter.Limit.Storage = types.StringValue(protoWriter.Limit.Storage)
+			} else {
+				tfWriter.Limit.Storage = types.StringNull()
+			}
+		}
 
 		tfWriters = append(tfWriters, tfWriter)
 	}
