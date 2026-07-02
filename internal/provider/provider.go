@@ -235,6 +235,8 @@ var allResourceCtors = []func() resource.Resource{
 	NewScalingGroupResource,
 	NewManagedCloudStorageResource,
 	NewUnmanagedCloudStorageResource,
+	NewManagedContainerRegistryResource,
+	NewUnmanagedContainerRegistryResource,
 	NewEnvironmentDatasetCloudStorageBindingResource,
 	NewEnvironmentPlanStagesCloudStorageBindingResource,
 	NewEnvironmentSourceBundleCloudStorageBindingResource,
