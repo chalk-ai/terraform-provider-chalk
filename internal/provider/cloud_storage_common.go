@@ -36,7 +36,11 @@ var (
 	s3StorageURIRegex             = regexp.MustCompile(`^s3://[a-z0-9][a-z0-9.-]*(?:/.*)?$`)
 	azureBlobHTTPSStorageURIRegex = regexp.MustCompile(`^https://[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?$`)
 	azureABFSStorageURIRegex      = regexp.MustCompile(`^abfss?://[a-z0-9](?:[a-z0-9-]*[a-z0-9])?@[a-z0-9]+\.dfs\.core\.windows\.net(?:/.*)?$`)
-	mockStorageURIRegex           = regexp.MustCompile(`^mock://[a-z0-9][a-z0-9._-]*(?:/.*)?$`)
+	// abfs(s) pointed at the blob endpoint without a `container@` prefix, e.g.
+	// abfs://<account>.blob.core.windows.net/<container>[/path]. The server accepts
+	// this form, so plan-time validation must too.
+	azureABFSBlobStorageURIRegex = regexp.MustCompile(`^abfss?://[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?$`)
+	mockStorageURIRegex          = regexp.MustCompile(`^mock://[a-z0-9][a-z0-9._-]*(?:/.*)?$`)
 )
 
 // validateStorageURIForKind enforces that the URI scheme matches the declared kind,
@@ -49,8 +53,10 @@ func validateStorageURIForKind(kind, uri string) (ok bool, reason string) {
 	case cloudStorageKindS3:
 		return s3StorageURIRegex.MatchString(trimmed), "s3 storage uri must look like s3://bucket[/path]"
 	case cloudStorageKindAzure:
-		return azureBlobHTTPSStorageURIRegex.MatchString(trimmed) || azureABFSStorageURIRegex.MatchString(trimmed),
-			"abs storage uri must look like https://<account>.blob.core.windows.net/<container>[/path] or abfss://<container>@<account>.dfs.core.windows.net[/path]"
+		return azureBlobHTTPSStorageURIRegex.MatchString(trimmed) ||
+				azureABFSStorageURIRegex.MatchString(trimmed) ||
+				azureABFSBlobStorageURIRegex.MatchString(trimmed),
+			"abs storage uri must look like https://<account>.blob.core.windows.net/<container>[/path], abfs://<account>.blob.core.windows.net/<container>[/path], or abfss://<container>@<account>.dfs.core.windows.net[/path]"
 	case cloudStorageKindMock:
 		return mockStorageURIRegex.MatchString(trimmed), "mock storage uri must look like mock://bucket[/path]"
 	default:
@@ -97,7 +103,8 @@ func cloudStorageSchema(managed bool) schema.Schema {
 			"Every attribute is replace-only (there is no update RPC). **Create-time bucket access check:** creating this resource performs a live `Head` against the bucket using the referenced `cloud_credential_id`; apply fails unless that credential can already reach the bucket, so the credential (and the bucket's real IAM grants) must exist first."
 		uriAttr = schema.StringAttribute{
 			MarkdownDescription: "URI of the existing bucket (and optional path prefix), e.g. `s3://bucket/prefix`, `gs://bucket/prefix`, " +
-				"`https://<account>.blob.core.windows.net/<container>[/path]`, `abfss://<container>@<account>.dfs.core.windows.net[/path]`, or `mock://bucket`. " +
+				"`https://<account>.blob.core.windows.net/<container>[/path]`, `abfs://<account>.blob.core.windows.net/<container>[/path]`, " +
+				"`abfss://<container>@<account>.dfs.core.windows.net[/path]`, or `mock://bucket`. " +
 				"When `kind` is set, the scheme must match it. Changing this forces a new resource.",
 			Required: true,
 			PlanModifiers: []planmodifier.String{
