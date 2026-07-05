@@ -28,6 +28,7 @@ Chalk AWS cloud credentials resource for configuring AWS authentication
 ### Optional
 
 - `aws_external_id` (String) AWS external ID for role assumption
+- `aws_permissions_boundary_arn` (String) AWS permissions boundary ARN to attach to IAM roles created by Chalk
 - `docker_build_config` (Block List) Docker build configuration (optional, max 1) (see [below for nested schema](#nestedblock--docker_build_config))
 - `gcp_workload_identity` (Block List) GCP workload identity configuration for AWS (optional, max 1) (see [below for nested schema](#nestedblock--gcp_workload_identity))
 
