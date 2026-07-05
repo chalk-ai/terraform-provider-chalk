@@ -34,11 +34,12 @@ type AWSCloudCredentialsResourceModel struct {
 	Name types.String `tfsdk:"name"`
 
 	// AWS Configuration
-	AWSAccountId         types.String               `tfsdk:"aws_account_id"`
-	AWSManagementRoleArn types.String               `tfsdk:"aws_management_role_arn"`
-	AWSRegion            types.String               `tfsdk:"aws_region"`
-	AWSExternalId        types.String               `tfsdk:"aws_external_id"`
-	GCPWorkloadIdentity  []GCPWorkloadIdentityModel `tfsdk:"gcp_workload_identity"`
+	AWSAccountId              types.String               `tfsdk:"aws_account_id"`
+	AWSManagementRoleArn      types.String               `tfsdk:"aws_management_role_arn"`
+	AWSRegion                 types.String               `tfsdk:"aws_region"`
+	AWSExternalId             types.String               `tfsdk:"aws_external_id"`
+	AWSPermissionsBoundaryArn types.String               `tfsdk:"aws_permissions_boundary_arn"`
+	GCPWorkloadIdentity       []GCPWorkloadIdentityModel `tfsdk:"gcp_workload_identity"`
 
 	// Block Configuration
 	DockerBuildConfig []DockerBuildConfigModel `tfsdk:"docker_build_config"`
@@ -85,6 +86,10 @@ func (r *AWSCloudCredentialsResource) Schema(ctx context.Context, req resource.S
 				MarkdownDescription: "AWS external ID for role assumption",
 				Optional:            true,
 				Computed:            true,
+			},
+			"aws_permissions_boundary_arn": schema.StringAttribute{
+				MarkdownDescription: "AWS permissions boundary ARN to attach to IAM roles created by Chalk",
+				Optional:            true,
 			},
 		},
 
@@ -191,6 +196,11 @@ func (r *AWSCloudCredentialsResource) Create(ctx context.Context, req resource.C
 		awsConfig.ExternalId = &externalId
 	}
 
+	if !data.AWSPermissionsBoundaryArn.IsNull() {
+		permissionsBoundaryArn := data.AWSPermissionsBoundaryArn.ValueString()
+		awsConfig.PermissionsBoundaryArn = &permissionsBoundaryArn
+	}
+
 	// Add Docker build config if provided
 	if dockerConfig := buildDockerConfig(&data.DockerBuildConfig); dockerConfig != nil {
 		awsConfig.DockerBuildConfig = dockerConfig
@@ -236,6 +246,11 @@ func (r *AWSCloudCredentialsResource) Create(ctx context.Context, req resource.C
 				data.AWSExternalId = types.StringValue(*aws.ExternalId)
 			} else {
 				data.AWSExternalId = types.StringNull()
+			}
+			if aws.PermissionsBoundaryArn != nil {
+				data.AWSPermissionsBoundaryArn = types.StringValue(*aws.PermissionsBoundaryArn)
+			} else {
+				data.AWSPermissionsBoundaryArn = types.StringNull()
 			}
 		}
 	}
@@ -284,6 +299,11 @@ func (r *AWSCloudCredentialsResource) Read(ctx context.Context, req resource.Rea
 			} else {
 				data.AWSExternalId = types.StringNull()
 			}
+			if aws.PermissionsBoundaryArn != nil {
+				data.AWSPermissionsBoundaryArn = types.StringValue(*aws.PermissionsBoundaryArn)
+			} else {
+				data.AWSPermissionsBoundaryArn = types.StringNull()
+			}
 
 			// Extract Docker build config if present
 			if aws.DockerBuildConfig != nil {
@@ -321,6 +341,11 @@ func (r *AWSCloudCredentialsResource) Update(ctx context.Context, req resource.U
 	if !data.AWSExternalId.IsNull() {
 		externalId := data.AWSExternalId.ValueString()
 		awsConfig.ExternalId = &externalId
+	}
+
+	if !data.AWSPermissionsBoundaryArn.IsNull() {
+		permissionsBoundaryArn := data.AWSPermissionsBoundaryArn.ValueString()
+		awsConfig.PermissionsBoundaryArn = &permissionsBoundaryArn
 	}
 
 	// Add Docker build config if provided
@@ -372,6 +397,11 @@ func (r *AWSCloudCredentialsResource) Update(ctx context.Context, req resource.U
 				data.AWSExternalId = types.StringValue(*aws.ExternalId)
 			} else {
 				data.AWSExternalId = types.StringNull()
+			}
+			if aws.PermissionsBoundaryArn != nil {
+				data.AWSPermissionsBoundaryArn = types.StringValue(*aws.PermissionsBoundaryArn)
+			} else {
+				data.AWSPermissionsBoundaryArn = types.StringNull()
 			}
 
 			// Extract Docker build config if present
