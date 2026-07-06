@@ -201,11 +201,9 @@ func (p *ChalkProvider) Configure(ctx context.Context, req provider.ConfigureReq
 // allResourceCtors is the canonical list of resource constructors. It is used
 // by Resources() and by tests that verify wrapper behavior.
 var allResourceCtors = []func() resource.Resource{
-	NewEnvironmentResource,
 	NewProjectResource,
 	NewServiceTokenResource,
 	NewClusterGatewayResource,
-	NewClusterBackgroundPersistenceResource,
 	NewClusterTimescaleResource,
 	NewKubernetesClusterResource,
 	NewManagedClusterResource,

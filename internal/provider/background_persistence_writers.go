@@ -13,6 +13,46 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+type KubeResourceConfigModel struct {
+	CPU              types.String `tfsdk:"cpu"`
+	Memory           types.String `tfsdk:"memory"`
+	EphemeralStorage types.String `tfsdk:"ephemeral_storage"`
+	Storage          types.String `tfsdk:"storage"`
+}
+
+type BackgroundPersistenceWriterHpaModel struct {
+	HpaPubsubSubscriptionId types.String `tfsdk:"hpa_pubsub_subscription_id"`
+	HpaMinReplicas          types.Int64  `tfsdk:"hpa_min_replicas"`
+	HpaMaxReplicas          types.Int64  `tfsdk:"hpa_max_replicas"`
+	HpaTargetAverageValue   types.Int64  `tfsdk:"hpa_target_average_value"`
+}
+
+type BackgroundPersistenceWriterModel struct {
+	Name                                     types.String                         `tfsdk:"name"`
+	ImageOverride                            types.String                         `tfsdk:"image_override"`
+	HpaSpecs                                 *BackgroundPersistenceWriterHpaModel `tfsdk:"hpa_specs"`
+	GkeSpot                                  types.Bool                           `tfsdk:"gke_spot"`
+	LoadWriterConfigmap                      types.Bool                           `tfsdk:"load_writer_configmap"`
+	Version                                  types.String                         `tfsdk:"version"`
+	Request                                  *KubeResourceConfigModel             `tfsdk:"request"`
+	Limit                                    *KubeResourceConfigModel             `tfsdk:"limit"`
+	BusSubscriberType                        types.String                         `tfsdk:"bus_subscriber_type"`
+	DefaultReplicaCount                      types.Int64                          `tfsdk:"default_replica_count"`
+	KafkaConsumerGroupOverride               types.String                         `tfsdk:"kafka_consumer_group_override"`
+	MaxBatchSize                             types.Int64                          `tfsdk:"max_batch_size"`
+	MessageProcessingConcurrency             types.Int64                          `tfsdk:"message_processing_concurrency"`
+	MetadataSqlSslCaCertSecret               types.String                         `tfsdk:"metadata_sql_ssl_ca_cert_secret"`
+	MetadataSqlSslClientCertSecret           types.String                         `tfsdk:"metadata_sql_ssl_client_cert_secret"`
+	MetadataSqlSslClientKeySecret            types.String                         `tfsdk:"metadata_sql_ssl_client_key_secret"`
+	MetadataSqlUriSecret                     types.String                         `tfsdk:"metadata_sql_uri_secret"`
+	OfflineStoreInserterDbType               types.String                         `tfsdk:"offline_store_inserter_db_type"`
+	StorageCachePrefix                       types.String                         `tfsdk:"storage_cache_prefix"`
+	ResultsWriterSkipProducingFeatureMetrics types.Bool                           `tfsdk:"results_writer_skip_producing_feature_metrics"`
+	QueryTableWriteDropRatio                 types.String                         `tfsdk:"query_table_write_drop_ratio"`
+	Nodepool                                 types.String                         `tfsdk:"nodepool"`
+	AdditionalEnvVars                        types.Map                            `tfsdk:"additional_env_vars"`
+}
+
 var kubeResourceConfigSchemaAttrs = map[string]schema.Attribute{
 	"cpu": schema.StringAttribute{
 		MarkdownDescription: "CPU resource specification",
@@ -145,14 +185,6 @@ var bgpWritersNestedAttrs = map[string]schema.Attribute{
 	"nodepool": schema.StringAttribute{
 		MarkdownDescription: "Nodepool to pin the writer to. On GCP this becomes a GKE node selector plus toleration; on AWS it maps to the Karpenter nodepool. When unset, the writer runs on the default nodepool.",
 		Optional:            true,
-	},
-}
-
-var bgpWritersSchemaAttribute = schema.ListNestedAttribute{
-	MarkdownDescription: "Background persistence writers",
-	Required:            true,
-	NestedObject: schema.NestedAttributeObject{
-		Attributes: bgpWritersNestedAttrs,
 	},
 }
 
