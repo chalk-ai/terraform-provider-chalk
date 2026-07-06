@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -30,7 +29,6 @@ type BaseEnvironmentModel struct {
 	OnlineStoreKind          types.String         `tfsdk:"online_store_kind"`
 	OnlineStoreSecret        types.String         `tfsdk:"online_store_secret"`
 	AdditionalEnvVars        types.Map            `tfsdk:"additional_env_vars"`
-	EnvironmentBuckets       types.Object         `tfsdk:"environment_buckets"`
 	SpecsConfigJson          jsontypes.Normalized `tfsdk:"specs_config_json"`
 	PrivatePipRepositories   jsontypes.Normalized `tfsdk:"private_pip_repositories"`
 	PinnedBaseImage          types.String         `tfsdk:"pinned_base_image"`
@@ -102,34 +100,6 @@ func commonEnvironmentSchemaAttributes(kubeJobNamespace schema.Attribute) map[st
 			MarkdownDescription: "Additional environment variables",
 			Optional:            true,
 			ElementType:         types.StringType,
-		},
-		"environment_buckets": schema.SingleNestedAttribute{
-			MarkdownDescription: "Environment object storage configuration; required for 'chalk apply' to work." +
-				" Note that the buckets provided must be created externally first, and should have a CORS policy set" +
-				" that allows GET access from the Chalk frontend." +
-				" **Deprecated:** use the environment-scoped cloud storage bindings" +
-				" (`chalk_environment_dataset_cloud_storage_binding`, `chalk_environment_plan_stages_cloud_storage_binding`," +
-				" `chalk_environment_source_bundle_cloud_storage_binding`, `chalk_environment_model_registry_cloud_storage_binding`) instead.",
-			DeprecationMessage: "environment_buckets is deprecated; use the environment-scoped cloud storage bindings instead.",
-			Optional:           true,
-			Attributes: map[string]schema.Attribute{
-				"dataset_bucket": schema.StringAttribute{
-					MarkdownDescription: "Dataset bucket; required for 'chalk apply' to work.",
-					Optional:            true,
-				},
-				"plan_stages_bucket": schema.StringAttribute{
-					MarkdownDescription: "Plan stages bucket; required for 'chalk apply' to work.",
-					Optional:            true,
-				},
-				"source_bundle_bucket": schema.StringAttribute{
-					MarkdownDescription: "Source bundle bucket; required for 'chalk apply' to work.",
-					Optional:            true,
-				},
-				"model_registry_bucket": schema.StringAttribute{
-					MarkdownDescription: "Model registry bucket. This bucket is required if using the model registry.",
-					Optional:            true,
-				},
-			},
 		},
 		"specs_config_json": schema.StringAttribute{
 			MarkdownDescription: "Specs config JSON (serialized map of spec configuration values)",
@@ -215,19 +185,6 @@ func baseEnvToProto(ctx context.Context, data *BaseEnvironmentModel, diagnostics
 		}
 		env.AdditionalEnvVars = envVars
 	}
-	if !data.EnvironmentBuckets.IsNull() && !data.EnvironmentBuckets.IsUnknown() {
-		var buckets EnvironmentBucketsModel
-		diagnostics.Append(data.EnvironmentBuckets.As(ctx, &buckets, basetypes.ObjectAsOptions{})...)
-		if diagnostics.HasError() {
-			return nil
-		}
-		env.EnvironmentBuckets = &serverv1.EnvironmentObjectStorageConfig{
-			DatasetBucket:       buckets.DatasetBucket.ValueString(),
-			PlanStagesBucket:    buckets.PlanStagesBucket.ValueString(),
-			SourceBundleBucket:  buckets.SourceBundleBucket.ValueString(),
-			ModelRegistryBucket: buckets.ModelRegistryBucket.ValueString(),
-		}
-	}
 	if !data.SpecsConfigJson.IsNull() && !data.SpecsConfigJson.IsUnknown() {
 		var st structpb.Struct
 		if err := protojson.Unmarshal([]byte(data.SpecsConfigJson.ValueString()), &st); err != nil {
@@ -296,8 +253,6 @@ func baseUpdateStateFromEnvironment(data *BaseEnvironmentModel, e *serverv1.Envi
 		data.AdditionalEnvVars = types.MapNull(types.StringType)
 	}
 
-	data.EnvironmentBuckets = environmentBucketsToTF(e.EnvironmentBuckets)
-
 	if len(e.SpecConfigJson) > 0 {
 		st := &structpb.Struct{Fields: e.SpecConfigJson}
 		b, err := protojson.Marshal(st)
@@ -350,19 +305,6 @@ func populateBaseEnvUpdateProto(ctx context.Context, plan *BaseEnvironmentModel,
 		}
 		env.AdditionalEnvVars = envVars
 	}
-	if !plan.EnvironmentBuckets.IsNull() && !plan.EnvironmentBuckets.IsUnknown() {
-		var buckets EnvironmentBucketsModel
-		diagnostics.Append(plan.EnvironmentBuckets.As(ctx, &buckets, basetypes.ObjectAsOptions{})...)
-		if diagnostics.HasError() {
-			return
-		}
-		env.EnvironmentBuckets = &serverv1.EnvironmentObjectStorageConfig{
-			DatasetBucket:       buckets.DatasetBucket.ValueString(),
-			PlanStagesBucket:    buckets.PlanStagesBucket.ValueString(),
-			SourceBundleBucket:  buckets.SourceBundleBucket.ValueString(),
-			ModelRegistryBucket: buckets.ModelRegistryBucket.ValueString(),
-		}
-	}
 	if !plan.SpecsConfigJson.IsNull() && !plan.SpecsConfigJson.IsUnknown() {
 		var st structpb.Struct
 		if err := protojson.Unmarshal([]byte(plan.SpecsConfigJson.ValueString()), &st); err != nil {
@@ -408,9 +350,6 @@ func buildBaseEnvUpdateMask(plan, state *BaseEnvironmentModel) []string {
 	}
 	if !plan.AdditionalEnvVars.IsUnknown() && !plan.AdditionalEnvVars.Equal(state.AdditionalEnvVars) {
 		paths = append(paths, "additional_env_vars")
-	}
-	if !plan.EnvironmentBuckets.IsUnknown() && !plan.EnvironmentBuckets.Equal(state.EnvironmentBuckets) {
-		paths = append(paths, "environment_buckets")
 	}
 	if !plan.SpecsConfigJson.IsUnknown() && !plan.SpecsConfigJson.Equal(state.SpecsConfigJson) {
 		paths = append(paths, "spec_config_json")

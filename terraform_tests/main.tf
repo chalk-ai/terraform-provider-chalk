@@ -100,12 +100,6 @@ resource "chalk_managed_cluster" "cluster" {
 #     "CHALK_INITIALIZE_NATIVE_BUS_PUBLISHER" : "1", "CHALK_PERSIST_TO_OFFLINE_STORE_QUERY_LOG" : "1", "CHALK_PLANNER_ENABLE_NATIVE_RESULT_BUS_PERSISTENCE" : "1", "CHALK_PLANNER_PERSIST_VALUES_OFFLINE_STORE" : "0", "CHALK_PLANNER_PERSIST_VALUES_PARQUET" : "0", "CHALK_PLANNER_SKIP_RELATIONSHIP_DISTINCT" : "1", "CHALK_PLANNER_USE_FILTERED_JOINS" : "0", "CHALK_PLANNER_USE_NATIVE_SQL_OPERATORS" : "1", "CHALK_PLANNER_USE_NATIVE_STATISTICS_OPERATOR" : "0", "CHALK_PLANNER_VELOX_USE_ZERO_COPY_HASH_JOIN" : "1", "CHALK_SKIP_USAGE_PERSISTENCE" : "1", "CHALK_STATIC_UNDERSCORE_EXPRESSIONS" : "1", "CHECK_DUPLICATE_ROWS" : "0", "DD_TRACE_ENABLED" : "1", "GRPC_QUERY_SERVER_NO_TLS" : "1", "PYTHONOPTIMIZE" : "1"
 #   }
 #   engine_docker_registry_path = "engines/engine-${local.sanitized_email}"
-#   environment_buckets = {
-#     "plan_stages_bucket"    = "s3://chalk-cicd-test-stages-bucket"
-#     "source_bundle_bucket"  = "s3://chalk-cicd-test-source-bucket"
-#     "dataset_bucket"        = "s3://chalk-cicd-test-dataset-bucket"
-#     "model_registry_bucket" = "s3://chalk-cicd-test-model-registry-bucket"
-#   }
 #   managed = true
 # }
 #

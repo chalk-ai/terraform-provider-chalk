@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
@@ -31,13 +30,6 @@ func NewEnvironmentResource() resource.Resource {
 
 type EnvironmentResource struct {
 	client *client.Manager
-}
-
-type EnvironmentBucketsModel struct {
-	DatasetBucket       types.String `tfsdk:"dataset_bucket"`
-	PlanStagesBucket    types.String `tfsdk:"plan_stages_bucket"`
-	SourceBundleBucket  types.String `tfsdk:"source_bundle_bucket"`
-	ModelRegistryBucket types.String `tfsdk:"model_registry_bucket"`
 }
 
 type EnvironmentResourceModel struct {
@@ -66,9 +58,6 @@ type EnvironmentResourceModel struct {
 	KubeJobNamespace types.String `tfsdk:"kube_job_namespace"`
 	//TODO template if not provided
 	KubeServiceAccountName types.String `tfsdk:"kube_service_account_name"`
-
-	//TODO move to a binding object eventually
-	EnvironmentBuckets types.Object `tfsdk:"environment_buckets"`
 
 	//Optional Fields
 	PrivatePipRepositories types.String `tfsdk:"private_pip_repositories"`
@@ -177,32 +166,6 @@ func (r *EnvironmentResource) Schema(ctx context.Context, req resource.SchemaReq
 				MarkdownDescription: "Whether to bootstrap cloud infrastructure",
 				Optional:            true,
 			},
-			"environment_buckets": schema.SingleNestedAttribute{
-				MarkdownDescription: "Environment object storage configuration." +
-					" **Deprecated:** use the environment-scoped cloud storage bindings" +
-					" (`chalk_environment_dataset_cloud_storage_binding`, `chalk_environment_plan_stages_cloud_storage_binding`," +
-					" `chalk_environment_source_bundle_cloud_storage_binding`, `chalk_environment_model_registry_cloud_storage_binding`) instead.",
-				DeprecationMessage: "environment_buckets is deprecated; use the environment-scoped cloud storage bindings instead.",
-				Optional:           true,
-				Attributes: map[string]schema.Attribute{
-					"dataset_bucket": schema.StringAttribute{
-						MarkdownDescription: "Dataset bucket",
-						Optional:            true,
-					},
-					"plan_stages_bucket": schema.StringAttribute{
-						MarkdownDescription: "Plan stages bucket",
-						Optional:            true,
-					},
-					"source_bundle_bucket": schema.StringAttribute{
-						MarkdownDescription: "Source bundle bucket",
-						Optional:            true,
-					},
-					"model_registry_bucket": schema.StringAttribute{
-						MarkdownDescription: "Model registry bucket",
-						Optional:            true,
-					},
-				},
-			},
 		},
 	}
 }
@@ -282,7 +245,7 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 		!data.SpecsConfigJson.IsNull() || !data.ServiceUrl.IsNull() ||
 		!data.WorkerUrl.IsNull() || !data.BranchUrl.IsNull() ||
 		!data.KubeJobNamespace.IsNull() || !data.KubeServiceAccountName.IsNull() ||
-		!data.EnvironmentBuckets.IsNull() || !data.OnlineStoreKind.IsNull() {
+		!data.OnlineStoreKind.IsNull() {
 		updateReq := &serverv1.UpdateEnvironmentRequest{
 			Id:     data.Id.ValueString(),
 			Update: &serverv1.UpdateEnvironmentOperation{},
@@ -359,22 +322,6 @@ func (r *EnvironmentResource) Create(ctx context.Context, req resource.CreateReq
 			val := data.KubeServiceAccountName.ValueString()
 			updateReq.Update.KubeServiceAccountName = &val
 			updateMaskPaths = append(updateMaskPaths, "kube_service_account_name")
-		}
-
-		if !data.EnvironmentBuckets.IsNull() {
-			var buckets EnvironmentBucketsModel
-			diags := data.EnvironmentBuckets.As(ctx, &buckets, basetypes.ObjectAsOptions{})
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			updateReq.Update.EnvironmentBuckets = &serverv1.EnvironmentObjectStorageConfig{
-				DatasetBucket:       buckets.DatasetBucket.ValueString(),
-				PlanStagesBucket:    buckets.PlanStagesBucket.ValueString(),
-				SourceBundleBucket:  buckets.SourceBundleBucket.ValueString(),
-				ModelRegistryBucket: buckets.ModelRegistryBucket.ValueString(),
-			}
-			updateMaskPaths = append(updateMaskPaths, "environment_buckets")
 		}
 
 		updateReq.UpdateMask = &fieldmaskpb.FieldMask{
@@ -495,37 +442,6 @@ func (r *EnvironmentResource) Read(ctx context.Context, req resource.ReadRequest
 
 	if e.EngineDockerRegistryPath != nil {
 		data.EngineDockerRegistryPath = types.StringValue(*e.EngineDockerRegistryPath)
-	}
-
-	if e.EnvironmentBuckets != nil {
-		bucketsAttrs := map[string]attr.Value{
-			"dataset_bucket":        types.StringValue(e.EnvironmentBuckets.DatasetBucket),
-			"plan_stages_bucket":    types.StringValue(e.EnvironmentBuckets.PlanStagesBucket),
-			"source_bundle_bucket":  types.StringValue(e.EnvironmentBuckets.SourceBundleBucket),
-			"model_registry_bucket": types.StringValue(e.EnvironmentBuckets.ModelRegistryBucket),
-		}
-		// Convert empty strings to null
-		if e.EnvironmentBuckets.DatasetBucket == "" {
-			bucketsAttrs["dataset_bucket"] = types.StringNull()
-		}
-		if e.EnvironmentBuckets.PlanStagesBucket == "" {
-			bucketsAttrs["plan_stages_bucket"] = types.StringNull()
-		}
-		if e.EnvironmentBuckets.SourceBundleBucket == "" {
-			bucketsAttrs["source_bundle_bucket"] = types.StringNull()
-		}
-		if e.EnvironmentBuckets.ModelRegistryBucket == "" {
-			bucketsAttrs["model_registry_bucket"] = types.StringNull()
-		}
-		bucketsType := types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"dataset_bucket":        types.StringType,
-				"plan_stages_bucket":    types.StringType,
-				"source_bundle_bucket":  types.StringType,
-				"model_registry_bucket": types.StringType,
-			},
-		}
-		data.EnvironmentBuckets = types.ObjectValueMust(bucketsType.AttrTypes, bucketsAttrs)
 	}
 
 	// Note: managed is a Terraform-only field that controls bootstrap behavior
@@ -655,24 +571,6 @@ func (r *EnvironmentResource) Update(ctx context.Context, req resource.UpdateReq
 			updateReq.Update.KubeServiceAccountName = &val
 		}
 		updateMaskPaths = append(updateMaskPaths, "kube_service_account_name")
-	}
-
-	if !data.EnvironmentBuckets.Equal(state.EnvironmentBuckets) {
-		if !data.EnvironmentBuckets.IsNull() {
-			var buckets EnvironmentBucketsModel
-			diags := data.EnvironmentBuckets.As(ctx, &buckets, basetypes.ObjectAsOptions{})
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			updateReq.Update.EnvironmentBuckets = &serverv1.EnvironmentObjectStorageConfig{
-				DatasetBucket:       buckets.DatasetBucket.ValueString(),
-				PlanStagesBucket:    buckets.PlanStagesBucket.ValueString(),
-				SourceBundleBucket:  buckets.SourceBundleBucket.ValueString(),
-				ModelRegistryBucket: buckets.ModelRegistryBucket.ValueString(),
-			}
-		}
-		updateMaskPaths = append(updateMaskPaths, "environment_buckets")
 	}
 
 	if len(updateMaskPaths) > 0 {
