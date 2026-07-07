@@ -71,8 +71,6 @@ func applyUnmanagedEnvField(dst, src *serverv1.Environment, path string) {
 		dst.PrivatePipRepositories = src.PrivatePipRepositories
 	case "additional_env_vars":
 		dst.AdditionalEnvVars = src.AdditionalEnvVars
-	case "environment_buckets":
-		dst.EnvironmentBuckets = src.EnvironmentBuckets
 	case "spec_config_json":
 		dst.SpecConfigJson = src.SpecConfigJson
 	case "pinned_base_image":

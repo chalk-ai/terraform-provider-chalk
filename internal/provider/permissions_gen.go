@@ -6,7 +6,6 @@ package provider
 var resourcePermissionsMarkdown = map[string]string{
 	"chalk_aws_cloud_credentials":                                 "**Required permissions:** `project.create`",
 	"chalk_azure_cloud_credentials":                               "**Required permissions:** `project.create`",
-	"chalk_cluster_background_persistence":                        "**Required permissions:** `team.admin`, `deploy.read`",
 	"chalk_cluster_background_persistence_deployment_binding":     "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_cluster_container_registry_binding":                    "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_cluster_dataset_cloud_storage_binding":                 "**Required permissions:** `project.create` *(team-scoped)*",
@@ -22,7 +21,6 @@ var resourcePermissionsMarkdown = map[string]string{
 	"chalk_datasource_kafka":                                      "**Required permissions:** `secrets.write`, `secrets.decrypt`",
 	"chalk_datasource_kinesis":                                    "**Required permissions:** `secrets.write`, `secrets.decrypt`",
 	"chalk_datasource_postgresql":                                 "**Required permissions:** `secrets.write`, `secrets.decrypt`",
-	"chalk_environment":                                           "**Required permissions:** `project.create`, `deploy.create`, `deploy.read`, `environment.create` *(team-scoped)*",
 	"chalk_environment_background_persistence_deployment_binding": "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_environment_dataset_cloud_storage_binding":             "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_environment_gateway_binding":                           "**Required permissions:** `project.create` *(team-scoped)*",

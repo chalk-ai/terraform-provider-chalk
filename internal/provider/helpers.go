@@ -53,26 +53,6 @@ func kubeResourceConfigObject(rc *serverv1.KubeResourceConfig) types.Object {
 	})
 }
 
-// environmentBucketsToTF converts an EnvironmentObjectStorageConfig proto to a types.Object.
-// Returns types.ObjectNull when b is nil.
-func environmentBucketsToTF(b *serverv1.EnvironmentObjectStorageConfig) types.Object {
-	attrTypes := map[string]attr.Type{
-		"dataset_bucket":        types.StringType,
-		"plan_stages_bucket":    types.StringType,
-		"source_bundle_bucket":  types.StringType,
-		"model_registry_bucket": types.StringType,
-	}
-	if b == nil {
-		return types.ObjectNull(attrTypes)
-	}
-	return types.ObjectValueMust(attrTypes, map[string]attr.Value{
-		"dataset_bucket":        optionalStringValue(b.DatasetBucket),
-		"plan_stages_bucket":    optionalStringValue(b.PlanStagesBucket),
-		"source_bundle_bucket":  optionalStringValue(b.SourceBundleBucket),
-		"model_registry_bucket": optionalStringValue(b.ModelRegistryBucket),
-	})
-}
-
 // kubePVCObject converts a KubePersistentVolumeClaim proto to a types.Object.
 func kubePVCObject(pvc *serverv1.KubePersistentVolumeClaim) types.Object {
 	if pvc == nil {

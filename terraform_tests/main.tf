@@ -51,12 +51,12 @@ resource "chalk_managed_aws_vpc" "vpc" {
       private_cidr_block = "10.100.1.0/8"
       public_cidr_block  = "10.100.2.0/8"
       availability_zone  = "a"
-    }, {
+      }, {
       name               = "subnet-2"
       private_cidr_block = "10.100.3.0/8"
       public_cidr_block  = "10.100.4.0/8"
       availability_zone  = "b"
-    }, {
+      }, {
       name               = "subnet-3"
       private_cidr_block = "10.100.5.0/8"
       public_cidr_block  = "10.100.6.0/8"
@@ -76,7 +76,7 @@ resource "chalk_managed_cluster" "cluster" {
 # }
 #
 # resource "chalk_cluster_background_persistence_deployment_binding" "cbpb" {
-#   background_persistence_deployment_id = chalk_cluster_background_persistence.persistence.id
+#   background_persistence_deployment_id = chalk_unmanaged_cluster_background_persistence.persistence.id
 #   cluster_id                           = chalk_kubernetes_cluster.cluster.id
 # }
 #
@@ -85,32 +85,65 @@ resource "chalk_managed_cluster" "cluster" {
 #   telemetry_deployment_id = chalk_telemetry.test.id
 # }
 #
-# resource "chalk_environment" "test" {
-#   id                        = local.sanitized_email
-#   name                      = local.sanitized_email
-#   project_id                = chalk_project.test.id
-#   kube_cluster_id           = chalk_kubernetes_cluster.cluster.id
-#   kube_job_namespace        = "ns-${local.sanitized_email}"
-#   kube_service_account_name = "env-${local.sanitized_email}-workload-identity"
-#   service_url               = "https://${local.sanitized_email}.remote.internal.aws.chalk.dev/"
-#   worker_url                = "https://${local.sanitized_email}.remote.internal.aws.chalk.dev/"
-#   branch_url                = "https://${local.sanitized_email}.remote.internal.aws.chalk.dev/"
-#   source_bundle_bucket      = "s3://chalk-cicd-test-source-bucket"
+# resource "chalk_unmanaged_environment" "test" {
+#   id                          = local.sanitized_email
+#   name                        = local.sanitized_email
+#   project_id                  = chalk_project.test.id
+#   kube_cluster_id             = chalk_kubernetes_cluster.cluster.id
+#   kube_job_namespace          = "ns-${local.sanitized_email}"
+#   kube_service_account_name   = "env-${local.sanitized_email}-workload-identity"
+#   service_url                 = "https://${local.sanitized_email}.remote.internal.aws.chalk.dev/"
+#   engine_docker_registry_path = "engines/engine-${local.sanitized_email}"
 #   additional_env_vars = {
 #     "CHALK_INITIALIZE_NATIVE_BUS_PUBLISHER" : "1", "CHALK_PERSIST_TO_OFFLINE_STORE_QUERY_LOG" : "1", "CHALK_PLANNER_ENABLE_NATIVE_RESULT_BUS_PERSISTENCE" : "1", "CHALK_PLANNER_PERSIST_VALUES_OFFLINE_STORE" : "0", "CHALK_PLANNER_PERSIST_VALUES_PARQUET" : "0", "CHALK_PLANNER_SKIP_RELATIONSHIP_DISTINCT" : "1", "CHALK_PLANNER_USE_FILTERED_JOINS" : "0", "CHALK_PLANNER_USE_NATIVE_SQL_OPERATORS" : "1", "CHALK_PLANNER_USE_NATIVE_STATISTICS_OPERATOR" : "0", "CHALK_PLANNER_VELOX_USE_ZERO_COPY_HASH_JOIN" : "1", "CHALK_SKIP_USAGE_PERSISTENCE" : "1", "CHALK_STATIC_UNDERSCORE_EXPRESSIONS" : "1", "CHECK_DUPLICATE_ROWS" : "0", "DD_TRACE_ENABLED" : "1", "GRPC_QUERY_SERVER_NO_TLS" : "1", "PYTHONOPTIMIZE" : "1"
 #   }
-#   engine_docker_registry_path = "engines/engine-${local.sanitized_email}"
-#   environment_buckets = {
-#     "plan_stages_bucket"    = "s3://chalk-cicd-test-stages-bucket"
-#     "source_bundle_bucket"  = "s3://chalk-cicd-test-source-bucket"
-#     "dataset_bucket"        = "s3://chalk-cicd-test-dataset-bucket"
-#     "model_registry_bucket" = "s3://chalk-cicd-test-model-registry-bucket"
-#   }
-#   managed = true
+# }
+#
+# # Buckets are registered as standalone cloud storage resources, then bound to
+# # the environment per role - this replaces the deprecated `environment_buckets`
+# # field that used to live directly on the environment resource.
+# resource "chalk_unmanaged_cloud_storage" "dataset" {
+#   uri                 = "s3://chalk-cicd-test-dataset-bucket"
+#   cloud_credential_id = chalk_aws_cloud_credentials.creds.id
+# }
+#
+# resource "chalk_unmanaged_cloud_storage" "plan_stages" {
+#   uri                 = "s3://chalk-cicd-test-stages-bucket"
+#   cloud_credential_id = chalk_aws_cloud_credentials.creds.id
+# }
+#
+# resource "chalk_unmanaged_cloud_storage" "source_bundle" {
+#   uri                 = "s3://chalk-cicd-test-source-bucket"
+#   cloud_credential_id = chalk_aws_cloud_credentials.creds.id
+# }
+#
+# resource "chalk_unmanaged_cloud_storage" "model_registry" {
+#   uri                 = "s3://chalk-cicd-test-model-registry-bucket"
+#   cloud_credential_id = chalk_aws_cloud_credentials.creds.id
+# }
+#
+# resource "chalk_environment_dataset_cloud_storage_binding" "dataset" {
+#   environment_id   = chalk_unmanaged_environment.test.id
+#   cloud_storage_id = chalk_unmanaged_cloud_storage.dataset.id
+# }
+#
+# resource "chalk_environment_plan_stages_cloud_storage_binding" "plan_stages" {
+#   environment_id   = chalk_unmanaged_environment.test.id
+#   cloud_storage_id = chalk_unmanaged_cloud_storage.plan_stages.id
+# }
+#
+# resource "chalk_environment_source_bundle_cloud_storage_binding" "source_bundle" {
+#   environment_id   = chalk_unmanaged_environment.test.id
+#   cloud_storage_id = chalk_unmanaged_cloud_storage.source_bundle.id
+# }
+#
+# resource "chalk_environment_model_registry_cloud_storage_binding" "model_registry" {
+#   environment_id   = chalk_unmanaged_environment.test.id
+#   cloud_storage_id = chalk_unmanaged_cloud_storage.model_registry.id
 # }
 #
 # resource "chalk_cluster_timescale" "timescale" {
-#   environment_ids                 = [chalk_environment.test.id]
+#   environment_id                  = chalk_unmanaged_environment.test.id
 #   timescale_image                 = "ghcr.io/imusmanmalik/timescaledb-postgis:16-3.4-54"
 #   database_name                   = "${local.sanitized_email}-chalk-metrics"
 #   database_replicas               = 1
@@ -119,7 +152,6 @@ resource "chalk_managed_cluster" "cluster" {
 #   connection_pool_replicas        = 1
 #   connection_pool_max_connections = "500"
 #   connection_pool_size            = "50"
-#   connection_pool_mode            = "transaction"
 #   instance_type                   = "c5.large"
 #   request = {
 #     cpu    = "500m"
@@ -133,51 +165,35 @@ resource "chalk_managed_cluster" "cluster" {
 #   dns_hostname = "${local.sanitized_email}.metrics.remote.internal.aws.chalk.dev"
 # }
 #
-# resource "chalk_cluster_background_persistence" "persistence" {
-#   kube_cluster_id                          = chalk_kubernetes_cluster.cluster.id
-#   namespace                                = "ns-${local.sanitized_email}"
-#   service_account_name                     = "env-${local.sanitized_email}-workload-identity"
-#   bus_backend                              = "KAFKA"
-#   secret_client                            = "AWS"
-#   bigquery_parquet_upload_subscription_id  = "${local.sanitized_email}-offline-store-bulk-insert-bus-1"
-#   bigquery_streaming_write_subscription_id = "${local.sanitized_email}-offline-store-streaming-insert-bus-1"
-#   bigquery_streaming_write_topic           = "${local.sanitized_email}-offline-store-streaming-insert-bus-1"
-#   bq_upload_bucket                         = "s3://chalk-cicd-test-data-bucket"
-#   bq_upload_topic                          = "${local.sanitized_email}-offline-store-bulk-insert-bus-1"
-#   kafka_dlq_topic                          = "${local.sanitized_email}-dlq-1"
-#   metrics_bus_subscription_id              = "${local.sanitized_email}-metrics-bus-1"
-#   metrics_bus_topic_id                     = "${local.sanitized_email}-metrics-bus-1"
-#   operation_subscription_id                = "${local.sanitized_email}-operation-bus-1"
-#   query_log_result_topic                   = "${local.sanitized_email}-query-log"
-#   query_log_subscription_id                = "${local.sanitized_email}-query-log"
-#   result_bus_metrics_subscription_id       = "${local.sanitized_email}-result-bus-1"
-#   result_bus_offline_store_subscription_id = "${local.sanitized_email}-result-bus-1"
-#   result_bus_online_store_subscription_id  = "${local.sanitized_email}-result-bus-1"
-#   result_bus_topic_id                      = "${local.sanitized_email}-result-bus-1"
-#   usage_bus_topic_id                       = "${local.sanitized_email}-usage-bus"
-#   usage_events_subscription_id             = "${local.sanitized_email}-usage-events"
-#   api_server_host                          = "http://${local.sanitized_email}-api-proxy-service.ns-${local.sanitized_email}.svc.cluster.local:80"
-#   kafka_sasl_secret                        = "AmazonMSK_chalk-cicd-test_chalk"
-#   metadata_provider                        = "GRPC_SERVER"
-#   kafka_bootstrap_servers                  = "b-2.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-1.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-3.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096"
-#   kafka_security_protocol                  = "SASL_SSL"
-#   kafka_sasl_mechanism                     = "SCRAM-SHA-512"
-#   redis_is_clustered = "0" // demo cluster online store is not clustered
-#   redis_lightning_supports_has_many        = false
-#   insecure                                 = true
+# resource "chalk_unmanaged_cluster_background_persistence" "persistence" {
+#   kube_cluster_id       = chalk_kubernetes_cluster.cluster.id
+#   namespace             = "ns-${local.sanitized_email}"
+#   service_account_name  = "env-${local.sanitized_email}-workload-identity"
+#   api_server_host       = "http://${local.sanitized_email}-api-proxy-service.ns-${local.sanitized_email}.svc.cluster.local:80"
+#
+#   offline_store_upload_bucket_name = "s3://chalk-cicd-test-data-bucket"
+#
+#   kafka = {
+#     dlq_topic                                  = "${local.sanitized_email}-dlq-1"
+#     metrics_bus_topic_id                       = "${local.sanitized_email}-metrics-bus-1"
+#     offline_store_bus_streaming_write_topic_id = "${local.sanitized_email}-offline-store-streaming-insert-bus-1"
+#     offline_store_bus_upload_topic_id          = "${local.sanitized_email}-offline-store-bulk-insert-bus-1"
+#     result_bus_topic_id                        = "${local.sanitized_email}-result-bus-1"
+#     bootstrap_servers                          = "b-2.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-1.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096,b-3.chalkcicdtestkafkaclus.446fhd.c4.kafka.us-east-1.amazonaws.com:9096"
+#     sasl_secret                                = "AmazonMSK_chalk-cicd-test_chalk"
+#     security_protocol                          = "SASL_SSL"
+#     sasl_mechanism                              = "SCRAM-SHA-512"
+#   }
 #
 #   writers = [
 #     {
-#       name                  = "go-metrics-bus-writer"
 #       bus_subscriber_type   = "GO_METRICS_BUS_WRITER"
 #       default_replica_count = 1
 #       request = {
 #         cpu    = "500m"
 #         memory = "1Gi"
 #       }
-#
-#       }, {
-#       name                  = "cluster-manager"
+#     }, {
 #       bus_subscriber_type   = "CLUSTER_MANAGER"
 #       default_replica_count = 1
 #       request = {
