@@ -26,9 +26,60 @@ Chalk Kubernetes cluster resource (unmanaged)
 ### Optional
 
 - `cloud_credential_id` (String) ID of the cloud credential to use for the cluster
+- `data_plane_controller` (Attributes) Dataplane controller configuration, required to use Chalk Compute. (see [below for nested schema](#nestedatt--data_plane_controller))
+- `data_plane_redis` (Attributes) Optional Redis instance for cluster operators to use as a shared cache. (see [below for nested schema](#nestedatt--data_plane_redis))
 - `dns_zone` (String) DNS zone for the cluster
+- `maintenance_window` (Attributes) Controls when disruptive maintenance operations may run on this cluster. (see [below for nested schema](#nestedatt--maintenance_window))
 
 ### Read-Only
 
 - `id` (String) Cluster identifier
 - `team_id` (String) Team ID
+
+<a id="nestedatt--data_plane_controller"></a>
+### Nested Schema for `data_plane_controller`
+
+Optional:
+
+- `host_pools` (Attributes List) Host pools to deploy for this cluster. Each entry provisions a ChalkHostPool. (see [below for nested schema](#nestedatt--data_plane_controller--host_pools))
+- `node_pool` (String) Node pool to pin non-gVisor (open) container/scaling-group workloads to.
+- `restricted_node_pool` (String) Node pool to pin gVisor (restricted) container/scaling-group workloads to.
+- `tier` (String) Resource tier for the dataplane controller. One of `DISABLED`, `SMALL`, `MEDIUM`, `LARGE`. Unset resolves to `SMALL` server-side.
+
+<a id="nestedatt--data_plane_controller--host_pools"></a>
+### Nested Schema for `data_plane_controller.host_pools`
+
+Required:
+
+- `count` (Number) Number of hypervisor pods in the pool.
+- `name` (String) Name of the pool. Must be a valid DNS label.
+
+Optional:
+
+- `cpu` (String) CPU resources for each hypervisor pod, e.g. `4`.
+- `memory` (String) Memory resources for each hypervisor pod, e.g. `8Gi`.
+
+
+
+<a id="nestedatt--data_plane_redis"></a>
+### Nested Schema for `data_plane_redis`
+
+Optional:
+
+- `cloud_secret_name` (String) Name of the cloud secret holding credentials for a self-hosted Redis instance (only used when `kind = SELF_HOSTED`).
+- `cpu` (String) CPU size of the Redis instance, e.g. `500m`, `1`.
+- `kind` (String) Redis provisioning kind. `MANAGED` provisions a Chalk-managed instance. `SELF_HOSTED` is defined but not yet supported server-side.
+- `memory` (String) Memory size of the Redis instance, e.g. `1Gi`, `2Gi`.
+
+
+<a id="nestedatt--maintenance_window"></a>
+### Nested Schema for `maintenance_window`
+
+Required:
+
+- `mode` (String) Maintenance scheduling mode. `UNSPECIFIED` uses the system default window, `UNRESTRICTED` allows operations at any time, and `CUSTOM` uses `schedule`/`duration`.
+
+Optional:
+
+- `duration` (String) How long the window stays open, e.g. `30m` or `1h`. Required when `mode = CUSTOM`.
+- `schedule` (String) 5-field UTC cron expression defining when the window opens, e.g. `0 2 * * *`. Required when `mode = CUSTOM`.
