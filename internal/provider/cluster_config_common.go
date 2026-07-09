@@ -3,7 +3,9 @@ package provider
 import (
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -74,10 +76,19 @@ type maintenanceWindowModel struct {
 	Duration types.String `tfsdk:"duration"`
 }
 
+// dataPlaneRedisModel splits config by provisioning kind: exactly one of managed
+// or self_hosted is set, and the kind is derived from which one is present.
 type dataPlaneRedisModel struct {
-	Kind            types.String `tfsdk:"kind"`
-	Memory          types.String `tfsdk:"memory"`
-	Cpu             types.String `tfsdk:"cpu"`
+	Managed    *dataPlaneRedisManagedModel    `tfsdk:"managed"`
+	SelfHosted *dataPlaneRedisSelfHostedModel `tfsdk:"self_hosted"`
+}
+
+type dataPlaneRedisManagedModel struct {
+	Memory types.String `tfsdk:"memory"`
+	Cpu    types.String `tfsdk:"cpu"`
+}
+
+type dataPlaneRedisSelfHostedModel struct {
 	CloudSecretName types.String `tfsdk:"cloud_secret_name"`
 }
 
@@ -122,27 +133,42 @@ func clusterConfigSchemaAttributes() map[string]schema.Attribute {
 			},
 		},
 		"data_plane_redis": schema.SingleNestedAttribute{
-			MarkdownDescription: "Optional Redis instance for cluster operators to use as a shared cache.",
+			MarkdownDescription: "Optional Redis instance for cluster operators to use as a shared cache. Specify exactly one of `managed` or `self_hosted`.",
 			Optional:            true,
 			Attributes: map[string]schema.Attribute{
-				"kind": schema.StringAttribute{
-					MarkdownDescription: "Redis provisioning kind. `MANAGED` provisions a Chalk-managed instance. `SELF_HOSTED` is defined but not yet supported server-side.",
+				"managed": schema.SingleNestedAttribute{
+					MarkdownDescription: "Provision a Chalk-managed Redis instance.",
 					Optional:            true,
-					Validators: []validator.String{
-						stringvalidator.OneOf(dataPlaneRedisKindManaged, dataPlaneRedisKindSelfHosted),
+					Validators: []validator.Object{
+						objectvalidator.ExactlyOneOf(
+							path.MatchRelative().AtParent().AtName("self_hosted"),
+						),
+					},
+					Attributes: map[string]schema.Attribute{
+						"memory": schema.StringAttribute{
+							MarkdownDescription: "Memory size of the Redis instance, e.g. `1Gi`, `2Gi`.",
+							Optional:            true,
+						},
+						"cpu": schema.StringAttribute{
+							MarkdownDescription: "CPU size of the Redis instance, e.g. `500m`, `1`.",
+							Optional:            true,
+						},
 					},
 				},
-				"memory": schema.StringAttribute{
-					MarkdownDescription: "Memory size of the Redis instance, e.g. `1Gi`, `2Gi`.",
+				"self_hosted": schema.SingleNestedAttribute{
+					MarkdownDescription: "Use a self-hosted Redis instance. Defined for forward compatibility but not yet supported server-side.",
 					Optional:            true,
-				},
-				"cpu": schema.StringAttribute{
-					MarkdownDescription: "CPU size of the Redis instance, e.g. `500m`, `1`.",
-					Optional:            true,
-				},
-				"cloud_secret_name": schema.StringAttribute{
-					MarkdownDescription: "Name of the cloud secret holding credentials for a self-hosted Redis instance (only used when `kind = SELF_HOSTED`).",
-					Optional:            true,
+					Validators: []validator.Object{
+						objectvalidator.ExactlyOneOf(
+							path.MatchRelative().AtParent().AtName("managed"),
+						),
+					},
+					Attributes: map[string]schema.Attribute{
+						"cloud_secret_name": schema.StringAttribute{
+							MarkdownDescription: "Name of the cloud secret holding credentials for the self-hosted Redis instance.",
+							Required:            true,
+						},
+					},
 				},
 			},
 		},
@@ -226,11 +252,20 @@ func (m *dataPlaneRedisModel) toProto() *serverv1.DataPlaneRedis {
 	if m == nil {
 		return nil
 	}
+	if m.SelfHosted != nil {
+		kind := dataPlaneRedisKindSelfHosted
+		return &serverv1.DataPlaneRedis{
+			Kind:            &kind,
+			CloudSecretName: optionalStringPtr(m.SelfHosted.CloudSecretName),
+		}
+	}
+	// Exactly one of managed/self_hosted is set (enforced by schema validators),
+	// so reaching here means managed.
+	kind := dataPlaneRedisKindManaged
 	return &serverv1.DataPlaneRedis{
-		Kind:            optionalStringPtr(m.Kind),
-		Memory:          optionalStringPtr(m.Memory),
-		Cpu:             optionalStringPtr(m.Cpu),
-		CloudSecretName: optionalStringPtr(m.CloudSecretName),
+		Kind:   &kind,
+		Memory: optionalStringPtr(m.Managed.Memory),
+		Cpu:    optionalStringPtr(m.Managed.Cpu),
 	}
 }
 
@@ -275,11 +310,19 @@ func dataPlaneRedisFromProto(p *serverv1.DataPlaneRedis) *dataPlaneRedisModel {
 	if p == nil {
 		return nil
 	}
+	if p.GetKind() == dataPlaneRedisKindSelfHosted {
+		return &dataPlaneRedisModel{
+			SelfHosted: &dataPlaneRedisSelfHostedModel{
+				CloudSecretName: optionalStringValue(p.GetCloudSecretName()),
+			},
+		}
+	}
+	// The server treats an empty kind the same as MANAGED.
 	return &dataPlaneRedisModel{
-		Kind:            optionalStringValue(p.GetKind()),
-		Memory:          optionalStringValue(p.GetMemory()),
-		Cpu:             optionalStringValue(p.GetCpu()),
-		CloudSecretName: optionalStringValue(p.GetCloudSecretName()),
+		Managed: &dataPlaneRedisManagedModel{
+			Memory: optionalStringValue(p.GetMemory()),
+			Cpu:    optionalStringValue(p.GetCpu()),
+		},
 	}
 }
 

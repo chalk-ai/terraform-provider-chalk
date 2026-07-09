@@ -27,7 +27,7 @@ Chalk Kubernetes cluster resource (unmanaged)
 
 - `cloud_credential_id` (String) ID of the cloud credential to use for the cluster
 - `data_plane_controller` (Attributes) Dataplane controller configuration, required to use Chalk Compute. (see [below for nested schema](#nestedatt--data_plane_controller))
-- `data_plane_redis` (Attributes) Optional Redis instance for cluster operators to use as a shared cache. (see [below for nested schema](#nestedatt--data_plane_redis))
+- `data_plane_redis` (Attributes) Optional Redis instance for cluster operators to use as a shared cache. Specify exactly one of `managed` or `self_hosted`. (see [below for nested schema](#nestedatt--data_plane_redis))
 - `dns_zone` (String) DNS zone for the cluster
 - `maintenance_window` (Attributes) Controls when disruptive maintenance operations may run on this cluster. (see [below for nested schema](#nestedatt--maintenance_window))
 
@@ -66,10 +66,25 @@ Optional:
 
 Optional:
 
-- `cloud_secret_name` (String) Name of the cloud secret holding credentials for a self-hosted Redis instance (only used when `kind = SELF_HOSTED`).
+- `managed` (Attributes) Provision a Chalk-managed Redis instance. (see [below for nested schema](#nestedatt--data_plane_redis--managed))
+- `self_hosted` (Attributes) Use a self-hosted Redis instance. Defined for forward compatibility but not yet supported server-side. (see [below for nested schema](#nestedatt--data_plane_redis--self_hosted))
+
+<a id="nestedatt--data_plane_redis--managed"></a>
+### Nested Schema for `data_plane_redis.managed`
+
+Optional:
+
 - `cpu` (String) CPU size of the Redis instance, e.g. `500m`, `1`.
-- `kind` (String) Redis provisioning kind. `MANAGED` provisions a Chalk-managed instance. `SELF_HOSTED` is defined but not yet supported server-side.
 - `memory` (String) Memory size of the Redis instance, e.g. `1Gi`, `2Gi`.
+
+
+<a id="nestedatt--data_plane_redis--self_hosted"></a>
+### Nested Schema for `data_plane_redis.self_hosted`
+
+Required:
+
+- `cloud_secret_name` (String) Name of the cloud secret holding credentials for the self-hosted Redis instance.
+
 
 
 <a id="nestedatt--maintenance_window"></a>

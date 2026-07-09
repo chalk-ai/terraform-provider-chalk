@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"regexp"
 	"testing"
 
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -34,9 +35,10 @@ resource "chalk_kubernetes_cluster" "cluster" {
   }
 
   data_plane_redis = {
-    kind   = "MANAGED"
-    memory = "10Gi"
-    cpu    = "1"
+    managed = {
+      memory = "10Gi"
+      cpu    = "1"
+    }
   }
 ` + controllerBlock + `
 }
@@ -187,8 +189,8 @@ func TestKubernetesClusterResourceConfigRoundTrip(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "maintenance_window.mode", "CUSTOM"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "maintenance_window.schedule", "0 2 * * *"),
-					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.kind", "MANAGED"),
-					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.memory", "10Gi"),
+					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.managed.memory", "10Gi"),
+					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.managed.cpu", "1"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.tier", "MEDIUM"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.node_pool", "open-pool"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.#", "1"),
@@ -223,6 +225,78 @@ func TestKubernetesClusterResourceConfigRoundTrip(t *testing.T) {
 	})
 }
 
+// TestKubernetesClusterResourceDataPlaneRedisSelfHosted verifies the self_hosted
+// branch of the data_plane_redis one-of maps to kind SELF_HOSTED.
+func TestKubernetesClusterResourceDataPlaneRedisSelfHosted(t *testing.T) {
+	t.Parallel()
+
+	server := setupClusterConfigServer(t, false)
+
+	config := providerConfig(server.URL) + `
+resource "chalk_kubernetes_cluster" "cluster" {
+  name = "test-cluster"
+  kind = "EKS_STANDARD"
+
+  data_plane_redis = {
+    self_hosted = {
+      cloud_secret_name = "redis-creds"
+    }
+  }
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.self_hosted.cloud_secret_name", "redis-creds"),
+					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.managed.memory"),
+					func(s *terraform.State) error {
+						reqs := server.GetCapturedRequests("CreateCloudComponentCluster")
+						require.Len(t, reqs, 1)
+						redis := reqs[0].(*serverv1.CreateCloudComponentClusterRequest).Cluster.GetSpec().GetDataPlaneRedis()
+						assert.Equal(t, "SELF_HOSTED", redis.GetKind())
+						assert.Equal(t, "redis-creds", redis.GetCloudSecretName())
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// TestKubernetesClusterResourceDataPlaneRedisRequiresExactlyOne verifies that
+// setting both managed and self_hosted is rejected at plan time.
+func TestKubernetesClusterResourceDataPlaneRedisRequiresExactlyOne(t *testing.T) {
+	t.Parallel()
+
+	server := setupClusterConfigServer(t, false)
+
+	config := providerConfig(server.URL) + `
+resource "chalk_kubernetes_cluster" "cluster" {
+  name = "test-cluster"
+  kind = "EKS_STANDARD"
+
+  data_plane_redis = {
+    managed     = {}
+    self_hosted = { cloud_secret_name = "redis-creds" }
+  }
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination`),
+			},
+		},
+	})
+}
+
 // TestKubernetesClusterResourceConfigOmittedNoDrift verifies that a cluster with
 // no data_plane_controller block does not drift even though the server hydrates
 // a non-nil (but empty) controller on every response.
@@ -246,7 +320,7 @@ resource "chalk_kubernetes_cluster" "cluster" {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.tier"),
 					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "maintenance_window.mode"),
-					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.kind"),
+					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.managed.memory"),
 				),
 			},
 			{
