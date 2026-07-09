@@ -57,6 +57,7 @@ Required:
 Optional:
 
 - `cpu` (String) CPU resources for each hypervisor pod, e.g. `4`.
+- `machine_family` (String) Machine family for this pool's hosts to run on. Unset lets the server pick a default.
 - `memory` (String) Memory resources for each hypervisor pod, e.g. `8Gi`.
 
 

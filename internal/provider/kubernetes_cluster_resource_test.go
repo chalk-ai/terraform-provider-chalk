@@ -60,7 +60,7 @@ const kubeControllerBlockLarge = `
     tier = "LARGE"
     host_pools = [
       { name = "workers", count = 3 },
-      { name = "gpu", count = 1, cpu = "8" },
+      { name = "gpu", count = 1, cpu = "8", machine_family = "n2" },
     ]
   }
 `
@@ -219,6 +219,7 @@ func TestKubernetesClusterResourceConfigRoundTrip(t *testing.T) {
 					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.node_pool"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.#", "2"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.1.name", "gpu"),
+					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.1.machine_family", "n2"),
 				),
 			},
 		},

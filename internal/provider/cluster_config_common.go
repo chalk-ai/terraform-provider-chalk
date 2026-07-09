@@ -100,10 +100,11 @@ type dataPlaneControllerModel struct {
 }
 
 type hostPoolModel struct {
-	Name   types.String `tfsdk:"name"`
-	Count  types.Int64  `tfsdk:"count"`
-	Cpu    types.String `tfsdk:"cpu"`
-	Memory types.String `tfsdk:"memory"`
+	Name          types.String `tfsdk:"name"`
+	Count         types.Int64  `tfsdk:"count"`
+	Cpu           types.String `tfsdk:"cpu"`
+	Memory        types.String `tfsdk:"memory"`
+	MachineFamily types.String `tfsdk:"machine_family"`
 }
 
 // clusterConfigSchemaAttributes returns the shared cluster-level config
@@ -215,6 +216,10 @@ func clusterConfigSchemaAttributes() map[string]schema.Attribute {
 								MarkdownDescription: "Memory resources for each hypervisor pod, e.g. `8Gi`.",
 								Optional:            true,
 							},
+							"machine_family": schema.StringAttribute{
+								MarkdownDescription: "Machine family for this pool's hosts to run on. Unset lets the server pick a default.",
+								Optional:            true,
+							},
 						},
 					},
 				},
@@ -282,10 +287,11 @@ func (m *dataPlaneControllerModel) toProto() *serverv1.DataplaneController {
 	}
 	for _, pool := range m.HostPools {
 		c.HostPools = append(c.HostPools, &serverv1.ChalkHostPool{
-			Name:   pool.Name.ValueString(),
-			Count:  int32(pool.Count.ValueInt64()),
-			Cpu:    optionalStringPtr(pool.Cpu),
-			Memory: optionalStringPtr(pool.Memory),
+			Name:          pool.Name.ValueString(),
+			Count:         int32(pool.Count.ValueInt64()),
+			Cpu:           optionalStringPtr(pool.Cpu),
+			Memory:        optionalStringPtr(pool.Memory),
+			MachineFamily: optionalStringPtr(pool.MachineFamily),
 		})
 	}
 	return c
@@ -342,10 +348,11 @@ func dataPlaneControllerFromProto(p *serverv1.DataplaneController) *dataPlaneCon
 	}
 	for _, pool := range p.GetHostPools() {
 		m.HostPools = append(m.HostPools, hostPoolModel{
-			Name:   types.StringValue(pool.GetName()),
-			Count:  types.Int64Value(int64(pool.GetCount())),
-			Cpu:    optionalStringValue(pool.GetCpu()),
-			Memory: optionalStringValue(pool.GetMemory()),
+			Name:          types.StringValue(pool.GetName()),
+			Count:         types.Int64Value(int64(pool.GetCount())),
+			Cpu:           optionalStringValue(pool.GetCpu()),
+			Memory:        optionalStringValue(pool.GetMemory()),
+			MachineFamily: optionalStringValue(pool.GetMachineFamily()),
 		})
 	}
 	return m
