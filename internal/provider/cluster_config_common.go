@@ -3,6 +3,7 @@ package provider
 import (
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -12,16 +13,9 @@ import (
 )
 
 // This file holds the cluster-level configuration that both chalk_managed_cluster
-// and chalk_kubernetes_cluster expose on the CloudComponentCluster spec:
-// maintenance_window, data_plane_redis, and data_plane_controller. Both resources
-// share the schema, expand (model -> proto) and flatten (proto -> model) logic so
-// the two stay in lockstep.
-//
-// The server (go-api-server/cloudcomponents) treats all three blocks as the only
-// mutable spec fields, applying them identically for managed and unmanaged
-// clusters, which is why the config is common.
+// and chalk_kubernetes_cluster expose on the CloudComponentCluster spec.
 
-// Maintenance window modes, exposed as short (prefix-stripped) tokens.
+// Maintenance window modes, exposed as short (prefix-stripped) strings.
 const (
 	maintenanceModeUnspecified  = "UNSPECIFIED"
 	maintenanceModeUnrestricted = "UNRESTRICTED"
@@ -29,14 +23,13 @@ const (
 )
 
 // Data plane redis kinds. These are free-form strings the server matches
-// case-sensitively, so the tokens must match exactly (see
-// go-api-server/cloudcomponents/utils.go validateDataPlaneRedisSpec).
+// case-sensitively, so they must match exactly.
 const (
 	dataPlaneRedisKindManaged    = "MANAGED"
 	dataPlaneRedisKindSelfHosted = "SELF_HOSTED"
 )
 
-// Dataplane controller tiers, exposed as short (prefix-stripped) tokens.
+// Dataplane controller tiers, exposed as short (prefix-stripped) strings.
 const (
 	dataPlaneControllerTierDisabled = "DISABLED"
 	dataPlaneControllerTierSmall    = "SMALL"
@@ -76,8 +69,6 @@ type maintenanceWindowModel struct {
 	Duration types.String `tfsdk:"duration"`
 }
 
-// dataPlaneRedisModel splits config by provisioning kind: exactly one of managed
-// or self_hosted is set, and the kind is derived from which one is present.
 type dataPlaneRedisModel struct {
 	Managed    *dataPlaneRedisManagedModel    `tfsdk:"managed"`
 	SelfHosted *dataPlaneRedisSelfHostedModel `tfsdk:"self_hosted"`
@@ -109,7 +100,7 @@ type hostPoolModel struct {
 
 // clusterConfigSchemaAttributes returns the shared cluster-level config
 // attributes to merge into a cluster resource's schema. All three blocks are
-// optional; omitting one leaves the corresponding spec field unset.
+// optional.
 func clusterConfigSchemaAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"maintenance_window": schema.SingleNestedAttribute{
@@ -134,7 +125,7 @@ func clusterConfigSchemaAttributes() map[string]schema.Attribute {
 			},
 		},
 		"data_plane_redis": schema.SingleNestedAttribute{
-			MarkdownDescription: "Optional Redis instance for cluster operators to use as a shared cache. Specify exactly one of `managed` or `self_hosted`.",
+			MarkdownDescription: "Optional Redis instance for cluster. Specify exactly one of `managed` or `self_hosted`.",
 			Optional:            true,
 			Attributes: map[string]schema.Attribute{
 				"managed": schema.SingleNestedAttribute{
@@ -157,7 +148,7 @@ func clusterConfigSchemaAttributes() map[string]schema.Attribute {
 					},
 				},
 				"self_hosted": schema.SingleNestedAttribute{
-					MarkdownDescription: "Use a self-hosted Redis instance. Defined for forward compatibility but not yet supported server-side.",
+					MarkdownDescription: "Use a self-hosted Redis instance.",
 					Optional:            true,
 					Validators: []validator.Object{
 						objectvalidator.ExactlyOneOf(
@@ -178,46 +169,59 @@ func clusterConfigSchemaAttributes() map[string]schema.Attribute {
 			Optional:            true,
 			Attributes: map[string]schema.Attribute{
 				"tier": schema.StringAttribute{
-					MarkdownDescription: "Resource tier for the dataplane controller. One of `DISABLED`, `SMALL`, `MEDIUM`, `LARGE`. Unset resolves to `SMALL` server-side.",
+					MarkdownDescription: "Resource tier for the dataplane controller. One of `DISABLED`, `SMALL`, `MEDIUM`, `LARGE`.",
 					Optional:            true,
 					Validators: []validator.String{
 						stringvalidator.OneOf(dataPlaneControllerTierDisabled, dataPlaneControllerTierSmall, dataPlaneControllerTierMedium, dataPlaneControllerTierLarge),
+						// Reject an empty data_plane_controller block: at least one field
+						// must be set. An empty block is indistinguishable from omitting
+						// it and would otherwise drift to null after apply.
+						stringvalidator.AtLeastOneOf(
+							path.MatchRelative().AtParent().AtName("node_pool"),
+							path.MatchRelative().AtParent().AtName("restricted_node_pool"),
+							path.MatchRelative().AtParent().AtName("host_pools"),
+						),
 					},
 				},
 				"node_pool": schema.StringAttribute{
-					MarkdownDescription: "Node pool to pin non-gVisor (open) container/scaling-group workloads to.",
+					MarkdownDescription: "Node pool to pin non-restricted (open) container/scaling-group workloads to.",
 					Optional:            true,
 				},
 				"restricted_node_pool": schema.StringAttribute{
-					MarkdownDescription: "Node pool to pin gVisor (restricted) container/scaling-group workloads to.",
+					MarkdownDescription: "Node pool to pin restricted container/scaling-group workloads to.",
 					Optional:            true,
 				},
 				"host_pools": schema.ListNestedAttribute{
-					MarkdownDescription: "Host pools to deploy for this cluster. Each entry provisions a ChalkHostPool.",
+					MarkdownDescription: "Host pools to deploy for this cluster.",
 					Optional:            true,
+					Validators: []validator.List{
+						// An empty list means the same as omitting the attribute and would
+						// drift to null after apply, so require at least one entry.
+						listvalidator.SizeAtLeast(1),
+					},
 					NestedObject: schema.NestedAttributeObject{
 						Attributes: map[string]schema.Attribute{
 							"name": schema.StringAttribute{
-								MarkdownDescription: "Name of the pool. Must be a valid DNS label.",
+								MarkdownDescription: "Name of the pool.",
 								Required:            true,
 							},
 							"count": schema.Int64Attribute{
-								MarkdownDescription: "Number of hypervisor pods in the pool.",
+								MarkdownDescription: "Number of hosts in the pool.",
 								Required:            true,
 								Validators: []validator.Int64{
 									int64validator.AtLeast(1),
 								},
 							},
 							"cpu": schema.StringAttribute{
-								MarkdownDescription: "CPU resources for each hypervisor pod, e.g. `4`.",
+								MarkdownDescription: "CPU resources for each host, e.g. `4`.",
 								Optional:            true,
 							},
 							"memory": schema.StringAttribute{
-								MarkdownDescription: "Memory resources for each hypervisor pod, e.g. `8Gi`.",
+								MarkdownDescription: "Memory resources for each host, e.g. `8Gi`.",
 								Optional:            true,
 							},
 							"machine_family": schema.StringAttribute{
-								MarkdownDescription: "Machine family for this pool's hosts to run on. Unset lets the server pick a default.",
+								MarkdownDescription: "Machine family for this pool's hosts to run on.",
 								Optional:            true,
 							},
 						},
@@ -278,8 +282,6 @@ func (m *dataPlaneControllerModel) toProto() *serverv1.DataplaneController {
 	if m == nil {
 		return nil
 	}
-	// available_tiers is output-only and is cleared server-side before persist,
-	// so it is intentionally never sent.
 	c := &serverv1.DataplaneController{
 		Tier:               dataPlaneControllerTierToProto[m.Tier.ValueString()],
 		NodePool:           optionalStringPtr(m.NodePool),

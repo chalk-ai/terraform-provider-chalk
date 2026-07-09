@@ -27,7 +27,7 @@ Chalk Kubernetes cluster resource (unmanaged)
 
 - `cloud_credential_id` (String) ID of the cloud credential to use for the cluster
 - `data_plane_controller` (Attributes) Dataplane controller configuration, required to use Chalk Compute. (see [below for nested schema](#nestedatt--data_plane_controller))
-- `data_plane_redis` (Attributes) Optional Redis instance for cluster operators to use as a shared cache. Specify exactly one of `managed` or `self_hosted`. (see [below for nested schema](#nestedatt--data_plane_redis))
+- `data_plane_redis` (Attributes) Optional Redis instance for cluster. Specify exactly one of `managed` or `self_hosted`. (see [below for nested schema](#nestedatt--data_plane_redis))
 - `dns_zone` (String) DNS zone for the cluster
 - `maintenance_window` (Attributes) Controls when disruptive maintenance operations may run on this cluster. (see [below for nested schema](#nestedatt--maintenance_window))
 
@@ -41,24 +41,24 @@ Chalk Kubernetes cluster resource (unmanaged)
 
 Optional:
 
-- `host_pools` (Attributes List) Host pools to deploy for this cluster. Each entry provisions a ChalkHostPool. (see [below for nested schema](#nestedatt--data_plane_controller--host_pools))
-- `node_pool` (String) Node pool to pin non-gVisor (open) container/scaling-group workloads to.
-- `restricted_node_pool` (String) Node pool to pin gVisor (restricted) container/scaling-group workloads to.
-- `tier` (String) Resource tier for the dataplane controller. One of `DISABLED`, `SMALL`, `MEDIUM`, `LARGE`. Unset resolves to `SMALL` server-side.
+- `host_pools` (Attributes List) Host pools to deploy for this cluster. (see [below for nested schema](#nestedatt--data_plane_controller--host_pools))
+- `node_pool` (String) Node pool to pin non-restricted (open) container/scaling-group workloads to.
+- `restricted_node_pool` (String) Node pool to pin restricted container/scaling-group workloads to.
+- `tier` (String) Resource tier for the dataplane controller. One of `DISABLED`, `SMALL`, `MEDIUM`, `LARGE`.
 
 <a id="nestedatt--data_plane_controller--host_pools"></a>
 ### Nested Schema for `data_plane_controller.host_pools`
 
 Required:
 
-- `count` (Number) Number of hypervisor pods in the pool.
-- `name` (String) Name of the pool. Must be a valid DNS label.
+- `count` (Number) Number of hosts in the pool.
+- `name` (String) Name of the pool.
 
 Optional:
 
-- `cpu` (String) CPU resources for each hypervisor pod, e.g. `4`.
-- `machine_family` (String) Machine family for this pool's hosts to run on. Unset lets the server pick a default.
-- `memory` (String) Memory resources for each hypervisor pod, e.g. `8Gi`.
+- `cpu` (String) CPU resources for each host, e.g. `4`.
+- `machine_family` (String) Machine family for this pool's hosts to run on.
+- `memory` (String) Memory resources for each host, e.g. `8Gi`.
 
 
 
@@ -68,7 +68,7 @@ Optional:
 Optional:
 
 - `managed` (Attributes) Provision a Chalk-managed Redis instance. (see [below for nested schema](#nestedatt--data_plane_redis--managed))
-- `self_hosted` (Attributes) Use a self-hosted Redis instance. Defined for forward compatibility but not yet supported server-side. (see [below for nested schema](#nestedatt--data_plane_redis--self_hosted))
+- `self_hosted` (Attributes) Use a self-hosted Redis instance. (see [below for nested schema](#nestedatt--data_plane_redis--self_hosted))
 
 <a id="nestedatt--data_plane_redis--managed"></a>
 ### Nested Schema for `data_plane_redis.managed`

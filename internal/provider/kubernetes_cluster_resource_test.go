@@ -298,6 +298,64 @@ resource "chalk_kubernetes_cluster" "cluster" {
 	})
 }
 
+// TestKubernetesClusterResourceDataPlaneControllerRejectsEmpty verifies that an
+// empty data_plane_controller block is rejected (it would otherwise drift to
+// null after apply).
+func TestKubernetesClusterResourceDataPlaneControllerRejectsEmpty(t *testing.T) {
+	t.Parallel()
+
+	server := setupClusterConfigServer(t, false)
+
+	config := providerConfig(server.URL) + `
+resource "chalk_kubernetes_cluster" "cluster" {
+  name = "test-cluster"
+  kind = "EKS_STANDARD"
+
+  data_plane_controller = {}
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination|At least one attribute`),
+			},
+		},
+	})
+}
+
+// TestKubernetesClusterResourceHostPoolsRejectsEmptyList verifies that an empty
+// host_pools list is rejected in favor of omitting the attribute.
+func TestKubernetesClusterResourceHostPoolsRejectsEmptyList(t *testing.T) {
+	t.Parallel()
+
+	server := setupClusterConfigServer(t, false)
+
+	config := providerConfig(server.URL) + `
+resource "chalk_kubernetes_cluster" "cluster" {
+  name = "test-cluster"
+  kind = "EKS_STANDARD"
+
+  data_plane_controller = {
+    tier       = "SMALL"
+    host_pools = []
+  }
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`(?s)must contain at least 1`),
+			},
+		},
+	})
+}
+
 // TestKubernetesClusterResourceConfigOmittedNoDrift verifies that a cluster with
 // no data_plane_controller block does not drift even though the server hydrates
 // a non-nil (but empty) controller on every response.
