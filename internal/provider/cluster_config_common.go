@@ -117,10 +117,16 @@ func clusterConfigSchemaAttributes() map[string]schema.Attribute {
 				"schedule": schema.StringAttribute{
 					MarkdownDescription: "5-field UTC cron expression defining when the window opens, e.g. `0 2 * * *`. Required when `mode = CUSTOM`.",
 					Optional:            true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtLeast(1),
+					},
 				},
 				"duration": schema.StringAttribute{
 					MarkdownDescription: "How long the window stays open, e.g. `30m` or `1h`. Required when `mode = CUSTOM`.",
 					Optional:            true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtLeast(1),
+					},
 				},
 			},
 		},

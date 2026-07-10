@@ -356,10 +356,43 @@ resource "chalk_kubernetes_cluster" "cluster" {
 	})
 }
 
+// TestKubernetesClusterResourceMaintenanceEmptyStringRejected verifies that an
+// empty schedule is rejected at plan time. schedule/duration are plain proto
+// strings with no presence bit, so "" is indistinguishable from unset and would
+// drift; it's forbidden rather than allowed.
+func TestKubernetesClusterResourceMaintenanceEmptyStringRejected(t *testing.T) {
+	t.Parallel()
+
+	server := setupClusterConfigServer(t, false)
+
+	config := providerConfig(server.URL) + `
+resource "chalk_kubernetes_cluster" "cluster" {
+  name = "test-cluster"
+  kind = "EKS_STANDARD"
+
+  maintenance_window = {
+    mode     = "CUSTOM"
+    schedule = ""
+    duration = "30m"
+  }
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config:      config,
+				ExpectError: regexp.MustCompile(`(?s)string length must be at least 1`),
+			},
+		},
+	})
+}
+
 // TestKubernetesClusterResourceOptionalEmptyStringRoundTrip verifies that an
-// optional string set to an explicit "" round-trips without drift. Presence-aware
-// flatten distinguishes "unset" (null) from "explicitly empty" (""); a value-based
-// flatten would collapse "" to null and error with an inconsistent result.
+// optional (pointer) string set to an explicit "" round-trips without drift.
+// Presence-aware flatten distinguishes "unset" (null) from "explicitly empty"
+// (""); a value-based flatten would collapse "" to null and error.
 func TestKubernetesClusterResourceOptionalEmptyStringRoundTrip(t *testing.T) {
 	t.Parallel()
 
