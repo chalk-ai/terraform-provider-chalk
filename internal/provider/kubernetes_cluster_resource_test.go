@@ -47,8 +47,9 @@ resource "chalk_kubernetes_cluster" "cluster" {
 
 const kubeControllerBlockMedium = `
   data_plane_controller = {
-    tier      = "MEDIUM"
-    node_pool = "open-pool"
+    tier                 = "MEDIUM"
+    node_pool            = "open-pool"
+    restricted_node_pool = "restricted-pool"
     host_pools = [
       { name = "workers", count = 2, cpu = "4", memory = "8Gi" },
     ]
@@ -193,6 +194,7 @@ func TestKubernetesClusterResourceConfigRoundTrip(t *testing.T) {
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.managed.cpu", "1"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.tier", "MEDIUM"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.node_pool", "open-pool"),
+					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.restricted_node_pool", "restricted-pool"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.#", "1"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.0.name", "workers"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.0.count", "2"),
@@ -221,6 +223,55 @@ func TestKubernetesClusterResourceConfigRoundTrip(t *testing.T) {
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.1.name", "gpu"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.1.machine_family", "n2"),
 				),
+			},
+		},
+	})
+}
+
+// TestKubernetesClusterResourceConfigClearOnUpdate verifies that removing the
+// config blocks from a cluster that had them clears them server-side (the update
+// sends nil blocks), the state drops them, and re-applying is a no-op.
+func TestKubernetesClusterResourceConfigClearOnUpdate(t *testing.T) {
+	t.Parallel()
+
+	server := setupClusterConfigServer(t, false)
+
+	withConfig := kubeClusterFullConfig(server.URL, kubeControllerBlockMedium, maintenanceModeCustom)
+	cleared := providerConfig(server.URL) + `
+resource "chalk_kubernetes_cluster" "cluster" {
+  name = "test-cluster"
+  kind = "EKS_STANDARD"
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: withConfig,
+				Check:  resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.tier", "MEDIUM"),
+			},
+			{
+				Config: cleared,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "maintenance_window.mode"),
+					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_redis.managed.memory"),
+					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.tier"),
+					func(s *terraform.State) error {
+						reqs := server.GetCapturedRequests("UpdateCloudComponentCluster")
+						require.GreaterOrEqual(t, len(reqs), 1)
+						spec := reqs[len(reqs)-1].(*serverv1.UpdateCloudComponentClusterRequest).Cluster.GetSpec()
+						assert.Nil(t, spec.GetMaintenanceWindow(), "update should clear maintenance_window")
+						assert.Nil(t, spec.GetDataPlaneRedis(), "update should clear data_plane_redis")
+						assert.Nil(t, spec.GetDataplaneController(), "update should clear data_plane_controller")
+						return nil
+					},
+				),
+			},
+			{
+				// Clearing must be stable: re-applying yields an empty plan.
+				Config:   cleared,
+				PlanOnly: true,
 			},
 		},
 	})

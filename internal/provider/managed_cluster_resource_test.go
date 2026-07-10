@@ -15,13 +15,7 @@ import (
 )
 
 // setupClusterConfigServer wires the cloud-component cluster RPCs to registry
-// mocks that echo back the last spec written by Create/Update. Get must reflect
-// the latest config so the acceptance framework's post-apply refresh sees an
-// empty plan across update steps. Every response hydrates a non-nil
-// DataplaneController the way go-api-server's hydrateOutputOnlyFields does, so
-// the tests exercise the provider's guard against that output-only field
-// surfacing as drift. It is shared by the managed and unmanaged cluster tests
-// since both drive the same CloudComponentCluster spec.
+// mocks that echo back the last spec written by Create/Update.
 func setupClusterConfigServer(t *testing.T, managed bool) *testserver.MockServer {
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
@@ -300,8 +294,7 @@ func TestManagedClusterResourceDeleteWaitsForDeleting(t *testing.T) {
 }
 
 // TestManagedClusterResourceConfigUpdate verifies that the managed cluster
-// resource sends the cluster-level config on create and pushes a real
-// UpdateCloudComponentCluster (rather than a no-op read) when the config changes.
+// resource sends the cluster-level config on create.
 func TestManagedClusterResourceConfigUpdate(t *testing.T) {
 	t.Parallel()
 
