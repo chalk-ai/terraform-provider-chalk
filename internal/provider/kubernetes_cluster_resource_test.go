@@ -356,6 +356,43 @@ resource "chalk_kubernetes_cluster" "cluster" {
 	})
 }
 
+// TestKubernetesClusterResourceOptionalEmptyStringRoundTrip verifies that an
+// optional string set to an explicit "" round-trips without drift. Presence-aware
+// flatten distinguishes "unset" (null) from "explicitly empty" (""); a value-based
+// flatten would collapse "" to null and error with an inconsistent result.
+func TestKubernetesClusterResourceOptionalEmptyStringRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	server := setupClusterConfigServer(t, false)
+
+	config := providerConfig(server.URL) + `
+resource "chalk_kubernetes_cluster" "cluster" {
+  name = "test-cluster"
+  kind = "EKS_STANDARD"
+
+  data_plane_controller = {
+    tier      = "SMALL"
+    node_pool = ""
+  }
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.node_pool", ""),
+			},
+			{
+				// Re-applying must be a no-op: "" must not drift to null.
+				Config:   config,
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 // TestKubernetesClusterResourceConfigOmittedNoDrift verifies that a cluster with
 // no data_plane_controller block does not drift even though the server hydrates
 // a non-nil (but empty) controller on every response.

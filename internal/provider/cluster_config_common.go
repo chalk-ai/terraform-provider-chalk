@@ -265,7 +265,7 @@ func (m *dataPlaneRedisModel) toProto() *serverv1.DataPlaneRedis {
 		kind := dataPlaneRedisKindSelfHosted
 		return &serverv1.DataPlaneRedis{
 			Kind:            &kind,
-			CloudSecretName: optionalStringPtr(m.SelfHosted.CloudSecretName),
+			CloudSecretName: m.SelfHosted.CloudSecretName.ValueStringPointer(),
 		}
 	}
 	// Exactly one of managed/self_hosted is set (enforced by schema validators),
@@ -273,8 +273,8 @@ func (m *dataPlaneRedisModel) toProto() *serverv1.DataPlaneRedis {
 	kind := dataPlaneRedisKindManaged
 	return &serverv1.DataPlaneRedis{
 		Kind:   &kind,
-		Memory: optionalStringPtr(m.Managed.Memory),
-		Cpu:    optionalStringPtr(m.Managed.Cpu),
+		Memory: m.Managed.Memory.ValueStringPointer(),
+		Cpu:    m.Managed.Cpu.ValueStringPointer(),
 	}
 }
 
@@ -284,16 +284,16 @@ func (m *dataPlaneControllerModel) toProto() *serverv1.DataplaneController {
 	}
 	c := &serverv1.DataplaneController{
 		Tier:               dataPlaneControllerTierToProto[m.Tier.ValueString()],
-		NodePool:           optionalStringPtr(m.NodePool),
-		RestrictedNodePool: optionalStringPtr(m.RestrictedNodePool),
+		NodePool:           m.NodePool.ValueStringPointer(),
+		RestrictedNodePool: m.RestrictedNodePool.ValueStringPointer(),
 	}
 	for _, pool := range m.HostPools {
 		c.HostPools = append(c.HostPools, &serverv1.ChalkHostPool{
 			Name:          pool.Name.ValueString(),
 			Count:         int32(pool.Count.ValueInt64()),
-			Cpu:           optionalStringPtr(pool.Cpu),
-			Memory:        optionalStringPtr(pool.Memory),
-			MachineFamily: optionalStringPtr(pool.MachineFamily),
+			Cpu:           pool.Cpu.ValueStringPointer(),
+			Memory:        pool.Memory.ValueStringPointer(),
+			MachineFamily: pool.MachineFamily.ValueStringPointer(),
 		})
 	}
 	return c
@@ -321,15 +321,15 @@ func dataPlaneRedisFromProto(p *serverv1.DataPlaneRedis) *dataPlaneRedisModel {
 	if p.GetKind() == dataPlaneRedisKindSelfHosted {
 		return &dataPlaneRedisModel{
 			SelfHosted: &dataPlaneRedisSelfHostedModel{
-				CloudSecretName: optionalStringValue(p.GetCloudSecretName()),
+				CloudSecretName: stringPointerValue(p.CloudSecretName),
 			},
 		}
 	}
 	// The server treats an empty kind the same as MANAGED.
 	return &dataPlaneRedisModel{
 		Managed: &dataPlaneRedisManagedModel{
-			Memory: optionalStringValue(p.GetMemory()),
-			Cpu:    optionalStringValue(p.GetCpu()),
+			Memory: stringPointerValue(p.Memory),
+			Cpu:    stringPointerValue(p.Cpu),
 		},
 	}
 }
@@ -345,28 +345,17 @@ func dataPlaneControllerFromProto(p *serverv1.DataplaneController) *dataPlaneCon
 	}
 	m := &dataPlaneControllerModel{
 		Tier:               optionalStringValue(dataPlaneControllerTierFromProto[p.GetTier()]),
-		NodePool:           optionalStringValue(p.GetNodePool()),
-		RestrictedNodePool: optionalStringValue(p.GetRestrictedNodePool()),
+		NodePool:           stringPointerValue(p.NodePool),
+		RestrictedNodePool: stringPointerValue(p.RestrictedNodePool),
 	}
 	for _, pool := range p.GetHostPools() {
 		m.HostPools = append(m.HostPools, hostPoolModel{
 			Name:          types.StringValue(pool.GetName()),
 			Count:         types.Int64Value(int64(pool.GetCount())),
-			Cpu:           optionalStringValue(pool.GetCpu()),
-			Memory:        optionalStringValue(pool.GetMemory()),
-			MachineFamily: optionalStringValue(pool.GetMachineFamily()),
+			Cpu:           stringPointerValue(pool.Cpu),
+			Memory:        stringPointerValue(pool.Memory),
+			MachineFamily: stringPointerValue(pool.MachineFamily),
 		})
 	}
 	return m
-}
-
-// optionalStringPtr converts a types.String to a *string, returning nil for
-// null, unknown, or empty values so unset optional fields are omitted from the
-// proto rather than sent as empty strings.
-func optionalStringPtr(s types.String) *string {
-	if s.IsNull() || s.IsUnknown() || s.ValueString() == "" {
-		return nil
-	}
-	v := s.ValueString()
-	return &v
 }

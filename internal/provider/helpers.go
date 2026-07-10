@@ -40,6 +40,20 @@ func optionalStringValue(s string) types.String {
 	return types.StringValue(s)
 }
 
+// stringPointerValue converts an optional (nullable) proto string to a
+// types.String using presence rather than emptiness: a nil pointer becomes null
+// and any non-nil pointer (including "") is preserved. Pair it with
+// types.String.ValueStringPointer() on the write side so a field round-trips
+// exactly, distinguishing "unset" from "explicitly empty". Only safe for proto
+// `optional string` fields whose presence the server round-trips faithfully; use
+// optionalStringValue when the server may return "" for unset fields.
+func stringPointerValue(p *string) types.String {
+	if p == nil {
+		return types.StringNull()
+	}
+	return types.StringValue(*p)
+}
+
 // kubeResourceConfigObject converts a KubeResourceConfig proto to a types.Object.
 func kubeResourceConfigObject(rc *serverv1.KubeResourceConfig) types.Object {
 	if rc == nil {
