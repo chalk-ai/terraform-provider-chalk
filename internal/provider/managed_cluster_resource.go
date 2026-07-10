@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"connectrpc.com/connect"
@@ -45,12 +46,15 @@ type ManagedClusterResource struct {
 }
 
 type ManagedClusterResourceModel struct {
-	Id                types.String `tfsdk:"id"`
-	Name              types.String `tfsdk:"name"`
-	Kind              types.String `tfsdk:"kind"`
-	Designator        types.String `tfsdk:"designator"`
-	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
-	VpcId             types.String `tfsdk:"vpc_id"`
+	Id                  types.String              `tfsdk:"id"`
+	Name                types.String              `tfsdk:"name"`
+	Kind                types.String              `tfsdk:"kind"`
+	Designator          types.String              `tfsdk:"designator"`
+	CloudCredentialId   types.String              `tfsdk:"cloud_credential_id"`
+	VpcId               types.String              `tfsdk:"vpc_id"`
+	MaintenanceWindow   *maintenanceWindowModel   `tfsdk:"maintenance_window"`
+	DataPlaneRedis      *dataPlaneRedisModel      `tfsdk:"data_plane_redis"`
+	DataPlaneController *dataPlaneControllerModel `tfsdk:"data_plane_controller"`
 }
 
 func (r *ManagedClusterResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -106,6 +110,8 @@ func (r *ManagedClusterResource) Schema(ctx context.Context, req resource.Schema
 			},
 		},
 	}
+
+	maps.Copy(resp.Schema.Attributes, clusterConfigSchemaAttributes())
 }
 
 func (r *ManagedClusterResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -147,8 +153,13 @@ func (r *ManagedClusterResource) Create(ctx context.Context, req resource.Create
 			Managed:           true,
 			CloudCredentialId: &credentialId,
 			VpcId:             &vpcId,
+			// The server generates name/kind/designator/dns for managed clusters,
+			// but still reads the config blocks off the spec.
+			Spec: &serverv1.CloudComponentCluster{},
 		},
 	}
+
+	applyClusterConfigToSpec(createReq.Cluster.Spec, data.MaintenanceWindow, data.DataPlaneRedis, data.DataPlaneController)
 
 	cluster, err := cc.CreateCloudComponentCluster(ctx, connect.NewRequest(createReq))
 	if err != nil {
@@ -217,8 +228,10 @@ func (r *ManagedClusterResource) Read(ctx context.Context, req resource.ReadRequ
 }
 
 func (r *ManagedClusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Since cloud_credential_id has RequiresReplace, updates should only happen
-	// for computed fields which we don't modify. Just refresh state from server.
+	// cloud_credential_id and vpc_id are RequiresReplace, so the only mutable
+	// fields are the cluster-level config blocks. Push them via a spec update; the
+	// server overlays them onto the stored spec and applies the change
+	// synchronously, returning the updated cluster.
 	var data ManagedClusterResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -230,18 +243,25 @@ func (r *ManagedClusterResource) Update(ctx context.Context, req resource.Update
 	// Create cloud components client
 	cc := r.client.NewCloudComponentsClient(ctx)
 
-	cluster, err := cc.GetCloudComponentCluster(ctx, connect.NewRequest(&serverv1.GetCloudComponentClusterRequest{
+	updateReq := &serverv1.UpdateCloudComponentClusterRequest{
 		Id: data.Id.ValueString(),
-	}))
+		Cluster: &serverv1.CloudComponentClusterRequest{
+			Managed: true,
+			Spec:    &serverv1.CloudComponentCluster{},
+		},
+	}
+	applyClusterConfigToSpec(updateReq.Cluster.Spec, data.MaintenanceWindow, data.DataPlaneRedis, data.DataPlaneController)
+
+	cluster, err := cc.UpdateCloudComponentCluster(ctx, connect.NewRequest(updateReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Reading Managed Cluster",
-			fmt.Sprintf("Could not read managed cluster %s: %v", data.Id.ValueString(), err),
+			"Error Updating Managed Cluster",
+			fmt.Sprintf("Could not update managed cluster %s: %v", data.Id.ValueString(), err),
 		)
 		return
 	}
 
-	// Update the model with the fetched data
+	// Update the model with the returned data
 	r.updateModelFromProto(&data, cluster.Msg.Cluster)
 
 	tflog.Trace(ctx, "updated chalk_managed_cluster resource")
@@ -369,4 +389,8 @@ func (r *ManagedClusterResource) updateModelFromProto(model *ManagedClusterResou
 	} else {
 		model.VpcId = types.StringNull()
 	}
+
+	model.MaintenanceWindow = maintenanceWindowFromProto(cluster.Spec.GetMaintenanceWindow())
+	model.DataPlaneRedis = dataPlaneRedisFromProto(cluster.Spec.GetDataPlaneRedis())
+	model.DataPlaneController = dataPlaneControllerFromProto(cluster.Spec.GetDataplaneController())
 }

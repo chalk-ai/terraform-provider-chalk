@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -28,12 +29,15 @@ type KubernetesClusterResource struct {
 }
 
 type KubernetesClusterResourceModel struct {
-	Id                types.String `tfsdk:"id"`
-	Name              types.String `tfsdk:"name"`
-	Kind              types.String `tfsdk:"kind"`
-	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
-	DnsZone           types.String `tfsdk:"dns_zone"`
-	TeamId            types.String `tfsdk:"team_id"`
+	Id                  types.String              `tfsdk:"id"`
+	Name                types.String              `tfsdk:"name"`
+	Kind                types.String              `tfsdk:"kind"`
+	CloudCredentialId   types.String              `tfsdk:"cloud_credential_id"`
+	DnsZone             types.String              `tfsdk:"dns_zone"`
+	TeamId              types.String              `tfsdk:"team_id"`
+	MaintenanceWindow   *maintenanceWindowModel   `tfsdk:"maintenance_window"`
+	DataPlaneRedis      *dataPlaneRedisModel      `tfsdk:"data_plane_redis"`
+	DataPlaneController *dataPlaneControllerModel `tfsdk:"data_plane_controller"`
 }
 
 func (r *KubernetesClusterResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -86,6 +90,8 @@ func (r *KubernetesClusterResource) Schema(ctx context.Context, req resource.Sch
 			},
 		},
 	}
+
+	maps.Copy(resp.Schema.Attributes, clusterConfigSchemaAttributes())
 }
 
 func (r *KubernetesClusterResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -138,6 +144,8 @@ func (r *KubernetesClusterResource) Create(ctx context.Context, req resource.Cre
 		dnsZone := data.DnsZone.ValueString()
 		createReq.Cluster.Spec.DnsZone = &dnsZone
 	}
+
+	applyClusterConfigToSpec(createReq.Cluster.Spec, data.MaintenanceWindow, data.DataPlaneRedis, data.DataPlaneController)
 
 	cluster, err := cc.CreateCloudComponentCluster(ctx, connect.NewRequest(createReq))
 	if err != nil {
@@ -218,6 +226,8 @@ func (r *KubernetesClusterResource) Update(ctx context.Context, req resource.Upd
 		updateReq.Cluster.Spec.DnsZone = &dnsZone
 	}
 
+	applyClusterConfigToSpec(updateReq.Cluster.Spec, data.MaintenanceWindow, data.DataPlaneRedis, data.DataPlaneController)
+
 	cluster, err := cc.UpdateCloudComponentCluster(ctx, connect.NewRequest(updateReq))
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -262,4 +272,8 @@ func (r *KubernetesClusterResource) updateModelFromProto(model *KubernetesCluste
 	} else {
 		model.DnsZone = types.StringNull()
 	}
+
+	model.MaintenanceWindow = maintenanceWindowFromProto(cluster.Spec.GetMaintenanceWindow())
+	model.DataPlaneRedis = dataPlaneRedisFromProto(cluster.Spec.GetDataPlaneRedis())
+	model.DataPlaneController = dataPlaneControllerFromProto(cluster.Spec.GetDataplaneController())
 }

@@ -14,6 +14,85 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// setupClusterConfigServer wires the cloud-component cluster RPCs to registry
+// mocks that echo back the last spec written by Create/Update.
+func setupClusterConfigServer(t *testing.T, managed bool) *testserver.MockServer {
+	server := testserver.NewMockBuilderServer(t)
+	t.Cleanup(func() { server.Close() })
+
+	// The acceptance test runs serially, so no synchronization is needed.
+	var (
+		stored  *serverv1.CloudComponentCluster
+		kind    string
+		ccID    *string
+		vpc     *string
+		deleted bool
+	)
+
+	response := func() *serverv1.CloudComponentClusterResponse {
+		spec := proto.Clone(stored).(*serverv1.CloudComponentCluster)
+		if spec.DataplaneController == nil {
+			spec.DataplaneController = &serverv1.DataplaneController{}
+		}
+		spec.DataplaneController.AvailableTiers = []*serverv1.DataplaneController_TierInfo{
+			{Tier: serverv1.DataplaneController_TIER_SMALL},
+		}
+		return &serverv1.CloudComponentClusterResponse{
+			Id:                "cluster-cfg-id",
+			Kind:              kind,
+			Managed:           managed,
+			CloudCredentialId: ccID,
+			VpcId:             vpc,
+			TeamId:            "team-test-id",
+			Status:            "ACTIVE",
+			Designator:        spec.Designator,
+			Spec:              spec,
+		}
+	}
+
+	server.OnCreateCloudComponentCluster().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		r := req.(*serverv1.CreateCloudComponentClusterRequest)
+		stored = proto.Clone(r.Cluster.GetSpec()).(*serverv1.CloudComponentCluster)
+		kind = r.Cluster.GetKind()
+		ccID = r.Cluster.CloudCredentialId
+		vpc = r.Cluster.VpcId
+		if stored.GetName() == "" {
+			// Managed clusters have name/kind/designator generated server-side.
+			stored.Name = "managed-test-cluster"
+			stored.Designator = new("abcd")
+			kind = "EKS_STANDARD"
+		}
+		return &serverv1.CreateCloudComponentClusterResponse{Cluster: response()}, nil
+	})
+
+	server.OnGetCloudComponentCluster().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		// The managed resource's Delete polls until the cluster is gone.
+		if deleted {
+			return nil, notFound("cluster not found")
+		}
+		return &serverv1.GetCloudComponentClusterResponse{Cluster: response()}, nil
+	})
+
+	server.OnUpdateCloudComponentCluster().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		// Mirror the server: only the config blocks (+ dns_zone) are mutable.
+		reqSpec := req.(*serverv1.UpdateCloudComponentClusterRequest).Cluster.GetSpec()
+		stored.DataPlaneRedis = reqSpec.GetDataPlaneRedis()
+		stored.DataplaneController = reqSpec.GetDataplaneController()
+		stored.MaintenanceWindow = reqSpec.GetMaintenanceWindow()
+		if reqSpec.DnsZone != nil {
+			stored.DnsZone = reqSpec.DnsZone
+		}
+		return &serverv1.UpdateCloudComponentClusterResponse{Cluster: response()}, nil
+	})
+
+	server.OnDeleteCloudComponentCluster().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		deleted = true
+		return &serverv1.DeleteCloudComponentClusterResponse{}, nil
+	})
+
+	return server
+}
+
 // clusterResponse builds a CloudComponentClusterResponse with the given
 // lifecycle status (and optional status_error).
 func clusterResponse(status string, statusErr string) *serverv1.CloudComponentClusterResponse {
@@ -209,6 +288,64 @@ func TestManagedClusterResourceDeleteWaitsForDeleting(t *testing.T) {
 					assert.GreaterOrEqual(t, int(deleteGets.Load()), 3, "expected Delete to keep polling through DELETING")
 					return nil
 				},
+			},
+		},
+	})
+}
+
+// TestManagedClusterResourceConfigUpdate verifies that the managed cluster
+// resource sends the cluster-level config on create.
+func TestManagedClusterResourceConfigUpdate(t *testing.T) {
+	t.Parallel()
+
+	server := setupClusterConfigServer(t, true)
+
+	config := func(tier string) string {
+		return providerConfig(server.URL) + `
+resource "chalk_managed_cluster" "cluster" {
+  cloud_credential_id = "cc-test-id"
+  vpc_id              = "vpc-test-id"
+
+  maintenance_window = {
+    mode = "UNRESTRICTED"
+  }
+
+  data_plane_controller = {
+    tier = "` + tier + `"
+  }
+}
+`
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config("SMALL"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_managed_cluster.cluster", "data_plane_controller.tier", "SMALL"),
+					resource.TestCheckResourceAttr("chalk_managed_cluster.cluster", "maintenance_window.mode", "UNRESTRICTED"),
+					func(s *terraform.State) error {
+						reqs := server.GetCapturedRequests("CreateCloudComponentCluster")
+						require.Len(t, reqs, 1)
+						spec := reqs[0].(*serverv1.CreateCloudComponentClusterRequest).Cluster.GetSpec()
+						assert.Equal(t, serverv1.DataplaneController_TIER_SMALL, spec.GetDataplaneController().GetTier())
+						return nil
+					},
+				),
+			},
+			{
+				Config: config("MEDIUM"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_managed_cluster.cluster", "data_plane_controller.tier", "MEDIUM"),
+					func(s *terraform.State) error {
+						reqs := server.GetCapturedRequests("UpdateCloudComponentCluster")
+						require.GreaterOrEqual(t, len(reqs), 1)
+						spec := reqs[len(reqs)-1].(*serverv1.UpdateCloudComponentClusterRequest).Cluster.GetSpec()
+						assert.Equal(t, serverv1.DataplaneController_TIER_MEDIUM, spec.GetDataplaneController().GetTier())
+						return nil
+					},
+				),
 			},
 		},
 	})
