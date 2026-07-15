@@ -31,10 +31,9 @@ const (
 // go-api-server/cloudcomponents/cloud_storage.go so plan-time validation never
 // disagrees with what the server will accept at apply time.
 var (
-	gcsStorageURIRegex            = regexp.MustCompile(`^gs://[a-z0-9][a-z0-9._-]*(?:/.*)?$`)
-	s3StorageURIRegex             = regexp.MustCompile(`^s3://[a-z0-9][a-z0-9.-]*(?:/.*)?$`)
-	azureBlobHTTPSStorageURIRegex = regexp.MustCompile(`^https://[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?$`)
-	azureABFSStorageURIRegex      = regexp.MustCompile(`^abfss?://(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?@[a-z0-9]+\.dfs\.core\.windows\.net(?:/.*)?|[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?)$`)
+	gcsStorageURIRegex       = regexp.MustCompile(`^gs://[a-z0-9][a-z0-9._-]*(?:/.*)?$`)
+	s3StorageURIRegex        = regexp.MustCompile(`^s3://[a-z0-9][a-z0-9.-]*(?:/.*)?$`)
+	azureABFSStorageURIRegex = regexp.MustCompile(`^abfs://[a-z0-9]+\.blob\.core\.windows\.net/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/.*)?$`)
 )
 
 // validateStorageURIForKind enforces that the URI scheme matches the declared kind,
@@ -47,9 +46,8 @@ func validateStorageURIForKind(kind, uri string) (ok bool, reason string) {
 	case cloudStorageKindS3:
 		return s3StorageURIRegex.MatchString(trimmed), "s3 storage uri must look like s3://bucket[/path]"
 	case cloudStorageKindAzure:
-		return azureBlobHTTPSStorageURIRegex.MatchString(trimmed) ||
-				azureABFSStorageURIRegex.MatchString(trimmed),
-			"abs storage uri must look like https://<account>.blob.core.windows.net/<container>[/path], abfs://<account>.blob.core.windows.net/<container>[/path], or abfss://<container>@<account>.dfs.core.windows.net[/path]"
+		return azureABFSStorageURIRegex.MatchString(trimmed),
+			"abs storage uri must look like abfs://<account>.blob.core.windows.net/<container>[/path]"
 	default:
 		return false, fmt.Sprintf("unsupported storage kind %q (expected one of gcs, s3, abs)", kind)
 	}
