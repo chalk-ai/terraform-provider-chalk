@@ -7,7 +7,10 @@ import (
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/chalk-go/testserver"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
@@ -67,6 +70,62 @@ resource "chalk_cluster_gateway" "test" {
 						assert.Equal(t, "test-kube-cluster", req.GetKubeClusterId())
 						return nil
 					},
+				),
+			},
+		},
+	})
+}
+
+func TestClusterGatewayDNSHostnameNullStaysNull(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerGateway(t)
+
+	config := providerConfig(server.URL) + `
+resource "chalk_cluster_gateway" "test" {
+  kube_cluster_id = "test-kube-cluster"
+}
+`
+	configWithUpdate := providerConfig(server.URL) + `
+resource "chalk_cluster_gateway" "test" {
+  kube_cluster_id = "test-kube-cluster"
+  nodepool        = "gateway-nodepool"
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_cluster_gateway.test", "dns_hostname"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateClusterGateway")
+						require.Len(t, captured, 1, "Expected exactly one CreateClusterGateway call")
+						req := captured[0].(*serverv1.CreateClusterGatewayRequest)
+						envoyConfig := req.Specs.GetConfig().GetEnvoy()
+						require.NotNil(t, envoyConfig)
+						assert.Nil(t, envoyConfig.DnsHostname, "client should not send a dns_hostname when config omits it")
+						return nil
+					},
+				),
+			},
+			{
+				Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			{
+				Config: configWithUpdate,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectKnownValue("chalk_cluster_gateway.test", tfjsonpath.New("dns_hostname"), knownvalue.Null()),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_cluster_gateway.test", "dns_hostname"),
+					resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "nodepool", "gateway-nodepool"),
 				),
 			},
 		},

@@ -9,8 +9,10 @@ import (
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/chalk-go/testserver"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
@@ -689,6 +691,15 @@ resource "chalk_cluster_timescale" "test" {
   timescale_image   = "timescale/timescaledb:latest-pg14"
 }
 `
+	configWithUpdate := providerConfig(server.URL) + `
+resource "chalk_cluster_timescale" "test" {
+  environment_id    = "test-env-id"
+  storage           = "30Gi"
+  database_replicas = 1
+  timescale_image   = "timescale/timescaledb:latest-pg14"
+  gateway_port      = 5432
+}
+`
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
@@ -702,6 +713,18 @@ resource "chalk_cluster_timescale" "test" {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
+			},
+			{
+				Config: configWithUpdate,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectKnownValue("chalk_cluster_timescale.test", tfjsonpath.New("dns_hostname"), knownvalue.Null()),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_cluster_timescale.test", "dns_hostname"),
+					resource.TestCheckResourceAttr("chalk_cluster_timescale.test", "gateway_port", "5432"),
+				),
 			},
 		},
 	})
