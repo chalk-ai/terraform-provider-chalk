@@ -279,9 +279,7 @@ func TestBgpWritersProtoToTF_ProtoRoundTrip(t *testing.T) {
 	require.Len(t, out, 1)
 	roundTripped := out[0]
 
-	// Name intentionally does not round-trip: it is not part of the TF model and
-	// is rederived by the server from bus_subscriber_type.
-	assert.Equal(t, "", roundTripped.Name)
+	assert.Equal(t, original.Name, roundTripped.Name)
 	assert.Equal(t, original.BusSubscriberType, roundTripped.BusSubscriberType)
 	assert.Equal(t, original.DefaultReplicaCount, roundTripped.DefaultReplicaCount)
 	assert.Equal(t, original.ImageOverride, roundTripped.ImageOverride)

@@ -14,7 +14,6 @@ BREAKING CHANGES:
   * `chalk_managed_aws_vpc`, `chalk_managed_gcp_vpc`: `name`, `designator`
   * `chalk_project`, `chalk_kubernetes_cluster`: `team_id`
   * `chalk_scaling_group`: `status`, `status_message`, `web_url`
-  * `chalk_unmanaged_cluster_background_persistence`: `writers[*].name`
 
 ## 1.0.0
 

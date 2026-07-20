@@ -7,7 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"golang.org/x/exp/maps"
 )
 
 type KubeResourceConfigModel struct {
@@ -25,6 +28,7 @@ type BackgroundPersistenceWriterHpaModel struct {
 }
 
 type BackgroundPersistenceWriterModel struct {
+	Name                                     types.String                         `tfsdk:"name"`
 	ImageOverride                            types.String                         `tfsdk:"image_override"`
 	HpaSpecs                                 *BackgroundPersistenceWriterHpaModel `tfsdk:"hpa_specs"`
 	GkeSpot                                  types.Bool                           `tfsdk:"gke_spot"`
@@ -69,6 +73,10 @@ var kubeResourceConfigSchemaAttrs = map[string]schema.Attribute{
 }
 
 var bgpWritersNestedAttrs = map[string]schema.Attribute{
+	"name": schema.StringAttribute{
+		MarkdownDescription: "Writer name",
+		Required:            true,
+	},
 	"image_override": schema.StringAttribute{
 		MarkdownDescription: "Image override",
 		Optional:            true,
@@ -184,30 +192,42 @@ var bgpUnmanagedWritersSchemaAttribute = schema.ListNestedAttribute{
 	MarkdownDescription: "Background persistence writers",
 	Required:            true,
 	NestedObject: schema.NestedAttributeObject{
-		Attributes: bgpWritersNestedAttrs,
+		Attributes: func() map[string]schema.Attribute {
+			attrs := maps.Clone(bgpWritersNestedAttrs)
+			// overrides name attribute and makes it computed, schema is identical otherwise
+			attrs["name"] = schema.StringAttribute{
+				MarkdownDescription: "Writer name (derived from bus_subscriber_type)",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			}
+			return attrs
+		}(),
 	},
 }
 
 var bgpWriterObjectType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
-		"image_override":                                types.StringType,
-		"hpa_specs":                                     types.ObjectType{AttrTypes: map[string]attr.Type{"hpa_pubsub_subscription_id": types.StringType, "hpa_min_replicas": types.Int64Type, "hpa_max_replicas": types.Int64Type, "hpa_target_average_value": types.Int64Type}},
-		"gke_spot":                                      types.BoolType,
-		"load_writer_configmap":                         types.BoolType,
-		"version":                                       types.StringType,
-		"request":                                       types.ObjectType{AttrTypes: map[string]attr.Type{"cpu": types.StringType, "memory": types.StringType, "ephemeral_storage": types.StringType, "storage": types.StringType}},
-		"limit":                                         types.ObjectType{AttrTypes: map[string]attr.Type{"cpu": types.StringType, "memory": types.StringType, "ephemeral_storage": types.StringType, "storage": types.StringType}},
-		"bus_subscriber_type":                           types.StringType,
-		"default_replica_count":                         types.Int64Type,
-		"kafka_consumer_group_override":                 types.StringType,
-		"max_batch_size":                                types.Int64Type,
-		"message_processing_concurrency":                types.Int64Type,
-		"metadata_sql_ssl_ca_cert_secret":               types.StringType,
-		"metadata_sql_ssl_client_cert_secret":           types.StringType,
-		"metadata_sql_ssl_client_key_secret":            types.StringType,
-		"metadata_sql_uri_secret":                       types.StringType,
-		"offline_store_inserter_db_type":                types.StringType,
-		"storage_cache_prefix":                          types.StringType,
+		"name":                                types.StringType,
+		"image_override":                      types.StringType,
+		"hpa_specs":                           types.ObjectType{AttrTypes: map[string]attr.Type{"hpa_pubsub_subscription_id": types.StringType, "hpa_min_replicas": types.Int64Type, "hpa_max_replicas": types.Int64Type, "hpa_target_average_value": types.Int64Type}},
+		"gke_spot":                            types.BoolType,
+		"load_writer_configmap":               types.BoolType,
+		"version":                             types.StringType,
+		"request":                             types.ObjectType{AttrTypes: map[string]attr.Type{"cpu": types.StringType, "memory": types.StringType, "ephemeral_storage": types.StringType, "storage": types.StringType}},
+		"limit":                               types.ObjectType{AttrTypes: map[string]attr.Type{"cpu": types.StringType, "memory": types.StringType, "ephemeral_storage": types.StringType, "storage": types.StringType}},
+		"bus_subscriber_type":                 types.StringType,
+		"default_replica_count":               types.Int64Type,
+		"kafka_consumer_group_override":       types.StringType,
+		"max_batch_size":                      types.Int64Type,
+		"message_processing_concurrency":      types.Int64Type,
+		"metadata_sql_ssl_ca_cert_secret":     types.StringType,
+		"metadata_sql_ssl_client_cert_secret": types.StringType,
+		"metadata_sql_ssl_client_key_secret":  types.StringType,
+		"metadata_sql_uri_secret":             types.StringType,
+		"offline_store_inserter_db_type":      types.StringType,
+		"storage_cache_prefix":                types.StringType,
 		"results_writer_skip_producing_feature_metrics": types.BoolType,
 		"query_table_write_drop_ratio":                  types.StringType,
 		"nodepool":                                      types.StringType,
@@ -225,8 +245,8 @@ func bgpWritersTFToProto(ctx context.Context, writersList types.List) ([]*server
 
 	var protoWriters []*serverv1.BackgroundPersistenceWriterSpecs
 	for _, writer := range writers {
-		// Name is deliberately unset: the server derives it from bus_subscriber_type.
 		protoWriter := &serverv1.BackgroundPersistenceWriterSpecs{
+			Name:              writer.Name.ValueString(),
 			BusSubscriberType: writer.BusSubscriberType.ValueString(),
 		}
 
@@ -361,6 +381,7 @@ func bgpWritersProtoToTF(ctx context.Context, protoWriters []*serverv1.Backgroun
 	)
 	for _, protoWriter := range protoWriters {
 		tfWriter := BackgroundPersistenceWriterModel{
+			Name:              types.StringValue(protoWriter.Name),
 			BusSubscriberType: types.StringValue(protoWriter.BusSubscriberType),
 		}
 

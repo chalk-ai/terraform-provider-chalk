@@ -73,6 +73,10 @@ Optional:
 - `storage_cache_prefix` (String) Storage cache prefix
 - `version` (String) Writer version
 
+Read-Only:
+
+- `name` (String) Writer name (derived from bus_subscriber_type)
+
 <a id="nestedatt--writers--hpa_specs"></a>
 ### Nested Schema for `writers.hpa_specs`
 
