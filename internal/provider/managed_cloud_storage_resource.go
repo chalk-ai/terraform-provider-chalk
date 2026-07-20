@@ -21,8 +21,8 @@ func NewManagedCloudStorageResource() resource.Resource {
 }
 
 // ManagedCloudStorageResource registers a Chalk-managed cloud storage: Chalk owns
-// the bucket and derives its location, so the user supplies only the cloud
-// credential (and optionally the kind).
+// the bucket and derives its uri, so the user supplies only the cloud credential
+// (and optionally the kind).
 type ManagedCloudStorageResource struct {
 	client *client.Manager
 }
@@ -40,7 +40,7 @@ func (r *ManagedCloudStorageResource) Configure(ctx context.Context, req resourc
 }
 
 func (r *ManagedCloudStorageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data managedCloudStorageResourceModel
+	var data cloudStorageResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -68,13 +68,13 @@ func (r *ManagedCloudStorageResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	setManagedCloudStorageState(&data, response.Msg.GetStorage())
+	setCloudStorageState(&data, response.Msg.GetStorage())
 	tflog.Trace(ctx, "created a chalk_managed_cloud_storage resource")
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *ManagedCloudStorageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data managedCloudStorageResourceModel
+	var data cloudStorageResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -95,7 +95,7 @@ func (r *ManagedCloudStorageResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	setManagedCloudStorageState(&data, response.Msg.GetStorage())
+	setCloudStorageState(&data, response.Msg.GetStorage())
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -107,7 +107,7 @@ func (r *ManagedCloudStorageResource) Update(ctx context.Context, req resource.U
 }
 
 func (r *ManagedCloudStorageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data managedCloudStorageResourceModel
+	var data cloudStorageResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return

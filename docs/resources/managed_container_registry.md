@@ -40,6 +40,7 @@ resource "chalk_managed_container_registry" "ecr" {
 ### Read-Only
 
 - `id` (String) Cloud container registry identifier.
+- `name` (String) Fully-qualified registry path. Derived and set by Chalk.
 
 ## Import
 

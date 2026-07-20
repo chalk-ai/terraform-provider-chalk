@@ -5,9 +5,9 @@
 BREAKING CHANGES:
 
 * Remove read-only (computed) attributes from provider resources. They could not be set and only added `(known after apply)` noise to plans. Existing state is cleaned up automatically on the next refresh; the only configs affected are ones that referenced a removed field (e.g. in an `output`), which must drop the reference. `id` and `chalk_service_token`'s `client_id`/`client_secret` are unchanged. Removed per resource:
-  * `chalk_managed_cloud_storage`: `uri`, `managed`, `name`, `designator`, `team_id`, `applied_at`, `created_at`, `updated_at`
+  * `chalk_managed_cloud_storage`: `managed`, `name`, `designator`, `team_id`, `applied_at`, `created_at`, `updated_at`
   * `chalk_unmanaged_cloud_storage`: `managed`, `name`, `designator`, `team_id`, `applied_at`, `created_at`, `updated_at`
-  * `chalk_managed_container_registry`: `name`, `kind`, `managed`, `designator`, `team_id`, `applied_at`, `created_at`, `updated_at`
+  * `chalk_managed_container_registry`: `kind`, `managed`, `designator`, `team_id`, `applied_at`, `created_at`, `updated_at`
   * `chalk_unmanaged_container_registry`: `kind`, `managed`, `designator`, `team_id`, `applied_at`, `created_at`, `updated_at`
   * all cloud storage binding resources: `created_at`, `updated_at`
   * `chalk_managed_cluster`: `name`, `kind`, `designator`

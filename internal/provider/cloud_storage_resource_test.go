@@ -92,8 +92,8 @@ resource "chalk_unmanaged_cloud_storage" "test" {
 	})
 }
 
-// TestManagedCloudStorageCreate verifies the managed resource, which has no uri
-// attribute at all.
+// TestManagedCloudStorageCreate verifies the managed resource: no uri input; uri is
+// computed and set by the server.
 func TestManagedCloudStorageCreate(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
@@ -116,7 +116,8 @@ resource "chalk_managed_cloud_storage" "test" {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "cloud_credential_id", "cred-1"),
 					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "id", "storage-id-1"),
-					resource.TestCheckNoResourceAttr("chalk_managed_cloud_storage.test", "uri"),
+					// uri is derived and set by the server.
+					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "uri", "s3://chalk-managed/abc"),
 				),
 			},
 		},

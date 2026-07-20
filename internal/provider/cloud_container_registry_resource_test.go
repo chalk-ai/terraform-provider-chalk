@@ -66,8 +66,8 @@ resource "chalk_unmanaged_container_registry" "test" {
 	})
 }
 
-// TestManagedContainerRegistryCreate verifies the managed resource, which has no
-// name attribute at all.
+// TestManagedContainerRegistryCreate verifies the managed resource: no name input;
+// name is computed and set by the server.
 func TestManagedContainerRegistryCreate(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
@@ -90,7 +90,8 @@ resource "chalk_managed_container_registry" "test" {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_managed_container_registry.test", "cloud_credential_id", "cred-1"),
 					resource.TestCheckResourceAttr("chalk_managed_container_registry.test", "id", "registry-id-1"),
-					resource.TestCheckNoResourceAttr("chalk_managed_container_registry.test", "name"),
+					// name is derived and set by the server.
+					resource.TestCheckResourceAttr("chalk_managed_container_registry.test", "name", "123456789012.dkr.ecr.us-east-1.amazonaws.com/chalk-managed"),
 				),
 			},
 		},

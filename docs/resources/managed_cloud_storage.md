@@ -45,6 +45,7 @@ resource "chalk_managed_cloud_storage" "datasets" {
 ### Read-Only
 
 - `id` (String) Cloud storage identifier.
+- `uri` (String) URI of the managed bucket. Derived and set by Chalk.
 
 ## Import
 
