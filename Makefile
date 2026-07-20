@@ -41,7 +41,7 @@ lint:  ## Run linter
 setup-hooks:  ## Install git pre-commit hooks via prek (requires prek: brew install j178/tap/prek)
 	prek install
 
-release:  ## Tag and create a new release (increments patch version)
-	@bash scripts/release.sh
+release:  ## Tag and create a new release. BUMP=major|minor|patch (default patch); use major for breaking changes
+	@bash scripts/release.sh $(BUMP)
 
 .PHONY: build install test fmt lint docs setup-hooks release help
