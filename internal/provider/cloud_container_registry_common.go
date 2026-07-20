@@ -39,7 +39,7 @@ type managedCloudContainerRegistryResourceModel struct {
 func cloudContainerRegistrySchema(managed bool) schema.Schema {
 	var markdown string
 	if managed {
-		markdown = "Registers a Chalk-managed container registry: Chalk owns the registry and derives its path, so you only supply the cloud credential.\n\n" +
+		markdown = "Registers a Chalk-managed container registry: Chalk owns the registry and derives its `name`, so you only supply the cloud credential.\n\n" +
 			"Every attribute is replace-only (there is no update RPC). **Create-time access check:** creating this resource performs a live access check using the referenced `cloud_credential_id`; apply fails unless that credential can reach the registry, so the credential must exist first."
 	} else {
 		markdown = "Registers a reference to an existing (unmanaged) cloud container registry plus the cloud credential used to reach it. Chalk does not provision the registry.\n\n" +

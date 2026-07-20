@@ -3,14 +3,14 @@
 page_title: "chalk_managed_cloud_storage Resource - chalk"
 subcategory: ""
 description: |-
-  Registers a Chalk-managed cloud storage: Chalk owns the bucket and derives its location, so you only supply the cloud credential.
+  Registers a Chalk-managed cloud storage: Chalk owns the bucket and derives its uri, so you only supply the cloud credential.
   Every attribute is replace-only (there is no update RPC). Create-time bucket access check: creating this resource performs a live access check using the referenced cloud_credential_id; apply fails unless that credential can reach the storage, so the credential must exist first.
   Required permissions: project.create (team-scoped)
 ---
 
 # chalk_managed_cloud_storage (Resource)
 
-Registers a Chalk-managed cloud storage: Chalk owns the bucket and derives its location, so you only supply the cloud credential.
+Registers a Chalk-managed cloud storage: Chalk owns the bucket and derives its `uri`, so you only supply the cloud credential.
 
 Every attribute is replace-only (there is no update RPC). **Create-time bucket access check:** creating this resource performs a live access check using the referenced `cloud_credential_id`; apply fails unless that credential can reach the storage, so the credential must exist first.
 

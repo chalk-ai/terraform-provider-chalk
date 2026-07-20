@@ -3,14 +3,14 @@
 page_title: "chalk_managed_container_registry Resource - chalk"
 subcategory: ""
 description: |-
-  Registers a Chalk-managed container registry: Chalk owns the registry and derives its path, so you only supply the cloud credential.
+  Registers a Chalk-managed container registry: Chalk owns the registry and derives its name, so you only supply the cloud credential.
   Every attribute is replace-only (there is no update RPC). Create-time access check: creating this resource performs a live access check using the referenced cloud_credential_id; apply fails unless that credential can reach the registry, so the credential must exist first.
   Required permissions: project.create (team-scoped)
 ---
 
 # chalk_managed_container_registry (Resource)
 
-Registers a Chalk-managed container registry: Chalk owns the registry and derives its path, so you only supply the cloud credential.
+Registers a Chalk-managed container registry: Chalk owns the registry and derives its `name`, so you only supply the cloud credential.
 
 Every attribute is replace-only (there is no update RPC). **Create-time access check:** creating this resource performs a live access check using the referenced `cloud_credential_id`; apply fails unless that credential can reach the registry, so the credential must exist first.
 
