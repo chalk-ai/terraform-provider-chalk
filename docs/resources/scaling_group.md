@@ -25,9 +25,6 @@ Manages a Chalk scaling group — a horizontally (auto)scalable container deploy
 ### Read-Only
 
 - `id` (String) The scaling group id.
-- `status` (String) Current status of the scaling group (e.g. Pending, Available, etc).
-- `status_message` (String) Additional status details.
-- `web_url` (String) Web URL to access the scaling group.
 
 <a id="nestedatt--container_spec"></a>
 ### Nested Schema for `container_spec`

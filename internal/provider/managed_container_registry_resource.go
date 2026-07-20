@@ -41,7 +41,7 @@ func (r *ManagedContainerRegistryResource) Configure(ctx context.Context, req re
 }
 
 func (r *ManagedContainerRegistryResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data cloudContainerRegistryResourceModel
+	var data managedCloudContainerRegistryResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -68,13 +68,13 @@ func (r *ManagedContainerRegistryResource) Create(ctx context.Context, req resou
 		return
 	}
 
-	setCloudContainerRegistryState(&data, response.Msg.GetContainerRegistry())
+	setManagedCloudContainerRegistryState(&data, response.Msg.GetContainerRegistry())
 	tflog.Trace(ctx, "created a chalk_managed_container_registry resource")
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *ManagedContainerRegistryResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data cloudContainerRegistryResourceModel
+	var data managedCloudContainerRegistryResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -95,7 +95,7 @@ func (r *ManagedContainerRegistryResource) Read(ctx context.Context, req resourc
 		return
 	}
 
-	setCloudContainerRegistryState(&data, response.Msg.GetContainerRegistry())
+	setManagedCloudContainerRegistryState(&data, response.Msg.GetContainerRegistry())
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -107,7 +107,7 @@ func (r *ManagedContainerRegistryResource) Update(ctx context.Context, req resou
 }
 
 func (r *ManagedContainerRegistryResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data cloudContainerRegistryResourceModel
+	var data managedCloudContainerRegistryResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -25,8 +25,6 @@ type environmentCloudStorageBindingModel struct {
 	Id             types.String `tfsdk:"id"`
 	EnvironmentId  types.String `tfsdk:"environment_id"`
 	CloudStorageId types.String `tfsdk:"cloud_storage_id"`
-	CreatedAt      types.String `tfsdk:"created_at"`
-	UpdatedAt      types.String `tfsdk:"updated_at"`
 }
 
 // clusterCloudStorageBindingModel is the state model for every cluster binding resource.
@@ -34,8 +32,6 @@ type clusterCloudStorageBindingModel struct {
 	Id             types.String `tfsdk:"id"`
 	ClusterId      types.String `tfsdk:"cluster_id"`
 	CloudStorageId types.String `tfsdk:"cloud_storage_id"`
-	CreatedAt      types.String `tfsdk:"created_at"`
-	UpdatedAt      types.String `tfsdk:"updated_at"`
 }
 
 // cloudStorageBindingSchema builds the schema shared by all binding resources.
@@ -65,15 +61,6 @@ func cloudStorageBindingSchema(targetAttr, targetLabel, roleLabel string) schema
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the binding was created.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the binding was last updated.",
-				Computed:            true,
-			},
 		},
 	}
 }
@@ -84,8 +71,6 @@ func setEnvBindingState(m *environmentCloudStorageBindingModel, b *serverv1.Envi
 		m.EnvironmentId = types.StringValue(b.GetEnvironmentId())
 	}
 	m.CloudStorageId = types.StringValue(b.GetCloudStorageId())
-	m.CreatedAt = timestampToStringValue(b.GetCreatedAt())
-	m.UpdatedAt = timestampToStringValue(b.GetUpdatedAt())
 }
 
 func setClusterBindingState(m *clusterCloudStorageBindingModel, b *serverv1.ClusterCloudStorageBinding) {
@@ -94,8 +79,6 @@ func setClusterBindingState(m *clusterCloudStorageBindingModel, b *serverv1.Clus
 		m.ClusterId = types.StringValue(b.GetClusterId())
 	}
 	m.CloudStorageId = types.StringValue(b.GetCloudStorageId())
-	m.CreatedAt = timestampToStringValue(b.GetCreatedAt())
-	m.UpdatedAt = timestampToStringValue(b.GetUpdatedAt())
 }
 
 // finishEnvBindingCreate applies the create response to state, mapping AlreadyExists

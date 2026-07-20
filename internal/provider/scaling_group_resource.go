@@ -38,9 +38,6 @@ type ScalingGroupResourceModel struct {
 	Id            types.String        `tfsdk:"id"`
 	Name          types.String        `tfsdk:"name"`
 	EnvironmentId types.String        `tfsdk:"environment_id"`
-	Status        types.String        `tfsdk:"status"`
-	StatusMessage types.String        `tfsdk:"status_message"`
-	WebURL        types.String        `tfsdk:"web_url"`
 	ContainerSpec *ContainerSpecModel `tfsdk:"container_spec"`
 	ScalingSpec   *ScalingSpecModel   `tfsdk:"scaling_spec"`
 }
@@ -98,7 +95,6 @@ func (r *ScalingGroupResource) Metadata(ctx context.Context, req resource.Metada
 func (r *ScalingGroupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	requiresReplaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	requiresReplaceObject := []planmodifier.Object{objectplanmodifier.RequiresReplace()}
-	useStateForUnknownString := []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a Chalk scaling group — a horizontally (auto)scalable container deployment.",
@@ -117,21 +113,6 @@ func (r *ScalingGroupResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "The environment ID that this scaling group is scoped to.",
 				Required:            true,
 				PlanModifiers:       requiresReplaceString,
-			},
-			"status": schema.StringAttribute{
-				MarkdownDescription: "Current status of the scaling group (e.g. Pending, Available, etc).",
-				Computed:            true,
-				PlanModifiers:       useStateForUnknownString,
-			},
-			"status_message": schema.StringAttribute{
-				MarkdownDescription: "Additional status details.",
-				Computed:            true,
-				PlanModifiers:       useStateForUnknownString,
-			},
-			"web_url": schema.StringAttribute{
-				MarkdownDescription: "Web URL to access the scaling group.",
-				Computed:            true,
-				PlanModifiers:       useStateForUnknownString,
 			},
 			"container_spec": schema.SingleNestedAttribute{
 				MarkdownDescription: "Container specification describing what to run in each replica.",
@@ -466,9 +447,6 @@ func updateScalingGroupState(ctx context.Context, data *ScalingGroupResourceMode
 	var diags diag.Diagnostics
 	data.Id = types.StringValue(sg.Id)
 	data.Name = types.StringValue(sg.Name)
-	data.Status = types.StringValue(sg.Status)
-	data.StatusMessage = optionalStringValue(sg.GetStatusMessage())
-	data.WebURL = optionalStringValue(sg.GetWebUrl())
 	if sg.Spec != nil {
 		cs, d := containerSpecModelFromProto(sg.Spec.ContainerSpec)
 		diags.Append(d...)

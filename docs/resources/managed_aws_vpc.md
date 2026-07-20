@@ -32,9 +32,7 @@ Chalk managed AWS VPC resource. Creates a fully managed VPC using the provided c
 
 ### Read-Only
 
-- `designator` (String) VPC designator
 - `id` (String) VPC identifier
-- `name` (String) VPC name
 
 <a id="nestedatt--subnets"></a>
 ### Nested Schema for `subnets`

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -16,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Cloud storage kinds. A storage's kind selects the cloud provider, which in turn
@@ -53,44 +51,67 @@ func validateStorageURIForKind(kind, uri string) (ok bool, reason string) {
 	}
 }
 
-// cloudStorageResourceModel is shared by the managed and unmanaged storage
-// resources. The two differ only in how `uri` is surfaced in the schema (Required
-// for unmanaged, Computed for managed); the underlying model and CRUD handling are
-// identical.
+// cloudStorageResourceModel is the state model for the unmanaged storage
+// resource: its inputs plus the server-assigned id. The managed variant has no
+// `uri` attribute (Chalk owns the bucket), so it uses its own model; CRUD handling
+// is otherwise identical.
 type cloudStorageResourceModel struct {
 	Id                types.String `tfsdk:"id"`
 	Kind              types.String `tfsdk:"kind"`
 	Uri               types.String `tfsdk:"uri"`
 	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
-	Managed           types.Bool   `tfsdk:"managed"`
-	Name              types.String `tfsdk:"name"`
-	Designator        types.String `tfsdk:"designator"`
-	TeamId            types.String `tfsdk:"team_id"`
-	AppliedAt         types.String `tfsdk:"applied_at"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	UpdatedAt         types.String `tfsdk:"updated_at"`
+}
+
+// managedCloudStorageResourceModel is the state model for the managed storage
+// resource.
+type managedCloudStorageResourceModel struct {
+	Id                types.String `tfsdk:"id"`
+	Kind              types.String `tfsdk:"kind"`
+	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
 }
 
 // cloudStorageSchema builds the schema shared by the managed and unmanaged storage
-// resources. When managed is true, `uri` is Computed (Chalk owns the bucket);
-// otherwise it is a Required, replace-only input.
+// resources. Only inputs and the resource id are exposed; server-derived metadata
+// deliberately has no attributes. When managed is true, Chalk owns the bucket and
+// derives its location, so there is no `uri` attribute at all; otherwise `uri` is a
+// Required, replace-only input.
 func cloudStorageSchema(managed bool) schema.Schema {
 	var markdown string
-	var uriAttr schema.StringAttribute
 	if managed {
-		markdown = "Registers a Chalk-managed cloud storage: Chalk owns the bucket and derives its `uri`, so you only supply the cloud credential.\n\n" +
+		markdown = "Registers a Chalk-managed cloud storage: Chalk owns the bucket and derives its location, so you only supply the cloud credential.\n\n" +
 			"Every attribute is replace-only (there is no update RPC). **Create-time bucket access check:** creating this resource performs a live access check using the referenced `cloud_credential_id`; apply fails unless that credential can reach the storage, so the credential must exist first."
-		uriAttr = schema.StringAttribute{
-			MarkdownDescription: "URI of the managed bucket. Derived and set by Chalk.",
-			Computed:            true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
-		}
 	} else {
 		markdown = "Registers a reference to an existing (unmanaged) cloud storage bucket plus the cloud credential used to reach it. Chalk does not provision the bucket.\n\n" +
 			"Every attribute is replace-only (there is no update RPC). **Create-time bucket access check:** creating this resource performs a live `Head` against the bucket using the referenced `cloud_credential_id`; apply fails unless that credential can already reach the bucket, so the credential (and the bucket's real IAM grants) must exist first."
-		uriAttr = schema.StringAttribute{
+	}
+
+	attributes := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			MarkdownDescription: "Cloud storage identifier.",
+			Computed:            true,
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+		},
+		"kind": schema.StringAttribute{
+			MarkdownDescription: "Cloud storage kind. One of `gcs`, `s3`, or `abs` (Azure Blob Storage). " +
+				"Optional: when omitted, Chalk infers it from the cloud credential. Changing this forces a new resource.",
+			Optional: true,
+			Computed: true,
+			Validators: []validator.String{
+				stringvalidator.OneOf(cloudStorageKindGCS, cloudStorageKindS3, cloudStorageKindAzure),
+			},
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+		"cloud_credential_id": schema.StringAttribute{
+			MarkdownDescription: "ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the bucket. Changing this forces a new resource.",
+			Required:            true,
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+		},
+	}
+	if !managed {
+		attributes["uri"] = schema.StringAttribute{
 			MarkdownDescription: "URI of the existing bucket (and optional path prefix), e.g. `s3://bucket/prefix`, `gs://bucket/prefix`, " +
 				"or `abfs://<account>.blob.core.windows.net/<container>[/path]`. " +
 				"When `kind` is set, the scheme must match it. Changing this forces a new resource.",
@@ -103,69 +124,12 @@ func cloudStorageSchema(managed bool) schema.Schema {
 
 	return schema.Schema{
 		MarkdownDescription: markdown,
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Cloud storage identifier.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "Cloud storage kind. One of `gcs`, `s3`, or `abs` (Azure Blob Storage). " +
-					"Optional: when omitted, Chalk infers it from the cloud credential. Changing this forces a new resource.",
-				Optional: true,
-				Computed: true,
-				Validators: []validator.String{
-					stringvalidator.OneOf(cloudStorageKindGCS, cloudStorageKindS3, cloudStorageKindAzure),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"uri": uriAttr,
-			"cloud_credential_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the bucket. Changing this forces a new resource.",
-				Required:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-			},
-			"managed": schema.BoolAttribute{
-				MarkdownDescription: "Whether the storage is managed by Chalk. Determined by the resource type.",
-				Computed:            true,
-			},
-			"name": schema.StringAttribute{
-				MarkdownDescription: "Cloud storage name. Set by the server to the storage `uri`.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"designator": schema.StringAttribute{
-				MarkdownDescription: "Server-assigned designator. Only populated for managed storages.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"team_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the team that owns the storage.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"applied_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the storage was last applied, if any.",
-				Computed:            true,
-			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the storage was created.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the storage was last updated.",
-				Computed:            true,
-			},
-		},
+		Attributes:          attributes,
 	}
 }
 
-// setCloudStorageState populates the model from a storage response. Required,
-// replace-only inputs (kind, cloud_credential_id) are only overwritten when the
+// setCloudStorageState populates the unmanaged model from a storage response.
+// Replace-only inputs (kind, cloud_credential_id) are only overwritten when the
 // server echoes a value, so a response that omits one cannot trigger a spurious
 // replace.
 func setCloudStorageState(data *cloudStorageResourceModel, storage *serverv1.CloudComponentStorageResponse) {
@@ -173,11 +137,9 @@ func setCloudStorageState(data *cloudStorageResourceModel, storage *serverv1.Clo
 		return
 	}
 	data.Id = types.StringValue(storage.GetId())
-	data.Name = types.StringValue(storage.GetName())
 	if storage.GetKind() != "" {
 		data.Kind = types.StringValue(storage.GetKind())
 	}
-	data.Managed = types.BoolValue(storage.GetManaged())
 
 	if spec := storage.GetSpec(); spec != nil {
 		data.Uri = types.StringValue(spec.GetUri())
@@ -186,17 +148,22 @@ func setCloudStorageState(data *cloudStorageResourceModel, storage *serverv1.Clo
 	if storage.CloudCredentialId != nil {
 		data.CloudCredentialId = types.StringValue(storage.GetCloudCredentialId())
 	}
+}
 
-	if storage.Designator != nil {
-		data.Designator = types.StringValue(storage.GetDesignator())
-	} else {
-		data.Designator = types.StringNull()
+// setManagedCloudStorageState is the managed-variant twin of setCloudStorageState
+// (the managed model has no uri).
+func setManagedCloudStorageState(data *managedCloudStorageResourceModel, storage *serverv1.CloudComponentStorageResponse) {
+	if storage == nil {
+		return
+	}
+	data.Id = types.StringValue(storage.GetId())
+	if storage.GetKind() != "" {
+		data.Kind = types.StringValue(storage.GetKind())
 	}
 
-	data.TeamId = types.StringValue(storage.GetTeamId())
-	data.AppliedAt = timestampToStringValue(storage.GetAppliedAt())
-	data.CreatedAt = timestampToStringValue(storage.GetCreatedAt())
-	data.UpdatedAt = timestampToStringValue(storage.GetUpdatedAt())
+	if storage.CloudCredentialId != nil {
+		data.CloudCredentialId = types.StringValue(storage.GetCloudCredentialId())
+	}
 }
 
 // describeCloudStorageCreateError maps well-known create-time failure codes to
@@ -217,15 +184,6 @@ func describeCloudStorageCreateError(err error) (summary, detail string) {
 		return "Error creating cloud storage",
 			fmt.Sprintf("Could not create cloud storage: %s", err.Error())
 	}
-}
-
-// timestampToStringValue renders a protobuf timestamp as an RFC3339 string, or a
-// null string when the timestamp is unset.
-func timestampToStringValue(ts *timestamppb.Timestamp) types.String {
-	if ts == nil || !ts.IsValid() || (ts.GetSeconds() == 0 && ts.GetNanos() == 0) {
-		return types.StringNull()
-	}
-	return types.StringValue(ts.AsTime().Format(time.RFC3339))
 }
 
 // configureCloudManager extracts the *client.Manager from a Configure request,

@@ -11,47 +11,56 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// cloudContainerRegistryResourceModel is shared by the managed and unmanaged
-// container registry resources. The two differ only in how `name` is surfaced in
-// the schema (Required for unmanaged, Computed for managed); the underlying model
-// and CRUD handling are identical. The server derives the registry `kind` and all
-// addressing from `name`, so there is no separate kind input or config block.
+// cloudContainerRegistryResourceModel is the state model for the unmanaged
+// container registry resource: its inputs plus the server-assigned id. The managed
+// variant has no `name` attribute (Chalk owns the registry and derives its path),
+// so it uses its own model; CRUD handling is otherwise identical. The server
+// derives the registry kind and all addressing from `name`, so there is no
+// separate kind input or config block.
 type cloudContainerRegistryResourceModel struct {
 	Id                types.String `tfsdk:"id"`
-	Kind              types.String `tfsdk:"kind"`
 	Name              types.String `tfsdk:"name"`
 	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
-	Designator        types.String `tfsdk:"designator"`
-	Managed           types.Bool   `tfsdk:"managed"`
-	TeamId            types.String `tfsdk:"team_id"`
-	AppliedAt         types.String `tfsdk:"applied_at"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	UpdatedAt         types.String `tfsdk:"updated_at"`
+}
+
+// managedCloudContainerRegistryResourceModel is the state model for the managed
+// container registry resource.
+type managedCloudContainerRegistryResourceModel struct {
+	Id                types.String `tfsdk:"id"`
+	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
 }
 
 // cloudContainerRegistrySchema builds the schema shared by the managed and
-// unmanaged container registry resources. When managed is true, `name` is Computed
-// (Chalk owns the registry and derives its path); otherwise it is a Required,
-// replace-only input. Every input is replace-only: there is no update RPC exposed,
-// so any change forces recreation.
+// unmanaged container registry resources. Only inputs and the resource id are
+// exposed; server-derived metadata deliberately has no attributes. When managed is
+// true, Chalk owns the registry and derives its path, so there is no `name`
+// attribute at all; otherwise it is a Required, replace-only input. Every input is
+// replace-only: there is no update RPC exposed, so any change forces recreation.
 func cloudContainerRegistrySchema(managed bool) schema.Schema {
 	var markdown string
-	var nameAttr schema.StringAttribute
 	if managed {
-		markdown = "Registers a Chalk-managed container registry: Chalk owns the registry and derives its `name`, so you only supply the cloud credential.\n\n" +
+		markdown = "Registers a Chalk-managed container registry: Chalk owns the registry and derives its path, so you only supply the cloud credential.\n\n" +
 			"Every attribute is replace-only (there is no update RPC). **Create-time access check:** creating this resource performs a live access check using the referenced `cloud_credential_id`; apply fails unless that credential can reach the registry, so the credential must exist first."
-		nameAttr = schema.StringAttribute{
-			MarkdownDescription: "Fully-qualified registry path. Derived and set by Chalk.",
-			Computed:            true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
-		}
 	} else {
 		markdown = "Registers a reference to an existing (unmanaged) cloud container registry plus the cloud credential used to reach it. Chalk does not provision the registry.\n\n" +
 			"The registry kind (GAR, ECR, or ACR) is derived by the server from `name`. " +
 			"Every attribute is replace-only (there is no update RPC). **Create-time access check:** creating this resource performs a live access check against the registry using the referenced `cloud_credential_id`; apply fails unless that credential can already reach the registry, so the credential must exist first."
-		nameAttr = schema.StringAttribute{
+	}
+
+	attributes := map[string]schema.Attribute{
+		"id": schema.StringAttribute{
+			MarkdownDescription: "Cloud container registry identifier.",
+			Computed:            true,
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+		},
+		"cloud_credential_id": schema.StringAttribute{
+			MarkdownDescription: "ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the registry. Its cloud provider must match the registry kind. Changing this forces a new resource.",
+			Required:            true,
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+		},
+	}
+	if !managed {
+		attributes["name"] = schema.StringAttribute{
 			MarkdownDescription: "Fully-qualified registry path, e.g. `us-docker.pkg.dev/<project>/<repository>` (GAR), " +
 				"`<account-id>.dkr.ecr.<region>.amazonaws.com/<repository>` (ECR), or `<registry>.azurecr.io/<repository>` (ACR). " +
 				"The server derives the registry kind from this. Changing this forces a new resource.",
@@ -64,82 +73,37 @@ func cloudContainerRegistrySchema(managed bool) schema.Schema {
 
 	return schema.Schema{
 		MarkdownDescription: markdown,
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Cloud container registry identifier.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "Container registry kind (e.g. `gar`, `ecr`, `acr`). Derived by the server from `name`.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"name": nameAttr,
-			"cloud_credential_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the registry. Its cloud provider must match the registry kind. Changing this forces a new resource.",
-				Required:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-			},
-			"designator": schema.StringAttribute{
-				MarkdownDescription: "Server-assigned designator. Only populated for managed registries.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"managed": schema.BoolAttribute{
-				MarkdownDescription: "Whether the registry is managed by Chalk. Determined by the resource type.",
-				Computed:            true,
-			},
-			"team_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the team that owns the registry.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"applied_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the registry was last applied, if any.",
-				Computed:            true,
-			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the registry was created.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the registry was last updated.",
-				Computed:            true,
-			},
-		},
+		Attributes:          attributes,
 	}
 }
 
-// setCloudContainerRegistryState populates the model from a registry response.
-// The replace-only input (cloud_credential_id) is only overwritten when the server
-// echoes a value, so a response that omits it cannot trigger a spurious replace.
+// setCloudContainerRegistryState populates the unmanaged model from a registry
+// response. The replace-only input (cloud_credential_id) is only overwritten when
+// the server echoes a value, so a response that omits it cannot trigger a spurious
+// replace.
 func setCloudContainerRegistryState(data *cloudContainerRegistryResourceModel, registry *serverv1.CloudComponentContainerRegistryResponse) {
 	if registry == nil {
 		return
 	}
 	data.Id = types.StringValue(registry.GetId())
 	data.Name = types.StringValue(registry.GetName())
-	if registry.GetKind() != "" {
-		data.Kind = types.StringValue(registry.GetKind())
-	}
-	data.Managed = types.BoolValue(registry.GetManaged())
 
 	if registry.CloudCredentialId != nil {
 		data.CloudCredentialId = types.StringValue(registry.GetCloudCredentialId())
 	}
+}
 
-	if registry.Designator != nil {
-		data.Designator = types.StringValue(registry.GetDesignator())
-	} else {
-		data.Designator = types.StringNull()
+// setManagedCloudContainerRegistryState is the managed-variant twin of
+// setCloudContainerRegistryState (the managed model has no name).
+func setManagedCloudContainerRegistryState(data *managedCloudContainerRegistryResourceModel, registry *serverv1.CloudComponentContainerRegistryResponse) {
+	if registry == nil {
+		return
 	}
+	data.Id = types.StringValue(registry.GetId())
 
-	data.TeamId = types.StringValue(registry.GetTeamId())
-	data.AppliedAt = timestampToStringValue(registry.GetAppliedAt())
-	data.CreatedAt = timestampToStringValue(registry.GetCreatedAt())
-	data.UpdatedAt = timestampToStringValue(registry.GetUpdatedAt())
+	if registry.CloudCredentialId != nil {
+		data.CloudCredentialId = types.StringValue(registry.GetCloudCredentialId())
+	}
 }
 
 // describeCloudContainerRegistryCreateError maps well-known create-time failure

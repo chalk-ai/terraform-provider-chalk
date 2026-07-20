@@ -31,7 +31,6 @@ type ProjectResource struct {
 type ProjectResourceModel struct {
 	Id      types.String `tfsdk:"id"`
 	Name    types.String `tfsdk:"name"`
-	TeamId  types.String `tfsdk:"team_id"`
 	GitRepo types.String `tfsdk:"git_repo"`
 }
 
@@ -54,13 +53,6 @@ func (r *ProjectResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Project name",
 				Required:            true,
-			},
-			"team_id": schema.StringAttribute{
-				MarkdownDescription: "Team ID",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"git_repo": schema.StringAttribute{
 				MarkdownDescription: "Git repository URL",
@@ -116,7 +108,6 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Update with created values
 	data.Id = types.StringValue(project.Msg.Project.Id)
-	data.TeamId = types.StringValue(project.Msg.Project.TeamId)
 
 	// If git_repo was provided, we need to update the project
 	if !data.GitRepo.IsNull() {
@@ -192,7 +183,6 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	// Update the model with the fetched data
 	data.Name = types.StringValue(foundProject.Name)
-	data.TeamId = types.StringValue(foundProject.TeamId)
 
 	if foundProject.GitRepo != nil && *foundProject.GitRepo != "" {
 		data.GitRepo = types.StringValue(*foundProject.GitRepo)

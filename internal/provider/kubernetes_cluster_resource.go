@@ -34,7 +34,6 @@ type KubernetesClusterResourceModel struct {
 	Kind                types.String              `tfsdk:"kind"`
 	CloudCredentialId   types.String              `tfsdk:"cloud_credential_id"`
 	DnsZone             types.String              `tfsdk:"dns_zone"`
-	TeamId              types.String              `tfsdk:"team_id"`
 	MaintenanceWindow   *maintenanceWindowModel   `tfsdk:"maintenance_window"`
 	DataPlaneRedis      *dataPlaneRedisModel      `tfsdk:"data_plane_redis"`
 	DataPlaneController *dataPlaneControllerModel `tfsdk:"data_plane_controller"`
@@ -80,13 +79,6 @@ func (r *KubernetesClusterResource) Schema(ctx context.Context, req resource.Sch
 			"dns_zone": schema.StringAttribute{
 				MarkdownDescription: "DNS zone for the cluster",
 				Optional:            true,
-			},
-			"team_id": schema.StringAttribute{
-				MarkdownDescription: "Team ID",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -259,7 +251,6 @@ func (r *KubernetesClusterResource) updateModelFromProto(model *KubernetesCluste
 	model.Id = types.StringValue(cluster.Id)
 	model.Name = types.StringValue(cluster.Spec.Name)
 	model.Kind = types.StringValue(cluster.Kind)
-	model.TeamId = types.StringValue(cluster.TeamId)
 
 	if cluster.CloudCredentialId != nil {
 		model.CloudCredentialId = types.StringValue(*cluster.CloudCredentialId)
