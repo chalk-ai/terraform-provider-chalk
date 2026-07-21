@@ -34,7 +34,6 @@ Chalk Kubernetes cluster resource (unmanaged)
 ### Read-Only
 
 - `id` (String) Cluster identifier
-- `team_id` (String) Team ID
 
 <a id="nestedatt--data_plane_controller"></a>
 ### Nested Schema for `data_plane_controller`

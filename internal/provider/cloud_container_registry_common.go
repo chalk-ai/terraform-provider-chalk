@@ -18,15 +18,8 @@ import (
 // addressing from `name`, so there is no separate kind input or config block.
 type cloudContainerRegistryResourceModel struct {
 	Id                types.String `tfsdk:"id"`
-	Kind              types.String `tfsdk:"kind"`
 	Name              types.String `tfsdk:"name"`
 	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
-	Designator        types.String `tfsdk:"designator"`
-	Managed           types.Bool   `tfsdk:"managed"`
-	TeamId            types.String `tfsdk:"team_id"`
-	AppliedAt         types.String `tfsdk:"applied_at"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	UpdatedAt         types.String `tfsdk:"updated_at"`
 }
 
 // cloudContainerRegistrySchema builds the schema shared by the managed and
@@ -70,43 +63,11 @@ func cloudContainerRegistrySchema(managed bool) schema.Schema {
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"kind": schema.StringAttribute{
-				MarkdownDescription: "Container registry kind (e.g. `gar`, `ecr`, `acr`). Derived by the server from `name`.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
 			"name": nameAttr,
 			"cloud_credential_id": schema.StringAttribute{
 				MarkdownDescription: "ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the registry. Its cloud provider must match the registry kind. Changing this forces a new resource.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-			},
-			"designator": schema.StringAttribute{
-				MarkdownDescription: "Server-assigned designator. Only populated for managed registries.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"managed": schema.BoolAttribute{
-				MarkdownDescription: "Whether the registry is managed by Chalk. Determined by the resource type.",
-				Computed:            true,
-			},
-			"team_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the team that owns the registry.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"applied_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the registry was last applied, if any.",
-				Computed:            true,
-			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the registry was created.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the registry was last updated.",
-				Computed:            true,
 			},
 		},
 	}
@@ -121,25 +82,10 @@ func setCloudContainerRegistryState(data *cloudContainerRegistryResourceModel, r
 	}
 	data.Id = types.StringValue(registry.GetId())
 	data.Name = types.StringValue(registry.GetName())
-	if registry.GetKind() != "" {
-		data.Kind = types.StringValue(registry.GetKind())
-	}
-	data.Managed = types.BoolValue(registry.GetManaged())
 
 	if registry.CloudCredentialId != nil {
 		data.CloudCredentialId = types.StringValue(registry.GetCloudCredentialId())
 	}
-
-	if registry.Designator != nil {
-		data.Designator = types.StringValue(registry.GetDesignator())
-	} else {
-		data.Designator = types.StringNull()
-	}
-
-	data.TeamId = types.StringValue(registry.GetTeamId())
-	data.AppliedAt = timestampToStringValue(registry.GetAppliedAt())
-	data.CreatedAt = timestampToStringValue(registry.GetCreatedAt())
-	data.UpdatedAt = timestampToStringValue(registry.GetUpdatedAt())
 }
 
 // describeCloudContainerRegistryCreateError maps well-known create-time failure

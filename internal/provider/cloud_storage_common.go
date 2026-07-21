@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -16,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Cloud storage kinds. A storage's kind selects the cloud provider, which in turn
@@ -62,13 +60,6 @@ type cloudStorageResourceModel struct {
 	Kind              types.String `tfsdk:"kind"`
 	Uri               types.String `tfsdk:"uri"`
 	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
-	Managed           types.Bool   `tfsdk:"managed"`
-	Name              types.String `tfsdk:"name"`
-	Designator        types.String `tfsdk:"designator"`
-	TeamId            types.String `tfsdk:"team_id"`
-	AppliedAt         types.String `tfsdk:"applied_at"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	UpdatedAt         types.String `tfsdk:"updated_at"`
 }
 
 // cloudStorageSchema builds the schema shared by the managed and unmanaged storage
@@ -128,38 +119,6 @@ func cloudStorageSchema(managed bool) schema.Schema {
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"managed": schema.BoolAttribute{
-				MarkdownDescription: "Whether the storage is managed by Chalk. Determined by the resource type.",
-				Computed:            true,
-			},
-			"name": schema.StringAttribute{
-				MarkdownDescription: "Cloud storage name. Set by the server to the storage `uri`.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"designator": schema.StringAttribute{
-				MarkdownDescription: "Server-assigned designator. Only populated for managed storages.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"team_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the team that owns the storage.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"applied_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the storage was last applied, if any.",
-				Computed:            true,
-			},
-			"created_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the storage was created.",
-				Computed:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "RFC3339 timestamp at which the storage was last updated.",
-				Computed:            true,
-			},
 		},
 	}
 }
@@ -173,11 +132,9 @@ func setCloudStorageState(data *cloudStorageResourceModel, storage *serverv1.Clo
 		return
 	}
 	data.Id = types.StringValue(storage.GetId())
-	data.Name = types.StringValue(storage.GetName())
 	if storage.GetKind() != "" {
 		data.Kind = types.StringValue(storage.GetKind())
 	}
-	data.Managed = types.BoolValue(storage.GetManaged())
 
 	if spec := storage.GetSpec(); spec != nil {
 		data.Uri = types.StringValue(spec.GetUri())
@@ -186,17 +143,6 @@ func setCloudStorageState(data *cloudStorageResourceModel, storage *serverv1.Clo
 	if storage.CloudCredentialId != nil {
 		data.CloudCredentialId = types.StringValue(storage.GetCloudCredentialId())
 	}
-
-	if storage.Designator != nil {
-		data.Designator = types.StringValue(storage.GetDesignator())
-	} else {
-		data.Designator = types.StringNull()
-	}
-
-	data.TeamId = types.StringValue(storage.GetTeamId())
-	data.AppliedAt = timestampToStringValue(storage.GetAppliedAt())
-	data.CreatedAt = timestampToStringValue(storage.GetCreatedAt())
-	data.UpdatedAt = timestampToStringValue(storage.GetUpdatedAt())
 }
 
 // describeCloudStorageCreateError maps well-known create-time failure codes to
@@ -217,15 +163,6 @@ func describeCloudStorageCreateError(err error) (summary, detail string) {
 		return "Error creating cloud storage",
 			fmt.Sprintf("Could not create cloud storage: %s", err.Error())
 	}
-}
-
-// timestampToStringValue renders a protobuf timestamp as an RFC3339 string, or a
-// null string when the timestamp is unset.
-func timestampToStringValue(ts *timestamppb.Timestamp) types.String {
-	if ts == nil || !ts.IsValid() || (ts.GetSeconds() == 0 && ts.GetNanos() == 0) {
-		return types.StringNull()
-	}
-	return types.StringValue(ts.AsTime().Format(time.RFC3339))
 }
 
 // configureCloudManager extracts the *client.Manager from a Configure request,

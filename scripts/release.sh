@@ -1,9 +1,36 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Bump level: major | minor | patch (default: patch).
+#
+# Pick per semver: patch for fixes, minor for backward-compatible changes,
+# major for backward-incompatible ones. Releases are picked up automatically by
+# users pinned with `~>`.
+BUMP="${1:-patch}"
+
 LAST_TAG=$(gh release view --json tagName --jq '.tagName')
-NEXT_TAG=$(echo "${LAST_TAG}" | awk -F. -v OFS=. 'NF==1{print ++$NF}; NF>1{$NF=$NF+1; print}')
-echo "Bumping from ${LAST_TAG} -> ${NEXT_TAG}"
+
+# Preserve an optional leading `v`, then split into major.minor.patch.
+prefix=""
+version="${LAST_TAG}"
+if [[ "${version}" == v* ]]; then
+  prefix="v"
+  version="${version#v}"
+fi
+IFS=. read -r major minor patch <<<"${version}"
+major="${major:-0}"
+minor="${minor:-0}"
+patch="${patch:-0}"
+
+case "${BUMP}" in
+  major) major=$((major + 1)); minor=0; patch=0 ;;
+  minor) minor=$((minor + 1)); patch=0 ;;
+  patch) patch=$((patch + 1)) ;;
+  *) echo "usage: release.sh [major|minor|patch]" >&2; exit 2 ;;
+esac
+
+NEXT_TAG="${prefix}${major}.${minor}.${patch}"
+echo "Bumping from ${LAST_TAG} -> ${NEXT_TAG} (${BUMP})"
 
 read -r -p "Push tag and create terraform provider release? [y/N] " response
 case "$response" in

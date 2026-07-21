@@ -169,7 +169,6 @@ func TestManagedClusterResourceCreatePollsUntilActive(t *testing.T) {
 				Config: managedClusterConfig(m.server.URL),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_managed_cluster.cluster", "id", "cluster-test-id"),
-					resource.TestCheckResourceAttr("chalk_managed_cluster.cluster", "name", "test-cluster"),
 					resource.TestCheckResourceAttr("chalk_managed_cluster.cluster", "vpc_id", "vpc-test-id"),
 					// status must not be persisted to state.
 					resource.TestCheckNoResourceAttr("chalk_managed_cluster.cluster", "status"),

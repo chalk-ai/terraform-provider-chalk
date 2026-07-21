@@ -84,7 +84,6 @@ func TestKubernetesClusterResourceCreateRead(t *testing.T) {
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "kind", "EKS_STANDARD"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "cloud_credential_id", "cc-test-id"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "dns_zone", "example.com"),
-					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "team_id", "team-test-id"),
 					func(s *terraform.State) error {
 						reqs := server.GetCapturedRequests("CreateCloudComponentCluster")
 						require.Len(t, reqs, 1)

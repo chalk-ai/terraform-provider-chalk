@@ -44,14 +44,7 @@ resource "chalk_managed_cloud_storage" "datasets" {
 
 ### Read-Only
 
-- `applied_at` (String) RFC3339 timestamp at which the storage was last applied, if any.
-- `created_at` (String) RFC3339 timestamp at which the storage was created.
-- `designator` (String) Server-assigned designator. Only populated for managed storages.
 - `id` (String) Cloud storage identifier.
-- `managed` (Boolean) Whether the storage is managed by Chalk. Determined by the resource type.
-- `name` (String) Cloud storage name. Set by the server to the storage `uri`.
-- `team_id` (String) ID of the team that owns the storage.
-- `updated_at` (String) RFC3339 timestamp at which the storage was last updated.
 - `uri` (String) URI of the managed bucket. Derived and set by Chalk.
 
 ## Import

@@ -31,10 +31,7 @@ Chalk managed Kubernetes cluster resource. Creates a fully managed cluster using
 
 ### Read-Only
 
-- `designator` (String) Cluster designator
 - `id` (String) Cluster identifier
-- `kind` (String) Cloud provider kind (e.g., 'EKS_STANDARD', 'EKS_AUTOPILOT', 'GKE_STANDARD', 'GKE_AUTOPILOT')
-- `name` (String) Cluster name
 
 <a id="nestedatt--data_plane_controller"></a>
 ### Nested Schema for `data_plane_controller`

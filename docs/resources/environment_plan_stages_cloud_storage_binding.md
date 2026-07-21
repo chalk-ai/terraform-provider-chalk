@@ -41,9 +41,7 @@ resource "chalk_environment_plan_stages_cloud_storage_binding" "example" {
 
 ### Read-Only
 
-- `created_at` (String) RFC3339 timestamp at which the binding was created.
 - `id` (String) Binding identifier.
-- `updated_at` (String) RFC3339 timestamp at which the binding was last updated.
 
 ## Import
 

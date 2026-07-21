@@ -29,7 +29,7 @@ func testStorageResponse(managed bool, uri string) *serverv1.CloudComponentStora
 	}
 }
 
-// TestUnmanagedCloudStorageCreate verifies the create/read lifecycle and computed fields.
+// TestUnmanagedCloudStorageCreate verifies the create/read lifecycle.
 func TestUnmanagedCloudStorageCreate(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
@@ -53,12 +53,9 @@ resource "chalk_unmanaged_cloud_storage" "test" {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "uri", "s3://my-bucket/prefix"),
 					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "cloud_credential_id", "cred-1"),
-					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "managed", "false"),
 					// kind is inferred/echoed by the server.
 					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "kind", "s3"),
 					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "id", "storage-id-1"),
-					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "name", "s3://my-bucket/prefix"),
-					resource.TestCheckResourceAttr("chalk_unmanaged_cloud_storage.test", "team_id", "team-1"),
 				),
 			},
 			{
@@ -95,8 +92,8 @@ resource "chalk_unmanaged_cloud_storage" "test" {
 	})
 }
 
-// TestManagedCloudStorageCreate verifies the managed resource: no uri input, uri is
-// computed, managed is true.
+// TestManagedCloudStorageCreate verifies the managed resource: no uri input; uri is
+// computed and set by the server.
 func TestManagedCloudStorageCreate(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
@@ -118,10 +115,9 @@ resource "chalk_managed_cloud_storage" "test" {
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "cloud_credential_id", "cred-1"),
-					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "managed", "true"),
+					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "id", "storage-id-1"),
 					// uri is derived and set by the server.
 					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "uri", "s3://chalk-managed/abc"),
-					resource.TestCheckResourceAttr("chalk_managed_cloud_storage.test", "id", "storage-id-1"),
 				),
 			},
 		},

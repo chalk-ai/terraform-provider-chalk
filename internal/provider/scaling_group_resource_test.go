@@ -26,6 +26,7 @@ func setupMockScalingGroupServer(t *testing.T) *testserver.MockServer {
 			Id:     "sg-test-id",
 			Name:   createReq.Spec.ContainerSpec.Name,
 			Status: "Running",
+			WebUrl: new("https://sg-test-id.example.com"),
 			Spec:   createReq.Spec,
 		}
 		return &scalinggroupv1.CreateScalingGroupResponse{ScalingGroup: current}, nil
@@ -72,7 +73,7 @@ func TestScalingGroupResourceCreate(t *testing.T) {
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "id", "sg-test-id"),
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "name", name),
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "environment_id", "test-env-id"),
-					resource.TestCheckResourceAttr("chalk_scaling_group.test", "status", "Running"),
+					resource.TestCheckResourceAttr("chalk_scaling_group.test", "web_url", "https://sg-test-id.example.com"),
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "container_spec.image", "my-image:latest"),
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "scaling_spec.min_replicas", "1"),
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "scaling_spec.max_replicas", "3"),

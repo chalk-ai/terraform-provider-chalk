@@ -29,4 +29,3 @@ Chalk project resource
 ### Read-Only
 
 - `id` (String) Project identifier
-- `team_id` (String) Team ID

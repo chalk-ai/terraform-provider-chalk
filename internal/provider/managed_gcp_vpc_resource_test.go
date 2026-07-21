@@ -97,7 +97,6 @@ func TestManagedGCPVPCResourceCreate(t *testing.T) {
 				Config: providerConfig(server.URL) + managedGCPVPCHCL,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_managed_gcp_vpc.vpc", "id", "gcp-vpc-test-id"),
-					resource.TestCheckResourceAttr("chalk_managed_gcp_vpc.vpc", "name", "test-gcp-vpc"),
 					resource.TestCheckResourceAttr("chalk_managed_gcp_vpc.vpc", "vpc_peer_addr", "10.0.0.0/16"),
 					resource.TestCheckResourceAttr("chalk_managed_gcp_vpc.vpc", "subnets.0.name", "primary"),
 					resource.TestCheckResourceAttr("chalk_managed_gcp_vpc.vpc", "subnets.0.purpose", "PRIVATE"),

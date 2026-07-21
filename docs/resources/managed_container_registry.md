@@ -39,15 +39,8 @@ resource "chalk_managed_container_registry" "ecr" {
 
 ### Read-Only
 
-- `applied_at` (String) RFC3339 timestamp at which the registry was last applied, if any.
-- `created_at` (String) RFC3339 timestamp at which the registry was created.
-- `designator` (String) Server-assigned designator. Only populated for managed registries.
 - `id` (String) Cloud container registry identifier.
-- `kind` (String) Container registry kind (e.g. `gar`, `ecr`, `acr`). Derived by the server from `name`.
-- `managed` (Boolean) Whether the registry is managed by Chalk. Determined by the resource type.
 - `name` (String) Fully-qualified registry path. Derived and set by Chalk.
-- `team_id` (String) ID of the team that owns the registry.
-- `updated_at` (String) RFC3339 timestamp at which the registry was last updated.
 
 ## Import
 
