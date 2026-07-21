@@ -38,6 +38,7 @@ type ScalingGroupResourceModel struct {
 	Id            types.String        `tfsdk:"id"`
 	Name          types.String        `tfsdk:"name"`
 	EnvironmentId types.String        `tfsdk:"environment_id"`
+	WebURL        types.String        `tfsdk:"web_url"`
 	ContainerSpec *ContainerSpecModel `tfsdk:"container_spec"`
 	ScalingSpec   *ScalingSpecModel   `tfsdk:"scaling_spec"`
 }
@@ -113,6 +114,11 @@ func (r *ScalingGroupResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "The environment ID that this scaling group is scoped to.",
 				Required:            true,
 				PlanModifiers:       requiresReplaceString,
+			},
+			"web_url": schema.StringAttribute{
+				MarkdownDescription: "Web URL to access the scaling group.",
+				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"container_spec": schema.SingleNestedAttribute{
 				MarkdownDescription: "Container specification describing what to run in each replica.",
@@ -447,6 +453,7 @@ func updateScalingGroupState(ctx context.Context, data *ScalingGroupResourceMode
 	var diags diag.Diagnostics
 	data.Id = types.StringValue(sg.Id)
 	data.Name = types.StringValue(sg.Name)
+	data.WebURL = optionalStringValue(sg.GetWebUrl())
 	if sg.Spec != nil {
 		cs, d := containerSpecModelFromProto(sg.Spec.ContainerSpec)
 		diags.Append(d...)

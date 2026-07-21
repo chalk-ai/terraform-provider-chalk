@@ -3,11 +3,9 @@ set -euo pipefail
 
 # Bump level: major | minor | patch (default: patch).
 #
-# Use `major` for any release that removes or renames public resource
-# attributes, or otherwise breaks existing configurations. Patch and minor
-# releases are picked up automatically by users pinned with `~>`, so a breaking
-# change MUST bump the major version.
-# https://developer.hashicorp.com/terraform/plugin/framework/deprecations#provider-attribute-removal
+# Pick per semver: patch for fixes, minor for backward-compatible changes,
+# major for backward-incompatible ones. Releases are picked up automatically by
+# users pinned with `~>`.
 BUMP="${1:-patch}"
 
 LAST_TAG=$(gh release view --json tagName --jq '.tagName')
