@@ -15,3 +15,7 @@ import (
 
 // Generate documentation.
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-dir .. --provider-name chalk
+
+// Generate the provider schema and permissions changelog. This must run after
+// tfplugindocs, which removes guide files that do not have templates.
+//go:generate go run ../tools/genchangelog --provider-dir ..

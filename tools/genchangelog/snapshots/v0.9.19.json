@@ -1,0 +1,3767 @@
+{
+  "format_version": 1,
+  "version": "v0.9.19",
+  "resources": {
+    "chalk_aws_cloud_credentials": {
+      "schema": {
+        "aws_account_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "aws_external_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "aws_management_role_arn": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "aws_region": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "docker_build_config": {
+          "kind": "block",
+          "nesting_mode": "list",
+          "children": {
+            "builder": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "notification_topic": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "push_registry_tag_prefix": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "push_registry_type": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "registry_credentials_secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            }
+          }
+        },
+        "gcp_workload_identity": {
+          "kind": "block",
+          "nesting_mode": "list",
+          "children": {
+            "pool_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "project_number": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "provider_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "service_account": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_azure_cloud_credentials": {
+      "schema": {
+        "container_registry_config": {
+          "kind": "block",
+          "nesting_mode": "list",
+          "children": {
+            "registry_name": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "docker_build_config": {
+          "kind": "block",
+          "nesting_mode": "list",
+          "children": {
+            "builder": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "notification_topic": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "push_registry_tag_prefix": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "push_registry_type": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "registry_credentials_secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            }
+          }
+        },
+        "gcp_workload_identity": {
+          "kind": "block",
+          "nesting_mode": "list",
+          "children": {
+            "pool_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "project_number": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "provider_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "service_account": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "key_vault_config": {
+          "kind": "block",
+          "nesting_mode": "list",
+          "children": {
+            "vault_name": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "region": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "resource_group": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "subscription_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "tenant_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_cluster_background_persistence": {
+      "schema": {
+        "api_server_host": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bigquery_parquet_upload_subscription_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bigquery_streaming_write_subscription_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bigquery_streaming_write_topic": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bq_upload_bucket": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bq_upload_topic": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bus_writer_image_bswl": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bus_writer_image_go": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bus_writer_image_python": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bus_writer_image_rust": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "google_cloud_project": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "kafka_bootstrap_servers": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "kafka_dlq_topic": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "kafka_sasl_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "kube_cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "metrics_bus_subscription_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "metrics_bus_topic_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "operation_subscription_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "query_log_result_topic": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "query_log_subscription_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "redis_lightning_supports_has_many": {
+          "kind": "attribute",
+          "type": "bool",
+          "optional": true,
+          "computed": true
+        },
+        "result_bus_offline_store_subscription_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "result_bus_online_store_subscription_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "result_bus_topic_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "service_account_name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "snowflake_storage_integration_name": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "writers": {
+          "kind": "attribute",
+          "nesting_mode": "list",
+          "required": true,
+          "children": {
+            "bus_subscriber_type": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "default_replica_count": {
+              "kind": "attribute",
+              "type": "number",
+              "optional": true,
+              "computed": true
+            },
+            "gke_spot": {
+              "kind": "attribute",
+              "type": "bool",
+              "optional": true,
+              "computed": true
+            },
+            "hpa_specs": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "hpa_max_replicas": {
+                  "kind": "attribute",
+                  "type": "number",
+                  "optional": true,
+                  "computed": true
+                },
+                "hpa_min_replicas": {
+                  "kind": "attribute",
+                  "type": "number",
+                  "optional": true,
+                  "computed": true
+                },
+                "hpa_pubsub_subscription_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "hpa_target_average_value": {
+                  "kind": "attribute",
+                  "type": "number",
+                  "optional": true,
+                  "computed": true
+                }
+              }
+            },
+            "image_override": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "kafka_consumer_group_override": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "limit": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "cpu": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "ephemeral_storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "memory": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            },
+            "load_writer_configmap": {
+              "kind": "attribute",
+              "type": "bool",
+              "optional": true,
+              "computed": true
+            },
+            "max_batch_size": {
+              "kind": "attribute",
+              "type": "number",
+              "optional": true
+            },
+            "message_processing_concurrency": {
+              "kind": "attribute",
+              "type": "number",
+              "optional": true
+            },
+            "metadata_sql_ssl_ca_cert_secret": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "metadata_sql_ssl_client_cert_secret": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "metadata_sql_ssl_client_key_secret": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "metadata_sql_uri_secret": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "name": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "offline_store_inserter_db_type": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "query_table_write_drop_ratio": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "computed": true
+            },
+            "request": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "cpu": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "ephemeral_storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "memory": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            },
+            "results_writer_skip_producing_feature_metrics": {
+              "kind": "attribute",
+              "type": "bool",
+              "optional": true,
+              "computed": true
+            },
+            "storage_cache_prefix": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "version": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "deploy.read"
+        },
+        {
+          "name": "team.admin"
+        }
+      ]
+    },
+    "chalk_cluster_background_persistence_deployment_binding": {
+      "schema": {
+        "background_persistence_deployment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_cluster_gateway": {
+      "schema": {
+        "additional_dns_names": {
+          "kind": "attribute",
+          "type": [
+            "list",
+            "string"
+          ],
+          "optional": true
+        },
+        "allow_collocation_with_chalk_workloads": {
+          "kind": "attribute",
+          "type": "bool",
+          "optional": true
+        },
+        "dns_hostname": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "gateway_class_name": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "gateway_name": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "ip_allowlist": {
+          "kind": "attribute",
+          "type": [
+            "list",
+            "string"
+          ],
+          "optional": true
+        },
+        "kube_cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "letsencrypt_cluster_issuer": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "listeners": {
+          "kind": "attribute",
+          "nesting_mode": "list",
+          "optional": true,
+          "children": {
+            "from": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "computed": true
+            },
+            "name": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "port": {
+              "kind": "attribute",
+              "type": "number",
+              "required": true
+            },
+            "protocol": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            }
+          }
+        },
+        "min_available": {
+          "kind": "attribute",
+          "type": "number",
+          "optional": true,
+          "computed": true
+        },
+        "namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "nodepool": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "replicas": {
+          "kind": "attribute",
+          "type": "number",
+          "optional": true,
+          "computed": true
+        },
+        "routing": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "service_annotations": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "optional": true
+        },
+        "timeout_duration": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "tls_certificate": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "secret_name": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "secret_namespace": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "deploy.read"
+        },
+        {
+          "name": "team.admin"
+        }
+      ]
+    },
+    "chalk_cluster_gateway_binding": {
+      "schema": {
+        "cluster_gateway_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_cluster_timescale": {
+      "schema": {
+        "backup_bucket": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "backup_gcp_service_account": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "backup_iam_role_arn": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bootstrap_cloud_resources": {
+          "kind": "attribute",
+          "type": "bool",
+          "optional": true,
+          "computed": true
+        },
+        "connection_pool_max_connections": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "connection_pool_replicas": {
+          "kind": "attribute",
+          "type": "number",
+          "optional": true,
+          "computed": true
+        },
+        "connection_pool_size": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "database_name": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "database_replicas": {
+          "kind": "attribute",
+          "type": "number",
+          "optional": true,
+          "computed": true
+        },
+        "dns_hostname": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "gateway_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "gateway_port": {
+          "kind": "attribute",
+          "type": "number",
+          "optional": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "instance_type": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "internal": {
+          "kind": "attribute",
+          "type": "bool",
+          "optional": true,
+          "computed": true
+        },
+        "ip_allowlist": {
+          "kind": "attribute",
+          "type": [
+            "list",
+            "string"
+          ],
+          "optional": true
+        },
+        "namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "node_selector": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "optional": true
+        },
+        "nodepool": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "postgres_parameters": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "optional": true,
+          "computed": true
+        },
+        "request": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "computed": true,
+          "children": {
+            "cpu": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "ephemeral_storage": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "memory": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "storage": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "secret_name": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "service_type": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "storage": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "storage_class": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "timescale_image": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "deploy.read"
+        },
+        {
+          "name": "team.admin"
+        }
+      ]
+    },
+    "chalk_datasource": {
+      "schema": {
+        "config": {
+          "kind": "attribute",
+          "nesting_mode": "map",
+          "required": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "kind": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "secrets.decrypt"
+        },
+        {
+          "name": "secrets.write"
+        }
+      ]
+    },
+    "chalk_datasource_databricks": {
+      "schema": {
+        "access_token": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "client_id": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "client_secret": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "config": {
+          "kind": "attribute",
+          "nesting_mode": "map",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "database": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "host": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "http_path": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "port": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "secrets.decrypt"
+        },
+        {
+          "name": "secrets.write"
+        }
+      ]
+    },
+    "chalk_datasource_kafka": {
+      "schema": {
+        "additional_kafka_args": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "aws_region": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "aws_role_arn": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "bootstrap_server": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "required": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "client_id_prefix": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "config": {
+          "kind": "attribute",
+          "nesting_mode": "map",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "dlq_topic": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "group_id_prefix": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "msk_iam_auth": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "sasl_mechanism": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "sasl_password": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "sasl_username": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "security_protocol": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "ssl_ca_file": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "topic": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "required": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "secrets.decrypt"
+        },
+        {
+          "name": "secrets.write"
+        }
+      ]
+    },
+    "chalk_datasource_kinesis": {
+      "schema": {
+        "aws_access_key_id": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "aws_secret_access_key": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "aws_session_token": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "config": {
+          "kind": "attribute",
+          "nesting_mode": "map",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "consumer_role_arn": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "dead_letter_queue_stream_name": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "endpoint_url": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "enhanced_fanout_consumer_name": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "late_arrival_deadline": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "region_name": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "required": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "stream_arn": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "stream_name": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "secrets.decrypt"
+        },
+        {
+          "name": "secrets.write"
+        }
+      ]
+    },
+    "chalk_datasource_postgresql": {
+      "schema": {
+        "config": {
+          "kind": "attribute",
+          "nesting_mode": "map",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "database": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "required": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "host": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "required": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "password": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "port": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "required": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "user": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "required": true,
+          "children": {
+            "literal": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            },
+            "secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "secrets.decrypt"
+        },
+        {
+          "name": "secrets.write"
+        }
+      ]
+    },
+    "chalk_environment": {
+      "schema": {
+        "additional_env_vars": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "optional": true
+        },
+        "branch_url": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "engine_docker_registry_path": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "environment_buckets": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "dataset_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "model_registry_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "plan_stages_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "source_bundle_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "feature_store_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "sensitive": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "kube_cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "kube_job_namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "kube_service_account_name": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "managed": {
+          "kind": "attribute",
+          "type": "bool",
+          "optional": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "online_store_kind": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "online_store_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "sensitive": true
+        },
+        "private_pip_repositories": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "project_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "service_url": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "source_bundle_bucket": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "specs_config_json": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "worker_url": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "deploy.create"
+        },
+        {
+          "name": "deploy.read"
+        },
+        {
+          "name": "environment.create",
+          "team_scoped": true
+        },
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_environment_background_persistence_deployment_binding": {
+      "schema": {
+        "background_persistence_deployment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_environment_gateway_binding": {
+      "schema": {
+        "cluster_gateway_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_environment_offline_store_connection_binding": {
+      "schema": {
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "offline_store_connection_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "deploy.create"
+        },
+        {
+          "name": "deploy.read"
+        }
+      ]
+    },
+    "chalk_gcp_cloud_credentials": {
+      "schema": {
+        "docker_build_config": {
+          "kind": "block",
+          "nesting_mode": "list",
+          "children": {
+            "builder": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "notification_topic": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "push_registry_tag_prefix": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "push_registry_type": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "registry_credentials_secret_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "sensitive": true
+            }
+          }
+        },
+        "gcp_management_service_account": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "gcp_project_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "gcp_region": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_kubernetes_cluster": {
+      "schema": {
+        "cloud_credential_id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "dns_zone": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "kind": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "team_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_managed_aws_vpc": {
+      "schema": {
+        "additional_cidr_blocks": {
+          "kind": "attribute",
+          "type": [
+            "list",
+            "string"
+          ],
+          "optional": true
+        },
+        "additional_private_routes": {
+          "kind": "attribute",
+          "nesting_mode": "list",
+          "optional": true,
+          "children": {
+            "destination_cidr_block": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "name": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "peer_id": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            }
+          }
+        },
+        "additional_public_routes": {
+          "kind": "attribute",
+          "nesting_mode": "list",
+          "optional": true,
+          "children": {
+            "destination_cidr_block": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "name": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "peer_id": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            }
+          }
+        },
+        "cidr_block": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "cloud_credential_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "designator": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "subnets": {
+          "kind": "attribute",
+          "nesting_mode": "list",
+          "required": true,
+          "children": {
+            "availability_zone": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "name": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "private_cidr_block": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "public_cidr_block": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        },
+        {
+          "name": "team.admin"
+        }
+      ]
+    },
+    "chalk_managed_azure_vpc": {},
+    "chalk_managed_cluster": {
+      "schema": {
+        "cloud_credential_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "designator": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "kind": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "vpc_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_managed_environment": {
+      "schema": {
+        "additional_env_vars": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "optional": true
+        },
+        "customer_metadata": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "default_build_profile": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "engine_docker_registry_path": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "environment_buckets": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "dataset_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "model_registry_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "plan_stages_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "source_bundle_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "kube_cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "kube_job_namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "online_store_kind": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "online_store_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "sensitive": true
+        },
+        "pinned_base_image": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "private_pip_repositories": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "project_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "service_url": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "specs_config_json": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "environment.create",
+          "team_scoped": true
+        }
+      ]
+    },
+    "chalk_managed_gcp_vpc": {},
+    "chalk_offline_store_connection": {
+      "schema": {
+        "bigquery": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "dataset_id": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "project_id": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            }
+          }
+        },
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "iceberg": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "glue_s3": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "required": true,
+              "children": {
+                "glue_database_name": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "s3_bucket": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                }
+              }
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "snowflake": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "credentials": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "required": true,
+              "children": {
+                "account": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "database": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "password": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true,
+                  "sensitive": true
+                },
+                "private_key": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true,
+                  "sensitive": true
+                },
+                "role": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "schema": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "username": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "warehouse": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "deploy.create"
+        },
+        {
+          "name": "deploy.read"
+        }
+      ]
+    },
+    "chalk_private_gateway_binding": {
+      "schema": {
+        "cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "private_gateway_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_project": {
+      "schema": {
+        "git_repo": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "team_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create",
+          "team_scoped": true
+        }
+      ]
+    },
+    "chalk_service_token": {
+      "schema": {
+        "client_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "client_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true,
+          "sensitive": true
+        },
+        "custom_claims": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "optional": true
+        },
+        "default_permission": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "feature_tag_to_permission": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "optional": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "permissions": {
+          "kind": "attribute",
+          "type": [
+            "list",
+            "string"
+          ],
+          "optional": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "tokens.list"
+        },
+        {
+          "name": "tokens.write"
+        }
+      ]
+    },
+    "chalk_telemetry": {
+      "schema": {
+        "aggregator_spec": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "computed": true,
+          "children": {
+            "image_version": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "request": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "cpu": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "ephemeral_storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "memory": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            }
+          }
+        },
+        "clickhouse_deployment_spec": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "computed": true,
+          "children": {
+            "gateway_id": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "limit": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "cpu": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "ephemeral_storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "memory": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            },
+            "request": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "cpu": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "ephemeral_storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "memory": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            },
+            "storage": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage_class_name": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            },
+            "version": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "kube_cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "otel_collector_spec": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "computed": true,
+          "children": {
+            "limit": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "cpu": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "ephemeral_storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "memory": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            },
+            "request": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "cpu": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "ephemeral_storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "memory": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            },
+            "version": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "deploy.read"
+        },
+        {
+          "name": "team.admin"
+        }
+      ]
+    },
+    "chalk_telemetry_binding": {
+      "schema": {
+        "cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "telemetry_deployment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "project.create"
+        }
+      ]
+    },
+    "chalk_unmanaged_cluster_background_persistence": {
+      "schema": {
+        "api_server_host": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "bus_writer_image_bswl": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bus_writer_image_go": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bus_writer_image_python": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "bus_writer_image_rust": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "google_pubsub": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "metrics_bus": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "required": true,
+              "children": {
+                "subscription_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "topic_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                }
+              }
+            },
+            "offline_store_streaming_write_bus": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "required": true,
+              "children": {
+                "subscription_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "topic_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                }
+              }
+            },
+            "offline_store_upload_bus": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "required": true,
+              "children": {
+                "subscription_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "topic_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                }
+              }
+            },
+            "result_bus": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "required": true,
+              "children": {
+                "offline_store_subscription_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "online_store_subscription_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "topic_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                }
+              }
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "kafka": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "bootstrap_servers": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "computed": true
+            },
+            "dlq_topic": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "metrics_bus_topic_id": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "offline_store_bus_streaming_write_topic_id": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "offline_store_bus_upload_topic_id": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "result_bus_topic_id": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "sasl_mechanism": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "sasl_secret": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "computed": true
+            },
+            "security_protocol": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "kube_cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "offline_store_snowflake_storage_integration_name": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "offline_store_upload_bucket_name": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "service_account_name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "writers": {
+          "kind": "attribute",
+          "nesting_mode": "list",
+          "required": true,
+          "children": {
+            "bus_subscriber_type": {
+              "kind": "attribute",
+              "type": "string",
+              "required": true
+            },
+            "default_replica_count": {
+              "kind": "attribute",
+              "type": "number",
+              "optional": true,
+              "computed": true
+            },
+            "gke_spot": {
+              "kind": "attribute",
+              "type": "bool",
+              "optional": true,
+              "computed": true
+            },
+            "hpa_specs": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "hpa_max_replicas": {
+                  "kind": "attribute",
+                  "type": "number",
+                  "optional": true,
+                  "computed": true
+                },
+                "hpa_min_replicas": {
+                  "kind": "attribute",
+                  "type": "number",
+                  "optional": true,
+                  "computed": true
+                },
+                "hpa_pubsub_subscription_id": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "required": true
+                },
+                "hpa_target_average_value": {
+                  "kind": "attribute",
+                  "type": "number",
+                  "optional": true,
+                  "computed": true
+                }
+              }
+            },
+            "image_override": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "kafka_consumer_group_override": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "limit": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "cpu": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "ephemeral_storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "memory": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            },
+            "load_writer_configmap": {
+              "kind": "attribute",
+              "type": "bool",
+              "optional": true,
+              "computed": true
+            },
+            "max_batch_size": {
+              "kind": "attribute",
+              "type": "number",
+              "optional": true
+            },
+            "message_processing_concurrency": {
+              "kind": "attribute",
+              "type": "number",
+              "optional": true
+            },
+            "metadata_sql_ssl_ca_cert_secret": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "metadata_sql_ssl_client_cert_secret": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "metadata_sql_ssl_client_key_secret": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "metadata_sql_uri_secret": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "name": {
+              "kind": "attribute",
+              "type": "string",
+              "computed": true
+            },
+            "offline_store_inserter_db_type": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "query_table_write_drop_ratio": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true,
+              "computed": true
+            },
+            "request": {
+              "kind": "attribute",
+              "nesting_mode": "single",
+              "optional": true,
+              "children": {
+                "cpu": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "ephemeral_storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "memory": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                },
+                "storage": {
+                  "kind": "attribute",
+                  "type": "string",
+                  "optional": true
+                }
+              }
+            },
+            "results_writer_skip_producing_feature_metrics": {
+              "kind": "attribute",
+              "type": "bool",
+              "optional": true,
+              "computed": true
+            },
+            "storage_cache_prefix": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "version": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        }
+      },
+      "permissions": [
+        {
+          "name": "deploy.read"
+        },
+        {
+          "name": "team.admin"
+        }
+      ]
+    },
+    "chalk_unmanaged_environment": {
+      "schema": {
+        "additional_env_vars": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "optional": true
+        },
+        "customer_metadata": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "default_build_profile": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "engine_docker_registry_path": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "environment_buckets": {
+          "kind": "attribute",
+          "nesting_mode": "single",
+          "optional": true,
+          "children": {
+            "dataset_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "model_registry_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "plan_stages_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            },
+            "source_bundle_bucket": {
+              "kind": "attribute",
+              "type": "string",
+              "optional": true
+            }
+          }
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "kube_cluster_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "kube_cluster_mode": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "kube_job_namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "kube_service_account_name": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "online_store_kind": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "online_store_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "sensitive": true
+        },
+        "pinned_base_image": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "private_pip_repositories": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true
+        },
+        "project_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "service_url": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        },
+        "specs_config_json": {
+          "kind": "attribute",
+          "type": "string",
+          "optional": true,
+          "computed": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "environment.create",
+          "team_scoped": true
+        }
+      ]
+    }
+  },
+  "data_sources": {
+    "chalk_environment": {
+      "schema": {
+        "active_deployment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "additional_cron_env_vars": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "computed": true
+        },
+        "additional_env_vars": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "computed": true
+        },
+        "archived_at": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "background_persistence_deployment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "bigtable_instance_name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "bigtable_table_name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "branch_kube_cluster_name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "branch_url": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "cloud_account_locator": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "cloud_config": {
+          "kind": "attribute",
+          "type": [
+            "object",
+            {
+              "aws": [
+                "object",
+                {
+                  "account_id": "string",
+                  "external_id": "string",
+                  "management_role_arn": "string",
+                  "region": "string"
+                }
+              ],
+              "gcp": [
+                "object",
+                {
+                  "management_service_account": "string",
+                  "project_id": "string",
+                  "region": "string"
+                }
+              ]
+            }
+          ],
+          "computed": true
+        },
+        "cloud_provider": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "cloud_region": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "cloud_tenancy_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "cluster_gateway_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "cluster_timescaledb_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "cluster_timescaledb_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "dashboard_url": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "default_planner": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "emq_uri": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "engine_docker_registry_path": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "engine_kube_cluster_name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "environment_buckets": {
+          "kind": "attribute",
+          "type": [
+            "object",
+            {
+              "dataset_bucket": "string",
+              "model_registry_bucket": "string",
+              "plan_stages_bucket": "string",
+              "source_bundle_bucket": "string"
+            }
+          ],
+          "computed": true
+        },
+        "feature_store_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "grpc_engine_url": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "is_sandbox": {
+          "kind": "attribute",
+          "type": "bool",
+          "computed": true
+        },
+        "kube_cluster_mode": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "kube_cluster_name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "kube_job_namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "kube_preview_namespace": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "kube_service_account_name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "metadata_server_metrics_store_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "metrics_bus_topic": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "offline_store_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "online_persistence_mode": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "online_store_kind": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "online_store_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "pinned_base_image": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "postgres_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "private_pip_repositories": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "project_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "query_server_metrics_store_secret": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "result_bus_topic": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "service_url": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "shadow_engine_kube_cluster_name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "skip_offline_writes_for_online_cached_features": {
+          "kind": "attribute",
+          "type": "bool",
+          "computed": true
+        },
+        "source_bundle_bucket": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "spec_config_json": {
+          "kind": "attribute",
+          "type": [
+            "map",
+            "string"
+          ],
+          "computed": true
+        },
+        "streaming_query_service_uri": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "team_id": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "vpc_connector_name": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "worker_url": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        }
+      },
+      "permissions": [
+        {
+          "name": "deploy.read"
+        }
+      ]
+    },
+    "chalk_offline_store_connection_test": {
+      "schema": {
+        "environment_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "error_message": {
+          "kind": "attribute",
+          "type": "string",
+          "computed": true
+        },
+        "offline_store_connection_id": {
+          "kind": "attribute",
+          "type": "string",
+          "required": true
+        },
+        "success": {
+          "kind": "attribute",
+          "type": "bool",
+          "computed": true
+        }
+      }
+    }
+  }
+}

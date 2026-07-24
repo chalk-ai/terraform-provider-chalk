@@ -67,7 +67,7 @@ steps:
       export PATH="$$TERRAFORM_DIR:$$PATH"
 
       echo "--- :golang: Running tests"
-      go run gotest.tools/gotestsum --format testname -- ./internal/provider/... -shuffle=on -count=1 -timeout 5m
+      go run gotest.tools/gotestsum --format testname -- ./internal/provider/... ./tools/... -shuffle=on -count=1 -timeout 5m
 
       echo "--- :terraform: Checking for docs drift"
       go generate ./tools/...
