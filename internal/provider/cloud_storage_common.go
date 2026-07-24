@@ -68,6 +68,7 @@ type cloudStorageResourceModel struct {
 func cloudStorageSchema(managed bool) schema.Schema {
 	var markdown string
 	var uriAttr schema.StringAttribute
+	var credAttr schema.StringAttribute
 	if managed {
 		markdown = "Registers a Chalk-managed cloud storage: Chalk owns the bucket and derives its `uri`, so you only supply the cloud credential.\n\n" +
 			"Every attribute is replace-only (there is no update RPC). **Create-time bucket access check:** creating this resource performs a live access check using the referenced `cloud_credential_id`; apply fails unless that credential can reach the storage, so the credential must exist first."
@@ -77,6 +78,11 @@ func cloudStorageSchema(managed bool) schema.Schema {
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
 			},
+		}
+		credAttr = schema.StringAttribute{
+			MarkdownDescription: "ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the storage. Changing this forces a new resource.",
+			Required:            true,
+			PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 		}
 	} else {
 		markdown = "Registers a reference to an existing (unmanaged) cloud storage bucket plus the cloud credential used to reach it. Chalk does not provision the bucket.\n\n" +
@@ -89,6 +95,13 @@ func cloudStorageSchema(managed bool) schema.Schema {
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
+		}
+		credAttr = schema.StringAttribute{
+			MarkdownDescription: "ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the bucket. " +
+				"Optional for unmanaged storage: omit it when the bucket is reached via workload identity / instance IAM rather than an explicit Chalk credential (an imported bucket with no credential reads back null). " +
+				"Changing this forces a new resource.",
+			Optional:      true,
+			PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 		}
 	}
 
@@ -113,12 +126,8 @@ func cloudStorageSchema(managed bool) schema.Schema {
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"uri": uriAttr,
-			"cloud_credential_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the bucket. Changing this forces a new resource.",
-				Required:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
-			},
+			"uri":                 uriAttr,
+			"cloud_credential_id": credAttr,
 		},
 	}
 }

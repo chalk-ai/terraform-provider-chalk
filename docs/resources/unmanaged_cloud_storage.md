@@ -37,11 +37,11 @@ resource "chalk_unmanaged_cloud_storage" "datasets" {
 
 ### Required
 
-- `cloud_credential_id` (String) ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the bucket. Changing this forces a new resource.
 - `uri` (String) URI of the existing bucket (and optional path prefix), e.g. `s3://bucket/prefix`, `gs://bucket/prefix`, or `abfs://<account>.blob.core.windows.net/<container>[/path]`. When `kind` is set, the scheme must match it. Changing this forces a new resource.
 
 ### Optional
 
+- `cloud_credential_id` (String) ID of the cloud credential (e.g. a `chalk_aws_cloud_credentials`/`chalk_gcp_cloud_credentials`/`chalk_azure_cloud_credentials` resource) used to access the bucket. Optional for unmanaged storage: omit it when the bucket is reached via workload identity / instance IAM rather than an explicit Chalk credential (an imported bucket with no credential reads back null). Changing this forces a new resource.
 - `kind` (String) Cloud storage kind. One of `gcs`, `s3`, or `abs` (Azure Blob Storage). Optional: when omitted, Chalk infers it from the cloud credential. Changing this forces a new resource.
 
 ### Read-Only
