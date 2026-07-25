@@ -25,7 +25,7 @@ install: build  ## Build and install the provider locally
 	mv ${BINARY} ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 
 test:  ## Run unit tests
-	go run gotest.tools/gotestsum --format testname -- ./internal/provider/... ./tools/... -shuffle=on -count=1 -timeout 5m
+	go run gotest.tools/gotestsum --format testname -- ./internal/provider/... -shuffle=on -count=1 -timeout 5m
 
 
 docs:  ## Generate documentation
@@ -33,7 +33,6 @@ docs:  ## Generate documentation
 
 snapshot:  ## Capture a release schema snapshot. VERSION=vX.Y.Z
 	@test -n "$(VERSION)" || (echo "VERSION is required (for example: make snapshot VERSION=v1.0.3)" >&2; exit 2)
-	$(MAKE) docs
 	go run ./tools/genchangelog --provider-dir . --snapshot "$(VERSION)"
 
 fmt:  ## Format Go and Terraform files

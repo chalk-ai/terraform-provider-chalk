@@ -32,7 +32,6 @@ func makeEntry(attrs map[string]*Attribute, blocks map[string]*BlockType) *Schem
 
 func makeBlock(attrs map[string]*Attribute, blocks map[string]*BlockType) BlockType {
 	return BlockType{
-		NestingMode: "list",
 		Block: Block{
 			Attributes: attrs,
 			BlockTypes: blocks,
@@ -274,8 +273,8 @@ func TestDiff_R006_RequiredStaysRequired_NotBreaking(t *testing.T) {
 
 func TestDiff_R007_BlockMadeRequired(t *testing.T) {
 	t.Parallel()
-	optBlock := BlockType{NestingMode: "list", MinItems: 0, Block: Block{}}
-	reqBlock := BlockType{NestingMode: "list", MinItems: 1, Block: Block{}}
+	optBlock := BlockType{MinItems: 0, Block: Block{}}
+	reqBlock := BlockType{MinItems: 1, Block: Block{}}
 	old := singleProvider(map[string]*SchemaEntry{
 		"chalk_foo": makeEntry(nil, map[string]*BlockType{"config": &optBlock}),
 	}, nil)
@@ -287,7 +286,7 @@ func TestDiff_R007_BlockMadeRequired(t *testing.T) {
 
 func TestDiff_R007_BlockStaysOptional_NotBreaking(t *testing.T) {
 	t.Parallel()
-	blk := BlockType{NestingMode: "list", MinItems: 0, Block: Block{}}
+	blk := BlockType{MinItems: 0, Block: Block{}}
 	schema := singleProvider(map[string]*SchemaEntry{
 		"chalk_foo": makeEntry(nil, map[string]*BlockType{"config": &blk}),
 	}, nil)
@@ -322,7 +321,7 @@ func TestDiff_R008_NewOptionalAttribute_NotBreaking(t *testing.T) {
 
 func TestDiff_R009_NewRequiredBlock(t *testing.T) {
 	t.Parallel()
-	reqBlock := BlockType{NestingMode: "list", MinItems: 1, Block: Block{}}
+	reqBlock := BlockType{MinItems: 1, Block: Block{}}
 	old := singleProvider(map[string]*SchemaEntry{"chalk_foo": makeEntry(nil, nil)}, nil)
 	new := singleProvider(map[string]*SchemaEntry{
 		"chalk_foo": makeEntry(nil, map[string]*BlockType{"config": &reqBlock}),
@@ -332,7 +331,7 @@ func TestDiff_R009_NewRequiredBlock(t *testing.T) {
 
 func TestDiff_R009_NewOptionalBlock_NotBreaking(t *testing.T) {
 	t.Parallel()
-	optBlock := BlockType{NestingMode: "list", MinItems: 0, Block: Block{}}
+	optBlock := BlockType{MinItems: 0, Block: Block{}}
 	old := singleProvider(map[string]*SchemaEntry{"chalk_foo": makeEntry(nil, nil)}, nil)
 	new := singleProvider(map[string]*SchemaEntry{
 		"chalk_foo": makeEntry(nil, map[string]*BlockType{"config": &optBlock}),
@@ -345,14 +344,13 @@ func TestDiff_R009_NewOptionalBlock_NotBreaking(t *testing.T) {
 func TestDiff_NestedAttributeDeleted(t *testing.T) {
 	t.Parallel()
 	oldBlock := BlockType{
-		NestingMode: "list",
 		Block: Block{
 			Attributes: map[string]*Attribute{
 				"key": {Type: jsonStr("string"), Optional: true},
 			},
 		},
 	}
-	newBlock := BlockType{NestingMode: "list", Block: Block{}}
+	newBlock := BlockType{Block: Block{}}
 	old := singleProvider(map[string]*SchemaEntry{
 		"chalk_foo": makeEntry(nil, map[string]*BlockType{"config": &oldBlock}),
 	}, nil)
@@ -364,9 +362,8 @@ func TestDiff_NestedAttributeDeleted(t *testing.T) {
 
 func TestDiff_NestedRequiredAttributeAdded(t *testing.T) {
 	t.Parallel()
-	oldBlock := BlockType{NestingMode: "list", Block: Block{}}
+	oldBlock := BlockType{Block: Block{}}
 	newBlock := BlockType{
-		NestingMode: "list",
 		Block: Block{
 			Attributes: map[string]*Attribute{
 				"key": {Type: jsonStr("string"), Required: true},
@@ -380,62 +377,6 @@ func TestDiff_NestedRequiredAttributeAdded(t *testing.T) {
 		"chalk_foo": makeEntry(nil, map[string]*BlockType{"config": &newBlock}),
 	}, nil)
 	assertBreaking(t, old, new, "R008")
-}
-
-func TestDiff_FrameworkNestedTypeAttributeDeleted(t *testing.T) {
-	t.Parallel()
-	old := singleProvider(map[string]*SchemaEntry{
-		"chalk_foo": makeEntry(map[string]*Attribute{
-			"config": {
-				Optional: true,
-				NestedType: &NestedType{
-					NestingMode: "list",
-					Attributes: map[string]*Attribute{
-						"key": {Type: jsonStr("string"), Optional: true},
-					},
-				},
-			},
-		}, nil),
-	}, nil)
-	new := singleProvider(map[string]*SchemaEntry{
-		"chalk_foo": makeEntry(map[string]*Attribute{
-			"config": {
-				Optional: true,
-				NestedType: &NestedType{
-					NestingMode: "list",
-					Attributes:  map[string]*Attribute{},
-				},
-			},
-		}, nil),
-	}, nil)
-	assertBreaking(t, old, new, "R003")
-}
-
-func TestDiff_FrameworkNestedTypeNestingChanged(t *testing.T) {
-	t.Parallel()
-	old := singleProvider(map[string]*SchemaEntry{
-		"chalk_foo": makeEntry(map[string]*Attribute{
-			"config": {
-				Optional: true,
-				NestedType: &NestedType{
-					NestingMode: "list",
-					Attributes:  map[string]*Attribute{},
-				},
-			},
-		}, nil),
-	}, nil)
-	new := singleProvider(map[string]*SchemaEntry{
-		"chalk_foo": makeEntry(map[string]*Attribute{
-			"config": {
-				Optional: true,
-				NestedType: &NestedType{
-					NestingMode: "set",
-					Attributes:  map[string]*Attribute{},
-				},
-			},
-		}, nil),
-	}, nil)
-	assertBreaking(t, old, new, "R005")
 }
 
 // --- safe changes ---

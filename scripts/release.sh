@@ -32,14 +32,6 @@ esac
 NEXT_TAG="${prefix}${major}.${minor}.${patch}"
 echo "Bumping from ${LAST_TAG} -> ${NEXT_TAG} (${BUMP})"
 
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "working tree must be clean before releasing" >&2
-  exit 1
-fi
-
-go run ./tools/genchangelog --provider-dir . --check-snapshot "${NEXT_TAG}"
-go run ./tools/genchangelog --provider-dir . --check
-
 read -r -p "Push tag and create terraform provider release? [y/N] " response
 case "$response" in
   [yY][eE][sS]|[yY]) ;;

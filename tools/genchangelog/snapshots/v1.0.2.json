@@ -1,4084 +1,2333 @@
 {
-  "format_version": 1,
   "version": "v1.0.2",
   "resources": {
     "chalk_aws_cloud_credentials": {
-      "schema": {
+      "attributes": {
         "aws_account_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "aws_external_id": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "aws_management_role_arn": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "aws_permissions_boundary_arn": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "aws_region": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
-        "docker_build_config": {
-          "kind": "block",
-          "nesting_mode": "list",
-          "children": {
-            "builder": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "notification_topic": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "push_registry_tag_prefix": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "push_registry_type": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "registry_credentials_secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            }
-          }
+        "docker_build_config.builder": {
+          "type": "tftypes.String"
         },
-        "gcp_workload_identity": {
-          "kind": "block",
-          "nesting_mode": "list",
-          "children": {
-            "pool_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "project_number": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "provider_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "service_account": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+        "docker_build_config.notification_topic": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.push_registry_tag_prefix": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.push_registry_type": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.registry_credentials_secret_id": {
+          "type": "tftypes.String"
+        },
+        "gcp_workload_identity.pool_id": {
+          "type": "tftypes.String"
+        },
+        "gcp_workload_identity.project_number": {
+          "type": "tftypes.String"
+        },
+        "gcp_workload_identity.provider_id": {
+          "type": "tftypes.String"
+        },
+        "gcp_workload_identity.service_account": {
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create"
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create`"
     },
     "chalk_azure_cloud_credentials": {
-      "schema": {
-        "container_registry_config": {
-          "kind": "block",
-          "nesting_mode": "list",
-          "children": {
-            "registry_name": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+      "attributes": {
+        "container_registry_config.registry_name": {
+          "type": "tftypes.String"
         },
-        "docker_build_config": {
-          "kind": "block",
-          "nesting_mode": "list",
-          "children": {
-            "builder": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "notification_topic": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "push_registry_tag_prefix": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "push_registry_type": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "registry_credentials_secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            }
-          }
+        "docker_build_config.builder": {
+          "type": "tftypes.String"
         },
-        "gcp_workload_identity": {
-          "kind": "block",
-          "nesting_mode": "list",
-          "children": {
-            "pool_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "project_number": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "provider_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "service_account": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+        "docker_build_config.notification_topic": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.push_registry_tag_prefix": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.push_registry_type": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.registry_credentials_secret_id": {
+          "type": "tftypes.String"
+        },
+        "gcp_workload_identity.pool_id": {
+          "type": "tftypes.String"
+        },
+        "gcp_workload_identity.project_number": {
+          "type": "tftypes.String"
+        },
+        "gcp_workload_identity.provider_id": {
+          "type": "tftypes.String"
+        },
+        "gcp_workload_identity.service_account": {
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
-        "key_vault_config": {
-          "kind": "block",
-          "nesting_mode": "list",
-          "children": {
-            "vault_name": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+        "key_vault_config.vault_name": {
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "region": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "resource_group": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "subscription_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "tenant_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create"
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create`"
     },
     "chalk_cluster_background_persistence_deployment_binding": {
-      "schema": {
+      "attributes": {
         "background_persistence_deployment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_cluster_container_registry_binding": {
-      "schema": {
+      "attributes": {
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "container_registry_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_cluster_dataset_cloud_storage_binding": {
-      "schema": {
+      "attributes": {
         "cloud_storage_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_cluster_gateway": {
-      "schema": {
+      "attributes": {
         "additional_dns_names": {
-          "kind": "attribute",
-          "type": [
-            "list",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.List[tftypes.String]"
         },
         "allow_collocation_with_chalk_workloads": {
-          "kind": "attribute",
-          "type": "bool",
-          "optional": true
+          "type": "tftypes.Bool"
         },
         "dns_hostname": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "gateway_class_name": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "gateway_name": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "ip_allowlist": {
-          "kind": "attribute",
-          "type": [
-            "list",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.List[tftypes.String]"
         },
         "kube_cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "letsencrypt_cluster_issuer": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "listeners": {
-          "kind": "attribute",
-          "nesting_mode": "list",
-          "optional": true,
-          "children": {
-            "from": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "computed": true
-            },
-            "name": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "port": {
-              "kind": "attribute",
-              "type": "number",
-              "required": true
-            },
-            "protocol": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            }
-          }
+          "type": "list(object)"
+        },
+        "listeners.from": {
+          "type": "tftypes.String"
+        },
+        "listeners.name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "listeners.port": {
+          "type": "tftypes.Number",
+          "required": true
+        },
+        "listeners.protocol": {
+          "type": "tftypes.String",
+          "required": true
         },
         "load_balancer_class": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "min_available": {
-          "kind": "attribute",
-          "type": "number",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.Number"
         },
         "namespace": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "nodepool": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "replicas": {
-          "kind": "attribute",
-          "type": "number",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.Number"
         },
         "routing": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "service_annotations": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "timeout_duration": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "tls_certificate": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "secret_name": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "secret_namespace": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            }
-          }
+          "type": "object"
+        },
+        "tls_certificate.secret_name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "tls_certificate.secret_namespace": {
+          "type": "tftypes.String",
+          "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "deploy.read"
-        },
-        {
-          "name": "team.admin"
-        }
-      ]
+      "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
     },
     "chalk_cluster_gateway_binding": {
-      "schema": {
+      "attributes": {
         "cluster_gateway_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_cluster_model_registry_cloud_storage_binding": {
-      "schema": {
+      "attributes": {
         "cloud_storage_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_cluster_plan_stages_cloud_storage_binding": {
-      "schema": {
+      "attributes": {
         "cloud_storage_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_cluster_source_bundle_cloud_storage_binding": {
-      "schema": {
+      "attributes": {
         "cloud_storage_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_cluster_timescale": {
-      "schema": {
+      "attributes": {
         "backup_bucket": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "backup_gcp_service_account": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "backup_iam_role_arn": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "bootstrap_cloud_resources": {
-          "kind": "attribute",
-          "type": "bool",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.Bool"
         },
         "connection_pool_max_connections": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "connection_pool_replicas": {
-          "kind": "attribute",
-          "type": "number",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.Number"
         },
         "connection_pool_size": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "database_name": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "database_replicas": {
-          "kind": "attribute",
-          "type": "number",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.Number"
         },
         "dns_hostname": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "gateway_id": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "gateway_port": {
-          "kind": "attribute",
-          "type": "number",
-          "optional": true
+          "type": "tftypes.Number"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "instance_type": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "internal": {
-          "kind": "attribute",
-          "type": "bool",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.Bool"
         },
         "ip_allowlist": {
-          "kind": "attribute",
-          "type": [
-            "list",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.List[tftypes.String]"
         },
         "namespace": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "node_selector": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "nodepool": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "postgres_parameters": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "optional": true,
-          "computed": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "request": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "computed": true,
-          "children": {
-            "cpu": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "ephemeral_storage": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "memory": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "storage": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "request.cpu": {
+          "type": "tftypes.String"
+        },
+        "request.ephemeral_storage": {
+          "type": "tftypes.String"
+        },
+        "request.memory": {
+          "type": "tftypes.String"
+        },
+        "request.storage": {
+          "type": "tftypes.String"
         },
         "secret_name": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "service_type": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "storage": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "storage_class": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "timescale_image": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "deploy.read"
-        },
-        {
-          "name": "team.admin"
-        }
-      ]
+      "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
     },
     "chalk_cluster_volume_cloud_storage_binding": {
-      "schema": {
+      "attributes": {
         "cloud_storage_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_datasource": {
-      "schema": {
+      "attributes": {
         "config": {
-          "kind": "attribute",
-          "nesting_mode": "map",
-          "required": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "map(object)",
+          "required": true
+        },
+        "config.literal": {
+          "type": "tftypes.String"
+        },
+        "config.secret_id": {
+          "type": "tftypes.String"
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "kind": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "secrets.decrypt"
-        },
-        {
-          "name": "secrets.write"
-        }
-      ]
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
     },
     "chalk_datasource_databricks": {
-      "schema": {
+      "attributes": {
         "access_token": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "access_token.literal": {
+          "type": "tftypes.String"
+        },
+        "access_token.secret_id": {
+          "type": "tftypes.String"
         },
         "client_id": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "client_id.literal": {
+          "type": "tftypes.String"
+        },
+        "client_id.secret_id": {
+          "type": "tftypes.String"
         },
         "client_secret": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "client_secret.literal": {
+          "type": "tftypes.String"
+        },
+        "client_secret.secret_id": {
+          "type": "tftypes.String"
         },
         "config": {
-          "kind": "attribute",
-          "nesting_mode": "map",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "map(object)"
+        },
+        "config.literal": {
+          "type": "tftypes.String"
+        },
+        "config.secret_id": {
+          "type": "tftypes.String"
         },
         "database": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "database.literal": {
+          "type": "tftypes.String"
+        },
+        "database.secret_id": {
+          "type": "tftypes.String"
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "host": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "host.literal": {
+          "type": "tftypes.String"
+        },
+        "host.secret_id": {
+          "type": "tftypes.String"
         },
         "http_path": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "http_path.literal": {
+          "type": "tftypes.String"
+        },
+        "http_path.secret_id": {
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "port": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "port.literal": {
+          "type": "tftypes.String"
+        },
+        "port.secret_id": {
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "secrets.decrypt"
-        },
-        {
-          "name": "secrets.write"
-        }
-      ]
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
     },
     "chalk_datasource_kafka": {
-      "schema": {
+      "attributes": {
         "additional_kafka_args": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "additional_kafka_args.literal": {
+          "type": "tftypes.String"
+        },
+        "additional_kafka_args.secret_id": {
+          "type": "tftypes.String"
         },
         "aws_region": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "aws_region.literal": {
+          "type": "tftypes.String"
+        },
+        "aws_region.secret_id": {
+          "type": "tftypes.String"
         },
         "aws_role_arn": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "aws_role_arn.literal": {
+          "type": "tftypes.String"
+        },
+        "aws_role_arn.secret_id": {
+          "type": "tftypes.String"
         },
         "bootstrap_server": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "required": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object",
+          "required": true
+        },
+        "bootstrap_server.literal": {
+          "type": "tftypes.String"
+        },
+        "bootstrap_server.secret_id": {
+          "type": "tftypes.String"
         },
         "client_id_prefix": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "client_id_prefix.literal": {
+          "type": "tftypes.String"
+        },
+        "client_id_prefix.secret_id": {
+          "type": "tftypes.String"
         },
         "config": {
-          "kind": "attribute",
-          "nesting_mode": "map",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "map(object)"
+        },
+        "config.literal": {
+          "type": "tftypes.String"
+        },
+        "config.secret_id": {
+          "type": "tftypes.String"
         },
         "dlq_topic": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "dlq_topic.literal": {
+          "type": "tftypes.String"
+        },
+        "dlq_topic.secret_id": {
+          "type": "tftypes.String"
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "group_id_prefix": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "group_id_prefix.literal": {
+          "type": "tftypes.String"
+        },
+        "group_id_prefix.secret_id": {
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "msk_iam_auth": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "msk_iam_auth.literal": {
+          "type": "tftypes.String"
+        },
+        "msk_iam_auth.secret_id": {
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "sasl_mechanism": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "sasl_mechanism.literal": {
+          "type": "tftypes.String"
+        },
+        "sasl_mechanism.secret_id": {
+          "type": "tftypes.String"
         },
         "sasl_password": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "sasl_password.literal": {
+          "type": "tftypes.String"
+        },
+        "sasl_password.secret_id": {
+          "type": "tftypes.String"
         },
         "sasl_username": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "sasl_username.literal": {
+          "type": "tftypes.String"
+        },
+        "sasl_username.secret_id": {
+          "type": "tftypes.String"
         },
         "security_protocol": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "security_protocol.literal": {
+          "type": "tftypes.String"
+        },
+        "security_protocol.secret_id": {
+          "type": "tftypes.String"
         },
         "ssl_ca_file": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "ssl_ca_file.literal": {
+          "type": "tftypes.String"
+        },
+        "ssl_ca_file.secret_id": {
+          "type": "tftypes.String"
         },
         "topic": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "required": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object",
+          "required": true
+        },
+        "topic.literal": {
+          "type": "tftypes.String"
+        },
+        "topic.secret_id": {
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "secrets.decrypt"
-        },
-        {
-          "name": "secrets.write"
-        }
-      ]
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
     },
     "chalk_datasource_kinesis": {
-      "schema": {
+      "attributes": {
         "aws_access_key_id": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "aws_access_key_id.literal": {
+          "type": "tftypes.String"
+        },
+        "aws_access_key_id.secret_id": {
+          "type": "tftypes.String"
         },
         "aws_secret_access_key": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "aws_secret_access_key.literal": {
+          "type": "tftypes.String"
+        },
+        "aws_secret_access_key.secret_id": {
+          "type": "tftypes.String"
         },
         "aws_session_token": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "aws_session_token.literal": {
+          "type": "tftypes.String"
+        },
+        "aws_session_token.secret_id": {
+          "type": "tftypes.String"
         },
         "config": {
-          "kind": "attribute",
-          "nesting_mode": "map",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "map(object)"
+        },
+        "config.literal": {
+          "type": "tftypes.String"
+        },
+        "config.secret_id": {
+          "type": "tftypes.String"
         },
         "consumer_role_arn": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "consumer_role_arn.literal": {
+          "type": "tftypes.String"
+        },
+        "consumer_role_arn.secret_id": {
+          "type": "tftypes.String"
         },
         "dead_letter_queue_stream_name": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "dead_letter_queue_stream_name.literal": {
+          "type": "tftypes.String"
+        },
+        "dead_letter_queue_stream_name.secret_id": {
+          "type": "tftypes.String"
         },
         "endpoint_url": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "endpoint_url.literal": {
+          "type": "tftypes.String"
+        },
+        "endpoint_url.secret_id": {
+          "type": "tftypes.String"
         },
         "enhanced_fanout_consumer_name": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "enhanced_fanout_consumer_name.literal": {
+          "type": "tftypes.String"
+        },
+        "enhanced_fanout_consumer_name.secret_id": {
+          "type": "tftypes.String"
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "late_arrival_deadline": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "late_arrival_deadline.literal": {
+          "type": "tftypes.String"
+        },
+        "late_arrival_deadline.secret_id": {
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "region_name": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "required": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object",
+          "required": true
+        },
+        "region_name.literal": {
+          "type": "tftypes.String"
+        },
+        "region_name.secret_id": {
+          "type": "tftypes.String"
         },
         "stream_arn": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "stream_arn.literal": {
+          "type": "tftypes.String"
+        },
+        "stream_arn.secret_id": {
+          "type": "tftypes.String"
         },
         "stream_name": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "stream_name.literal": {
+          "type": "tftypes.String"
+        },
+        "stream_name.secret_id": {
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "secrets.decrypt"
-        },
-        {
-          "name": "secrets.write"
-        }
-      ]
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
     },
     "chalk_datasource_postgresql": {
-      "schema": {
+      "attributes": {
         "config": {
-          "kind": "attribute",
-          "nesting_mode": "map",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "map(object)"
+        },
+        "config.literal": {
+          "type": "tftypes.String"
+        },
+        "config.secret_id": {
+          "type": "tftypes.String"
         },
         "database": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "required": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object",
+          "required": true
+        },
+        "database.literal": {
+          "type": "tftypes.String"
+        },
+        "database.secret_id": {
+          "type": "tftypes.String"
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "host": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "required": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object",
+          "required": true
+        },
+        "host.literal": {
+          "type": "tftypes.String"
+        },
+        "host.secret_id": {
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "password": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "password.literal": {
+          "type": "tftypes.String"
+        },
+        "password.secret_id": {
+          "type": "tftypes.String"
         },
         "port": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "required": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object",
+          "required": true
+        },
+        "port.literal": {
+          "type": "tftypes.String"
+        },
+        "port.secret_id": {
+          "type": "tftypes.String"
         },
         "user": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "required": true,
-          "children": {
-            "literal": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            },
-            "secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object",
+          "required": true
+        },
+        "user.literal": {
+          "type": "tftypes.String"
+        },
+        "user.secret_id": {
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "secrets.decrypt"
-        },
-        {
-          "name": "secrets.write"
-        }
-      ]
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
     },
     "chalk_environment_background_persistence_deployment_binding": {
-      "schema": {
+      "attributes": {
         "background_persistence_deployment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_environment_dataset_cloud_storage_binding": {
-      "schema": {
+      "attributes": {
         "cloud_storage_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_environment_gateway_binding": {
-      "schema": {
+      "attributes": {
         "cluster_gateway_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_environment_model_registry_cloud_storage_binding": {
-      "schema": {
+      "attributes": {
         "cloud_storage_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_environment_offline_store_connection_binding": {
-      "schema": {
+      "attributes": {
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "offline_store_connection_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "deploy.create"
-        },
-        {
-          "name": "deploy.read"
-        }
-      ]
+      "permissions": "**Required permissions:** `deploy.create`, `deploy.read`"
     },
     "chalk_environment_plan_stages_cloud_storage_binding": {
-      "schema": {
+      "attributes": {
         "cloud_storage_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_environment_source_bundle_cloud_storage_binding": {
-      "schema": {
+      "attributes": {
         "cloud_storage_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_gcp_cloud_credentials": {
-      "schema": {
-        "docker_build_config": {
-          "kind": "block",
-          "nesting_mode": "list",
-          "children": {
-            "builder": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "notification_topic": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "push_registry_tag_prefix": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "push_registry_type": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "registry_credentials_secret_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "sensitive": true
-            }
-          }
+      "attributes": {
+        "docker_build_config.builder": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.notification_topic": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.push_registry_tag_prefix": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.push_registry_type": {
+          "type": "tftypes.String"
+        },
+        "docker_build_config.registry_credentials_secret_id": {
+          "type": "tftypes.String"
         },
         "gcp_management_service_account": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "gcp_project_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "gcp_region": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create"
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create`"
     },
     "chalk_kubernetes_cluster": {
-      "schema": {
+      "attributes": {
         "cloud_credential_id": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "data_plane_controller": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "host_pools": {
-              "kind": "attribute",
-              "nesting_mode": "list",
-              "optional": true,
-              "children": {
-                "count": {
-                  "kind": "attribute",
-                  "type": "number",
-                  "required": true
-                },
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "machine_family": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "name": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            },
-            "node_pool": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "restricted_node_pool": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "tier": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "data_plane_controller.host_pools": {
+          "type": "list(object)"
+        },
+        "data_plane_controller.host_pools.count": {
+          "type": "tftypes.Number",
+          "required": true
+        },
+        "data_plane_controller.host_pools.cpu": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.host_pools.machine_family": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.host_pools.memory": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.host_pools.name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "data_plane_controller.node_pool": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.restricted_node_pool": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.tier": {
+          "type": "tftypes.String"
         },
         "data_plane_redis": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "managed": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "self_hosted": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cloud_secret_name": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            }
-          }
+          "type": "object"
+        },
+        "data_plane_redis.managed": {
+          "type": "object"
+        },
+        "data_plane_redis.managed.cpu": {
+          "type": "tftypes.String"
+        },
+        "data_plane_redis.managed.memory": {
+          "type": "tftypes.String"
+        },
+        "data_plane_redis.self_hosted": {
+          "type": "object"
+        },
+        "data_plane_redis.self_hosted.cloud_secret_name": {
+          "type": "tftypes.String",
+          "required": true
         },
         "dns_zone": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "kind": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "maintenance_window": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "duration": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "mode": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "schedule": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "maintenance_window.duration": {
+          "type": "tftypes.String"
+        },
+        "maintenance_window.mode": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "maintenance_window.schedule": {
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_managed_aws_vpc": {
-      "schema": {
+      "attributes": {
         "additional_cidr_blocks": {
-          "kind": "attribute",
-          "type": [
-            "list",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.List[tftypes.String]"
         },
         "additional_private_routes": {
-          "kind": "attribute",
-          "nesting_mode": "list",
-          "optional": true,
-          "children": {
-            "destination_cidr_block": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "name": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "peer_id": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            }
-          }
+          "type": "list(object)"
+        },
+        "additional_private_routes.destination_cidr_block": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "additional_private_routes.name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "additional_private_routes.peer_id": {
+          "type": "tftypes.String",
+          "required": true
         },
         "additional_public_routes": {
-          "kind": "attribute",
-          "nesting_mode": "list",
-          "optional": true,
-          "children": {
-            "destination_cidr_block": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "name": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "peer_id": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            }
-          }
+          "type": "list(object)"
+        },
+        "additional_public_routes.destination_cidr_block": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "additional_public_routes.name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "additional_public_routes.peer_id": {
+          "type": "tftypes.String",
+          "required": true
         },
         "cidr_block": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "cloud_credential_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "subnets": {
-          "kind": "attribute",
-          "nesting_mode": "list",
-          "required": true,
-          "children": {
-            "availability_zone": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "name": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "private_cidr_block": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "public_cidr_block": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            }
-          }
+          "type": "list(object)",
+          "required": true
+        },
+        "subnets.availability_zone": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "subnets.name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "subnets.private_cidr_block": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "subnets.public_cidr_block": {
+          "type": "tftypes.String",
+          "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        },
-        {
-          "name": "team.admin",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*"
     },
-    "chalk_managed_azure_vpc": {},
+    "chalk_managed_azure_vpc": {
+      "attributes": {}
+    },
     "chalk_managed_cloud_storage": {
-      "schema": {
+      "attributes": {
         "cloud_credential_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "kind": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "uri": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_managed_cluster": {
-      "schema": {
+      "attributes": {
         "cloud_credential_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "data_plane_controller": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "host_pools": {
-              "kind": "attribute",
-              "nesting_mode": "list",
-              "optional": true,
-              "children": {
-                "count": {
-                  "kind": "attribute",
-                  "type": "number",
-                  "required": true
-                },
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "machine_family": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "name": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            },
-            "node_pool": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "restricted_node_pool": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "tier": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "data_plane_controller.host_pools": {
+          "type": "list(object)"
+        },
+        "data_plane_controller.host_pools.count": {
+          "type": "tftypes.Number",
+          "required": true
+        },
+        "data_plane_controller.host_pools.cpu": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.host_pools.machine_family": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.host_pools.memory": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.host_pools.name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "data_plane_controller.node_pool": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.restricted_node_pool": {
+          "type": "tftypes.String"
+        },
+        "data_plane_controller.tier": {
+          "type": "tftypes.String"
         },
         "data_plane_redis": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "managed": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "self_hosted": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cloud_secret_name": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            }
-          }
+          "type": "object"
+        },
+        "data_plane_redis.managed": {
+          "type": "object"
+        },
+        "data_plane_redis.managed.cpu": {
+          "type": "tftypes.String"
+        },
+        "data_plane_redis.managed.memory": {
+          "type": "tftypes.String"
+        },
+        "data_plane_redis.self_hosted": {
+          "type": "object"
+        },
+        "data_plane_redis.self_hosted.cloud_secret_name": {
+          "type": "tftypes.String",
+          "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "maintenance_window": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "duration": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "mode": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "schedule": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "maintenance_window.duration": {
+          "type": "tftypes.String"
+        },
+        "maintenance_window.mode": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "maintenance_window.schedule": {
+          "type": "tftypes.String"
         },
         "vpc_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_managed_container_registry": {
-      "schema": {
+      "attributes": {
         "cloud_credential_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_managed_environment": {
-      "schema": {
+      "attributes": {
         "additional_env_vars": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "customer_metadata": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "default_build_profile": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "engine_docker_registry_path": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "kube_cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "kube_job_namespace": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "online_store_kind": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "online_store_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "pinned_base_image": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "private_pip_repositories": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "project_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "service_url": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "specs_config_json": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "environment.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `environment.create` *(team-scoped)*"
     },
     "chalk_managed_gcp_vpc": {
-      "schema": {
+      "attributes": {
         "backup_subnets": {
-          "kind": "attribute",
-          "nesting_mode": "list",
-          "optional": true,
-          "children": {
-            "cidr_range": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "name": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "purpose": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "role": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "computed": true
-            },
-            "secondary_ip_ranges": {
-              "kind": "attribute",
-              "nesting_mode": "list",
-              "optional": true,
-              "children": {
-                "ip_cidr_range": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "range_name": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            }
-          }
+          "type": "list(object)"
+        },
+        "backup_subnets.cidr_range": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "backup_subnets.name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "backup_subnets.purpose": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "backup_subnets.role": {
+          "type": "tftypes.String"
+        },
+        "backup_subnets.secondary_ip_ranges": {
+          "type": "list(object)"
+        },
+        "backup_subnets.secondary_ip_ranges.ip_cidr_range": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "backup_subnets.secondary_ip_ranges.range_name": {
+          "type": "tftypes.String",
+          "required": true
         },
         "cloud_credential_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "subnets": {
-          "kind": "attribute",
-          "nesting_mode": "list",
-          "required": true,
-          "children": {
-            "cidr_range": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "name": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "purpose": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "role": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "computed": true
-            },
-            "secondary_ip_ranges": {
-              "kind": "attribute",
-              "nesting_mode": "list",
-              "optional": true,
-              "children": {
-                "ip_cidr_range": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "range_name": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            }
-          }
+          "type": "list(object)",
+          "required": true
+        },
+        "subnets.cidr_range": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "subnets.name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "subnets.purpose": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "subnets.role": {
+          "type": "tftypes.String"
+        },
+        "subnets.secondary_ip_ranges": {
+          "type": "list(object)"
+        },
+        "subnets.secondary_ip_ranges.ip_cidr_range": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "subnets.secondary_ip_ranges.range_name": {
+          "type": "tftypes.String",
+          "required": true
         },
         "vpc_peer_addr": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        },
-        {
-          "name": "team.admin",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*"
     },
     "chalk_offline_store_connection": {
-      "schema": {
+      "attributes": {
         "bigquery": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "dataset_id": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "project_id": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            }
-          }
+          "type": "object"
+        },
+        "bigquery.dataset_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "bigquery.project_id": {
+          "type": "tftypes.String",
+          "required": true
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "iceberg": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "glue_s3": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "required": true,
-              "children": {
-                "glue_database_name": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "s3_bucket": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            }
-          }
+          "type": "object"
+        },
+        "iceberg.glue_s3": {
+          "type": "object",
+          "required": true
+        },
+        "iceberg.glue_s3.glue_database_name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "iceberg.glue_s3.s3_bucket": {
+          "type": "tftypes.String",
+          "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "snowflake": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "credentials": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "required": true,
-              "children": {
-                "account": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "database": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "password": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true,
-                  "sensitive": true
-                },
-                "private_key": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true,
-                  "sensitive": true
-                },
-                "role": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "schema": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "username": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "warehouse": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            },
-            "storage_integration_name": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "snowflake.credentials": {
+          "type": "object",
+          "required": true
+        },
+        "snowflake.credentials.account": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "snowflake.credentials.database": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "snowflake.credentials.password": {
+          "type": "tftypes.String"
+        },
+        "snowflake.credentials.private_key": {
+          "type": "tftypes.String"
+        },
+        "snowflake.credentials.role": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "snowflake.credentials.schema": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "snowflake.credentials.username": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "snowflake.credentials.warehouse": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "snowflake.storage_integration_name": {
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "deploy.create"
-        },
-        {
-          "name": "deploy.read"
-        }
-      ]
+      "permissions": "**Required permissions:** `deploy.create`, `deploy.read`"
     },
     "chalk_private_gateway_binding": {
-      "schema": {
+      "attributes": {
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "private_gateway_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_project": {
-      "schema": {
+      "attributes": {
         "git_repo": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_scaling_group": {
-      "schema": {
+      "attributes": {
         "container_spec": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "required": true,
-          "children": {
-            "authentication": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "entrypoint": {
-              "kind": "attribute",
-              "type": [
-                "list",
-                "string"
-              ],
-              "optional": true
-            },
-            "env_vars": {
-              "kind": "attribute",
-              "type": [
-                "map",
-                "string"
-              ],
-              "optional": true
-            },
-            "image": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "port": {
-              "kind": "attribute",
-              "type": "number",
-              "optional": true
-            },
-            "protocol": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "resources": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "gpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "routing": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "tags": {
-              "kind": "attribute",
-              "type": [
-                "map",
-                "string"
-              ],
-              "optional": true
-            },
-            "volumes": {
-              "kind": "attribute",
-              "nesting_mode": "list",
-              "optional": true,
-              "children": {
-                "mount_path": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "name": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "size_limit": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "type": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            }
-          }
+          "type": "object",
+          "required": true
+        },
+        "container_spec.authentication": {
+          "type": "tftypes.String"
+        },
+        "container_spec.entrypoint": {
+          "type": "tftypes.List[tftypes.String]"
+        },
+        "container_spec.env_vars": {
+          "type": "tftypes.Map[tftypes.String]"
+        },
+        "container_spec.image": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "container_spec.port": {
+          "type": "tftypes.Number"
+        },
+        "container_spec.protocol": {
+          "type": "tftypes.String"
+        },
+        "container_spec.resources": {
+          "type": "object"
+        },
+        "container_spec.resources.cpu": {
+          "type": "tftypes.String"
+        },
+        "container_spec.resources.gpu": {
+          "type": "tftypes.String"
+        },
+        "container_spec.resources.memory": {
+          "type": "tftypes.String"
+        },
+        "container_spec.routing": {
+          "type": "tftypes.String"
+        },
+        "container_spec.tags": {
+          "type": "tftypes.Map[tftypes.String]"
+        },
+        "container_spec.volumes": {
+          "type": "list(object)"
+        },
+        "container_spec.volumes.mount_path": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "container_spec.volumes.name": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "container_spec.volumes.size_limit": {
+          "type": "tftypes.String"
+        },
+        "container_spec.volumes.type": {
+          "type": "tftypes.String",
+          "required": true
         },
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "scaling_spec": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "required": true,
-          "children": {
-            "max_replicas": {
-              "kind": "attribute",
-              "type": "number",
-              "required": true
-            },
-            "min_replicas": {
-              "kind": "attribute",
-              "type": "number",
-              "required": true
-            },
-            "shutdown_delay_seconds": {
-              "kind": "attribute",
-              "type": "number",
-              "optional": true
-            },
-            "target_cpu_utilization_percentage": {
-              "kind": "attribute",
-              "type": "number",
-              "optional": true
-            }
-          }
+          "type": "object",
+          "required": true
+        },
+        "scaling_spec.max_replicas": {
+          "type": "tftypes.Number",
+          "required": true
+        },
+        "scaling_spec.min_replicas": {
+          "type": "tftypes.Number",
+          "required": true
+        },
+        "scaling_spec.shutdown_delay_seconds": {
+          "type": "tftypes.Number"
+        },
+        "scaling_spec.target_cpu_utilization_percentage": {
+          "type": "tftypes.Number"
         },
         "web_url": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       }
     },
     "chalk_service_token": {
-      "schema": {
+      "attributes": {
         "client_id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "client_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true,
-          "sensitive": true
+          "type": "tftypes.String"
         },
         "custom_claims": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "default_permission": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "feature_tag_to_permission": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "permissions": {
-          "kind": "attribute",
-          "type": [
-            "list",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.List[tftypes.String]"
         }
       },
-      "permissions": [
-        {
-          "name": "tokens.list"
-        },
-        {
-          "name": "tokens.write"
-        }
-      ]
+      "permissions": "**Required permissions:** `tokens.write`, `tokens.list`"
     },
     "chalk_telemetry": {
-      "schema": {
+      "attributes": {
         "aggregator_spec": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "computed": true,
-          "children": {
-            "image_version": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "request": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "ephemeral_storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            }
-          }
+          "type": "object"
+        },
+        "aggregator_spec.image_version": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "aggregator_spec.request": {
+          "type": "object"
+        },
+        "aggregator_spec.request.cpu": {
+          "type": "tftypes.String"
+        },
+        "aggregator_spec.request.ephemeral_storage": {
+          "type": "tftypes.String"
+        },
+        "aggregator_spec.request.memory": {
+          "type": "tftypes.String"
+        },
+        "aggregator_spec.request.storage": {
+          "type": "tftypes.String"
         },
         "clickhouse_deployment_spec": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "computed": true,
-          "children": {
-            "gateway_id": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "limit": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "ephemeral_storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "request": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "ephemeral_storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "storage": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "storage_class_name": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "version": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            }
-          }
+          "type": "object"
+        },
+        "clickhouse_deployment_spec.gateway_id": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.limit": {
+          "type": "object"
+        },
+        "clickhouse_deployment_spec.limit.cpu": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.limit.ephemeral_storage": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.limit.memory": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.limit.storage": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.request": {
+          "type": "object"
+        },
+        "clickhouse_deployment_spec.request.cpu": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.request.ephemeral_storage": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.request.memory": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.request.storage": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.storage": {
+          "type": "object"
+        },
+        "clickhouse_deployment_spec.storage.storage": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.storage.storage_class_name": {
+          "type": "tftypes.String"
+        },
+        "clickhouse_deployment_spec.version": {
+          "type": "tftypes.String",
+          "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "kube_cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "namespace": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "otel_collector_spec": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "computed": true,
-          "children": {
-            "limit": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "ephemeral_storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "request": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "ephemeral_storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "version": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            }
-          }
+          "type": "object"
+        },
+        "otel_collector_spec.limit": {
+          "type": "object"
+        },
+        "otel_collector_spec.limit.cpu": {
+          "type": "tftypes.String"
+        },
+        "otel_collector_spec.limit.ephemeral_storage": {
+          "type": "tftypes.String"
+        },
+        "otel_collector_spec.limit.memory": {
+          "type": "tftypes.String"
+        },
+        "otel_collector_spec.limit.storage": {
+          "type": "tftypes.String"
+        },
+        "otel_collector_spec.request": {
+          "type": "object"
+        },
+        "otel_collector_spec.request.cpu": {
+          "type": "tftypes.String"
+        },
+        "otel_collector_spec.request.ephemeral_storage": {
+          "type": "tftypes.String"
+        },
+        "otel_collector_spec.request.memory": {
+          "type": "tftypes.String"
+        },
+        "otel_collector_spec.request.storage": {
+          "type": "tftypes.String"
+        },
+        "otel_collector_spec.version": {
+          "type": "tftypes.String",
+          "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "deploy.read"
-        },
-        {
-          "name": "team.admin"
-        }
-      ]
+      "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
     },
     "chalk_telemetry_binding": {
-      "schema": {
+      "attributes": {
         "cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "telemetry_deployment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_unmanaged_cloud_storage": {
-      "schema": {
+      "attributes": {
         "cloud_credential_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "kind": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "uri": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_unmanaged_cluster_background_persistence": {
-      "schema": {
+      "attributes": {
         "api_server_host": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "autodiscover_key": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "bus_writer_image_bswl": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "bus_writer_image_go": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "bus_writer_image_python": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "bus_writer_image_rust": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "google_pubsub": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "metrics_bus": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "required": true,
-              "children": {
-                "subscription_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "topic_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            },
-            "offline_store_streaming_write_bus": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "required": true,
-              "children": {
-                "subscription_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "topic_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            },
-            "offline_store_upload_bus": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "required": true,
-              "children": {
-                "subscription_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "topic_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            },
-            "result_bus": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "required": true,
-              "children": {
-                "offline_store_subscription_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "online_store_subscription_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "topic_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                }
-              }
-            }
-          }
+          "type": "object"
+        },
+        "google_pubsub.metrics_bus": {
+          "type": "object",
+          "required": true
+        },
+        "google_pubsub.metrics_bus.subscription_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "google_pubsub.metrics_bus.topic_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "google_pubsub.offline_store_streaming_write_bus": {
+          "type": "object",
+          "required": true
+        },
+        "google_pubsub.offline_store_streaming_write_bus.subscription_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "google_pubsub.offline_store_streaming_write_bus.topic_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "google_pubsub.offline_store_upload_bus": {
+          "type": "object",
+          "required": true
+        },
+        "google_pubsub.offline_store_upload_bus.subscription_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "google_pubsub.offline_store_upload_bus.topic_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "google_pubsub.result_bus": {
+          "type": "object",
+          "required": true
+        },
+        "google_pubsub.result_bus.offline_store_subscription_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "google_pubsub.result_bus.online_store_subscription_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "google_pubsub.result_bus.topic_id": {
+          "type": "tftypes.String",
+          "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "kafka": {
-          "kind": "attribute",
-          "nesting_mode": "single",
-          "optional": true,
-          "children": {
-            "bootstrap_servers": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "computed": true
-            },
-            "dlq_topic": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "metrics_bus_topic_id": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "offline_store_bus_streaming_write_topic_id": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "offline_store_bus_upload_topic_id": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "result_bus_topic_id": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "sasl_mechanism": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "sasl_secret": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true,
-              "computed": true
-            },
-            "security_protocol": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "object"
+        },
+        "kafka.bootstrap_servers": {
+          "type": "tftypes.String"
+        },
+        "kafka.dlq_topic": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "kafka.metrics_bus_topic_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "kafka.offline_store_bus_streaming_write_topic_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "kafka.offline_store_bus_upload_topic_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "kafka.result_bus_topic_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "kafka.sasl_mechanism": {
+          "type": "tftypes.String"
+        },
+        "kafka.sasl_secret": {
+          "type": "tftypes.String"
+        },
+        "kafka.security_protocol": {
+          "type": "tftypes.String"
         },
         "kube_cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "namespace": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "offline_store_snowflake_storage_integration_name": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "offline_store_upload_bucket_name": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "service_account_name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "writers": {
-          "kind": "attribute",
-          "nesting_mode": "list",
-          "required": true,
-          "children": {
-            "additional_env_vars": {
-              "kind": "attribute",
-              "type": [
-                "map",
-                "string"
-              ],
-              "optional": true
-            },
-            "bus_subscriber_type": {
-              "kind": "attribute",
-              "type": "string",
-              "required": true
-            },
-            "default_replica_count": {
-              "kind": "attribute",
-              "type": "number",
-              "optional": true
-            },
-            "gke_spot": {
-              "kind": "attribute",
-              "type": "bool",
-              "optional": true
-            },
-            "hpa_specs": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "hpa_max_replicas": {
-                  "kind": "attribute",
-                  "type": "number",
-                  "optional": true
-                },
-                "hpa_min_replicas": {
-                  "kind": "attribute",
-                  "type": "number",
-                  "optional": true
-                },
-                "hpa_pubsub_subscription_id": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "required": true
-                },
-                "hpa_target_average_value": {
-                  "kind": "attribute",
-                  "type": "number",
-                  "optional": true
-                }
-              }
-            },
-            "image_override": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "kafka_consumer_group_override": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "limit": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "ephemeral_storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "load_writer_configmap": {
-              "kind": "attribute",
-              "type": "bool",
-              "optional": true
-            },
-            "max_batch_size": {
-              "kind": "attribute",
-              "type": "number",
-              "optional": true
-            },
-            "message_processing_concurrency": {
-              "kind": "attribute",
-              "type": "number",
-              "optional": true
-            },
-            "metadata_sql_ssl_ca_cert_secret": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "metadata_sql_ssl_client_cert_secret": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "metadata_sql_ssl_client_key_secret": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "metadata_sql_uri_secret": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "name": {
-              "kind": "attribute",
-              "type": "string",
-              "computed": true
-            },
-            "nodepool": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "offline_store_inserter_db_type": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "query_table_write_drop_ratio": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "request": {
-              "kind": "attribute",
-              "nesting_mode": "single",
-              "optional": true,
-              "children": {
-                "cpu": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "ephemeral_storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "memory": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                },
-                "storage": {
-                  "kind": "attribute",
-                  "type": "string",
-                  "optional": true
-                }
-              }
-            },
-            "results_writer_skip_producing_feature_metrics": {
-              "kind": "attribute",
-              "type": "bool",
-              "optional": true
-            },
-            "storage_cache_prefix": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            },
-            "version": {
-              "kind": "attribute",
-              "type": "string",
-              "optional": true
-            }
-          }
+          "type": "list(object)",
+          "required": true
+        },
+        "writers.additional_env_vars": {
+          "type": "tftypes.Map[tftypes.String]"
+        },
+        "writers.bus_subscriber_type": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "writers.default_replica_count": {
+          "type": "tftypes.Number"
+        },
+        "writers.gke_spot": {
+          "type": "tftypes.Bool"
+        },
+        "writers.hpa_specs": {
+          "type": "object"
+        },
+        "writers.hpa_specs.hpa_max_replicas": {
+          "type": "tftypes.Number"
+        },
+        "writers.hpa_specs.hpa_min_replicas": {
+          "type": "tftypes.Number"
+        },
+        "writers.hpa_specs.hpa_pubsub_subscription_id": {
+          "type": "tftypes.String",
+          "required": true
+        },
+        "writers.hpa_specs.hpa_target_average_value": {
+          "type": "tftypes.Number"
+        },
+        "writers.image_override": {
+          "type": "tftypes.String"
+        },
+        "writers.kafka_consumer_group_override": {
+          "type": "tftypes.String"
+        },
+        "writers.limit": {
+          "type": "object"
+        },
+        "writers.limit.cpu": {
+          "type": "tftypes.String"
+        },
+        "writers.limit.ephemeral_storage": {
+          "type": "tftypes.String"
+        },
+        "writers.limit.memory": {
+          "type": "tftypes.String"
+        },
+        "writers.limit.storage": {
+          "type": "tftypes.String"
+        },
+        "writers.load_writer_configmap": {
+          "type": "tftypes.Bool"
+        },
+        "writers.max_batch_size": {
+          "type": "tftypes.Number"
+        },
+        "writers.message_processing_concurrency": {
+          "type": "tftypes.Number"
+        },
+        "writers.metadata_sql_ssl_ca_cert_secret": {
+          "type": "tftypes.String"
+        },
+        "writers.metadata_sql_ssl_client_cert_secret": {
+          "type": "tftypes.String"
+        },
+        "writers.metadata_sql_ssl_client_key_secret": {
+          "type": "tftypes.String"
+        },
+        "writers.metadata_sql_uri_secret": {
+          "type": "tftypes.String"
+        },
+        "writers.name": {
+          "type": "tftypes.String"
+        },
+        "writers.nodepool": {
+          "type": "tftypes.String"
+        },
+        "writers.offline_store_inserter_db_type": {
+          "type": "tftypes.String"
+        },
+        "writers.query_table_write_drop_ratio": {
+          "type": "tftypes.String"
+        },
+        "writers.request": {
+          "type": "object"
+        },
+        "writers.request.cpu": {
+          "type": "tftypes.String"
+        },
+        "writers.request.ephemeral_storage": {
+          "type": "tftypes.String"
+        },
+        "writers.request.memory": {
+          "type": "tftypes.String"
+        },
+        "writers.request.storage": {
+          "type": "tftypes.String"
+        },
+        "writers.results_writer_skip_producing_feature_metrics": {
+          "type": "tftypes.Bool"
+        },
+        "writers.storage_cache_prefix": {
+          "type": "tftypes.String"
+        },
+        "writers.version": {
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "deploy.read"
-        },
-        {
-          "name": "team.admin"
-        }
-      ]
+      "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
     },
     "chalk_unmanaged_container_registry": {
-      "schema": {
+      "attributes": {
         "cloud_credential_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         }
       },
-      "permissions": [
-        {
-          "name": "project.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_unmanaged_environment": {
-      "schema": {
+      "attributes": {
         "additional_env_vars": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "optional": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "customer_metadata": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "default_build_profile": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "engine_docker_registry_path": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "kube_cluster_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "kube_cluster_mode": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "kube_job_namespace": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "kube_service_account_name": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "online_store_kind": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "online_store_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "pinned_base_image": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "private_pip_repositories": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true
+          "type": "tftypes.String"
         },
         "project_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "service_url": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         },
         "specs_config_json": {
-          "kind": "attribute",
-          "type": "string",
-          "optional": true,
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "environment.create",
-          "team_scoped": true
-        }
-      ]
+      "permissions": "**Required permissions:** `environment.create` *(team-scoped)*"
     }
   },
   "data_sources": {
     "chalk_environment": {
-      "schema": {
+      "attributes": {
         "active_deployment_id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "additional_cron_env_vars": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "computed": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "additional_env_vars": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "computed": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "archived_at": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "background_persistence_deployment_id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "bigtable_instance_name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "bigtable_table_name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "branch_kube_cluster_name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "branch_url": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "cloud_account_locator": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "cloud_config": {
-          "kind": "attribute",
-          "type": [
-            "object",
-            {
-              "aws": [
-                "object",
-                {
-                  "account_id": "string",
-                  "external_id": "string",
-                  "management_role_arn": "string",
-                  "region": "string"
-                }
-              ],
-              "gcp": [
-                "object",
-                {
-                  "management_service_account": "string",
-                  "project_id": "string",
-                  "region": "string"
-                }
-              ]
-            }
-          ],
-          "computed": true
+          "type": "tftypes.Object[\"aws\":tftypes.Object[\"account_id\":tftypes.String, \"external_id\":tftypes.String, \"management_role_arn\":tftypes.String, \"region\":tftypes.String], \"gcp\":tftypes.Object[\"management_service_account\":tftypes.String, \"project_id\":tftypes.String, \"region\":tftypes.String]]"
         },
         "cloud_provider": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "cloud_region": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "cloud_tenancy_id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "cluster_gateway_id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "cluster_timescaledb_id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "cluster_timescaledb_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "dashboard_url": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "default_planner": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "emq_uri": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "engine_docker_registry_path": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "engine_kube_cluster_name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "environment_buckets": {
-          "kind": "attribute",
-          "type": [
-            "object",
-            {
-              "dataset_bucket": "string",
-              "model_registry_bucket": "string",
-              "plan_stages_bucket": "string",
-              "source_bundle_bucket": "string"
-            }
-          ],
-          "computed": true
+          "type": "tftypes.Object[\"dataset_bucket\":tftypes.String, \"model_registry_bucket\":tftypes.String, \"plan_stages_bucket\":tftypes.String, \"source_bundle_bucket\":tftypes.String]"
         },
         "feature_store_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "grpc_engine_url": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "is_sandbox": {
-          "kind": "attribute",
-          "type": "bool",
-          "computed": true
+          "type": "tftypes.Bool"
         },
         "kube_cluster_mode": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "kube_cluster_name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "kube_job_namespace": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "kube_preview_namespace": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "kube_service_account_name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "metadata_server_metrics_store_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "metrics_bus_topic": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "offline_store_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "online_persistence_mode": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "online_store_kind": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "online_store_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "pinned_base_image": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "postgres_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "private_pip_repositories": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "project_id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "query_server_metrics_store_secret": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "result_bus_topic": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "service_url": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "shadow_engine_kube_cluster_name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "skip_offline_writes_for_online_cached_features": {
-          "kind": "attribute",
-          "type": "bool",
-          "computed": true
+          "type": "tftypes.Bool"
         },
         "source_bundle_bucket": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "spec_config_json": {
-          "kind": "attribute",
-          "type": [
-            "map",
-            "string"
-          ],
-          "computed": true
+          "type": "tftypes.Map[tftypes.String]"
         },
         "streaming_query_service_uri": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "team_id": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "vpc_connector_name": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "worker_url": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         }
       },
-      "permissions": [
-        {
-          "name": "deploy.read"
-        }
-      ]
+      "permissions": "**Required permissions:** `deploy.read`"
     },
     "chalk_offline_store_connection_test": {
-      "schema": {
+      "attributes": {
         "environment_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "error_message": {
-          "kind": "attribute",
-          "type": "string",
-          "computed": true
+          "type": "tftypes.String"
         },
         "offline_store_connection_id": {
-          "kind": "attribute",
-          "type": "string",
+          "type": "tftypes.String",
           "required": true
         },
         "success": {
-          "kind": "attribute",
-          "type": "bool",
-          "computed": true
+          "type": "tftypes.Bool"
         }
       }
     }
