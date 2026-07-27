@@ -1,5 +1,4 @@
-// genchangelog generates the Terraform Registry changelog from provider
-// schema snapshots.
+// genchangelog generates the Registry changelog from schema snapshots.
 package main
 
 import (

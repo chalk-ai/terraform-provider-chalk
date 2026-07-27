@@ -1,13 +1,11 @@
 package provider
 
-// ResourcePermissionsMarkdown returns the generated permission documentation
-// for a Terraform resource type.
+// ResourcePermissionsMarkdown returns generated resource permission docs.
 func ResourcePermissionsMarkdown(typeName string) string {
 	return resourcePermissionsMarkdown[typeName]
 }
 
-// DataSourcePermissionsMarkdown returns the generated permission documentation
-// for a Terraform data source type.
+// DataSourcePermissionsMarkdown returns generated data-source permission docs.
 func DataSourcePermissionsMarkdown(typeName string) string {
 	return datasourcePermissionsMarkdown[typeName]
 }
