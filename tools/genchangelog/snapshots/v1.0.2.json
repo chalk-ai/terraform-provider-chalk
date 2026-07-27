@@ -4,55 +4,55 @@
     "chalk_aws_cloud_credentials": {
       "attributes": {
         "aws_account_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "aws_external_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_management_role_arn": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "aws_permissions_boundary_arn": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_region": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "docker_build_config.builder": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.notification_topic": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.push_registry_tag_prefix": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.push_registry_type": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.registry_credentials_secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_workload_identity.pool_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_workload_identity.project_number": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_workload_identity.provider_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_workload_identity.service_account": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -61,59 +61,59 @@
     "chalk_azure_cloud_credentials": {
       "attributes": {
         "container_registry_config.registry_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.builder": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.notification_topic": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.push_registry_tag_prefix": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.push_registry_type": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.registry_credentials_secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_workload_identity.pool_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_workload_identity.project_number": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_workload_identity.provider_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_workload_identity.service_account": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "key_vault_config.vault_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "region": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "resource_group": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "subscription_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "tenant_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -122,11 +122,11 @@
     "chalk_cluster_background_persistence_deployment_binding": {
       "attributes": {
         "background_persistence_deployment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -135,11 +135,11 @@
     "chalk_cluster_container_registry_binding": {
       "attributes": {
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "container_registry_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -148,15 +148,15 @@
     "chalk_cluster_dataset_cloud_storage_binding": {
       "attributes": {
         "cloud_storage_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -164,84 +164,84 @@
     "chalk_cluster_gateway": {
       "attributes": {
         "additional_dns_names": {
-          "type": "tftypes.List[tftypes.String]"
+          "type": "list(string)"
         },
         "allow_collocation_with_chalk_workloads": {
-          "type": "tftypes.Bool"
+          "type": "bool"
         },
         "dns_hostname": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gateway_class_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gateway_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "ip_allowlist": {
-          "type": "tftypes.List[tftypes.String]"
+          "type": "list(string)"
         },
         "kube_cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "letsencrypt_cluster_issuer": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "listeners": {
           "type": "list(object)"
         },
         "listeners.from": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "listeners.name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "listeners.port": {
-          "type": "tftypes.Number",
+          "type": "number",
           "required": true
         },
         "listeners.protocol": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "load_balancer_class": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "min_available": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "namespace": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "nodepool": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "replicas": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "routing": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "service_annotations": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "timeout_duration": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "tls_certificate": {
           "type": "object"
         },
         "tls_certificate.secret_name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "tls_certificate.secret_namespace": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -250,11 +250,11 @@
     "chalk_cluster_gateway_binding": {
       "attributes": {
         "cluster_gateway_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -263,15 +263,15 @@
     "chalk_cluster_model_registry_cloud_storage_binding": {
       "attributes": {
         "cloud_storage_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -279,15 +279,15 @@
     "chalk_cluster_plan_stages_cloud_storage_binding": {
       "attributes": {
         "cloud_storage_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -295,15 +295,15 @@
     "chalk_cluster_source_bundle_cloud_storage_binding": {
       "attributes": {
         "cloud_storage_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -311,98 +311,98 @@
     "chalk_cluster_timescale": {
       "attributes": {
         "backup_bucket": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "backup_gcp_service_account": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "backup_iam_role_arn": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "bootstrap_cloud_resources": {
-          "type": "tftypes.Bool"
+          "type": "bool"
         },
         "connection_pool_max_connections": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "connection_pool_replicas": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "connection_pool_size": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "database_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "database_replicas": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "dns_hostname": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "gateway_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gateway_port": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "instance_type": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "internal": {
-          "type": "tftypes.Bool"
+          "type": "bool"
         },
         "ip_allowlist": {
-          "type": "tftypes.List[tftypes.String]"
+          "type": "list(string)"
         },
         "namespace": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "node_selector": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "nodepool": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "postgres_parameters": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "request": {
           "type": "object"
         },
         "request.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "request.ephemeral_storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "request.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "request.storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "secret_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "service_type": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "storage_class": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "timescale_image": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
@@ -410,15 +410,15 @@
     "chalk_cluster_volume_cloud_storage_binding": {
       "attributes": {
         "cloud_storage_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -430,24 +430,24 @@
           "required": true
         },
         "config.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "config.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kind": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -459,84 +459,84 @@
           "type": "object"
         },
         "access_token.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "access_token.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "client_id": {
           "type": "object"
         },
         "client_id.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "client_id.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "client_secret": {
           "type": "object"
         },
         "client_secret.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "client_secret.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "config": {
           "type": "map(object)"
         },
         "config.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "config.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "database": {
           "type": "object"
         },
         "database.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "database.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "host": {
           "type": "object"
         },
         "host.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "host.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "http_path": {
           "type": "object"
         },
         "http_path.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "http_path.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "port": {
           "type": "object"
         },
         "port.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "port.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
@@ -547,149 +547,149 @@
           "type": "object"
         },
         "additional_kafka_args.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "additional_kafka_args.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_region": {
           "type": "object"
         },
         "aws_region.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_region.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_role_arn": {
           "type": "object"
         },
         "aws_role_arn.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_role_arn.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "bootstrap_server": {
           "type": "object",
           "required": true
         },
         "bootstrap_server.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "bootstrap_server.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "client_id_prefix": {
           "type": "object"
         },
         "client_id_prefix.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "client_id_prefix.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "config": {
           "type": "map(object)"
         },
         "config.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "config.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "dlq_topic": {
           "type": "object"
         },
         "dlq_topic.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "dlq_topic.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "group_id_prefix": {
           "type": "object"
         },
         "group_id_prefix.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "group_id_prefix.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "msk_iam_auth": {
           "type": "object"
         },
         "msk_iam_auth.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "msk_iam_auth.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "sasl_mechanism": {
           "type": "object"
         },
         "sasl_mechanism.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "sasl_mechanism.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "sasl_password": {
           "type": "object"
         },
         "sasl_password.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "sasl_password.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "sasl_username": {
           "type": "object"
         },
         "sasl_username.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "sasl_username.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "security_protocol": {
           "type": "object"
         },
         "security_protocol.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "security_protocol.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "ssl_ca_file": {
           "type": "object"
         },
         "ssl_ca_file.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "ssl_ca_file.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "topic": {
           "type": "object",
           "required": true
         },
         "topic.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "topic.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
@@ -700,92 +700,92 @@
           "type": "object"
         },
         "aws_access_key_id.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_access_key_id.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_secret_access_key": {
           "type": "object"
         },
         "aws_secret_access_key.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_secret_access_key.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_session_token": {
           "type": "object"
         },
         "aws_session_token.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aws_session_token.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "config": {
           "type": "map(object)"
         },
         "config.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "config.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "consumer_role_arn": {
           "type": "object"
         },
         "consumer_role_arn.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "consumer_role_arn.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "dead_letter_queue_stream_name": {
           "type": "object"
         },
         "dead_letter_queue_stream_name.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "dead_letter_queue_stream_name.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "endpoint_url": {
           "type": "object"
         },
         "endpoint_url.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "endpoint_url.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "enhanced_fanout_consumer_name": {
           "type": "object"
         },
         "enhanced_fanout_consumer_name.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "enhanced_fanout_consumer_name.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "late_arrival_deadline": {
           "type": "object"
         },
         "late_arrival_deadline.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "late_arrival_deadline.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "region_name": {
@@ -793,28 +793,28 @@
           "required": true
         },
         "region_name.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "region_name.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "stream_arn": {
           "type": "object"
         },
         "stream_arn.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "stream_arn.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "stream_name": {
           "type": "object"
         },
         "stream_name.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "stream_name.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
@@ -825,23 +825,23 @@
           "type": "map(object)"
         },
         "config.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "config.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "database": {
           "type": "object",
           "required": true
         },
         "database.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "database.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "host": {
@@ -849,46 +849,46 @@
           "required": true
         },
         "host.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "host.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "password": {
           "type": "object"
         },
         "password.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "password.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "port": {
           "type": "object",
           "required": true
         },
         "port.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "port.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "user": {
           "type": "object",
           "required": true
         },
         "user.literal": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "user.secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
@@ -896,11 +896,11 @@
     "chalk_environment_background_persistence_deployment_binding": {
       "attributes": {
         "background_persistence_deployment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -909,15 +909,15 @@
     "chalk_environment_dataset_cloud_storage_binding": {
       "attributes": {
         "cloud_storage_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -925,11 +925,11 @@
     "chalk_environment_gateway_binding": {
       "attributes": {
         "cluster_gateway_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -938,15 +938,15 @@
     "chalk_environment_model_registry_cloud_storage_binding": {
       "attributes": {
         "cloud_storage_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -954,11 +954,11 @@
     "chalk_environment_offline_store_connection_binding": {
       "attributes": {
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "offline_store_connection_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -967,15 +967,15 @@
     "chalk_environment_plan_stages_cloud_storage_binding": {
       "attributes": {
         "cloud_storage_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -983,15 +983,15 @@
     "chalk_environment_source_bundle_cloud_storage_binding": {
       "attributes": {
         "cloud_storage_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -999,36 +999,36 @@
     "chalk_gcp_cloud_credentials": {
       "attributes": {
         "docker_build_config.builder": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.notification_topic": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.push_registry_tag_prefix": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.push_registry_type": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "docker_build_config.registry_credentials_secret_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_management_service_account": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "gcp_project_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "gcp_region": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -1037,7 +1037,7 @@
     "chalk_kubernetes_cluster": {
       "attributes": {
         "cloud_credential_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller": {
           "type": "object"
@@ -1046,30 +1046,30 @@
           "type": "list(object)"
         },
         "data_plane_controller.host_pools.count": {
-          "type": "tftypes.Number",
+          "type": "number",
           "required": true
         },
         "data_plane_controller.host_pools.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.host_pools.machine_family": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.host_pools.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.host_pools.name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "data_plane_controller.node_pool": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.restricted_node_pool": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.tier": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_redis": {
           "type": "object"
@@ -1078,43 +1078,43 @@
           "type": "object"
         },
         "data_plane_redis.managed.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_redis.managed.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_redis.self_hosted": {
           "type": "object"
         },
         "data_plane_redis.self_hosted.cloud_secret_name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "dns_zone": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kind": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "maintenance_window": {
           "type": "object"
         },
         "maintenance_window.duration": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "maintenance_window.mode": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "maintenance_window.schedule": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -1123,67 +1123,67 @@
     "chalk_managed_aws_vpc": {
       "attributes": {
         "additional_cidr_blocks": {
-          "type": "tftypes.List[tftypes.String]"
+          "type": "list(string)"
         },
         "additional_private_routes": {
           "type": "list(object)"
         },
         "additional_private_routes.destination_cidr_block": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "additional_private_routes.name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "additional_private_routes.peer_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "additional_public_routes": {
           "type": "list(object)"
         },
         "additional_public_routes.destination_cidr_block": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "additional_public_routes.name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "additional_public_routes.peer_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cidr_block": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cloud_credential_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "subnets": {
           "type": "list(object)",
           "required": true
         },
         "subnets.availability_zone": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "subnets.name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "subnets.private_cidr_block": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "subnets.public_cidr_block": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -1195,17 +1195,17 @@
     "chalk_managed_cloud_storage": {
       "attributes": {
         "cloud_credential_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kind": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "uri": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -1213,7 +1213,7 @@
     "chalk_managed_cluster": {
       "attributes": {
         "cloud_credential_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "data_plane_controller": {
@@ -1223,30 +1223,30 @@
           "type": "list(object)"
         },
         "data_plane_controller.host_pools.count": {
-          "type": "tftypes.Number",
+          "type": "number",
           "required": true
         },
         "data_plane_controller.host_pools.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.host_pools.machine_family": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.host_pools.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.host_pools.name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "data_plane_controller.node_pool": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.restricted_node_pool": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_controller.tier": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_redis": {
           "type": "object"
@@ -1255,36 +1255,36 @@
           "type": "object"
         },
         "data_plane_redis.managed.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_redis.managed.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "data_plane_redis.self_hosted": {
           "type": "object"
         },
         "data_plane_redis.self_hosted.cloud_secret_name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "maintenance_window": {
           "type": "object"
         },
         "maintenance_window.duration": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "maintenance_window.mode": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "maintenance_window.schedule": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "vpc_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -1293,14 +1293,14 @@
     "chalk_managed_container_registry": {
       "attributes": {
         "cloud_credential_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
@@ -1308,52 +1308,52 @@
     "chalk_managed_environment": {
       "attributes": {
         "additional_env_vars": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "customer_metadata": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "default_build_profile": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "engine_docker_registry_path": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kube_cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "kube_job_namespace": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "online_store_kind": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "online_store_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "pinned_base_image": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "private_pip_repositories": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "project_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "service_url": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "specs_config_json": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `environment.create` *(team-scoped)*"
@@ -1364,70 +1364,70 @@
           "type": "list(object)"
         },
         "backup_subnets.cidr_range": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "backup_subnets.name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "backup_subnets.purpose": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "backup_subnets.role": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "backup_subnets.secondary_ip_ranges": {
           "type": "list(object)"
         },
         "backup_subnets.secondary_ip_ranges.ip_cidr_range": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "backup_subnets.secondary_ip_ranges.range_name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "cloud_credential_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "subnets": {
           "type": "list(object)",
           "required": true
         },
         "subnets.cidr_range": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "subnets.name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "subnets.purpose": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "subnets.role": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "subnets.secondary_ip_ranges": {
           "type": "list(object)"
         },
         "subnets.secondary_ip_ranges.ip_cidr_range": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "subnets.secondary_ip_ranges.range_name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "vpc_peer_addr": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*"
@@ -1438,15 +1438,15 @@
           "type": "object"
         },
         "bigquery.dataset_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "bigquery.project_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "iceberg": {
@@ -1457,18 +1457,18 @@
           "required": true
         },
         "iceberg.glue_s3.glue_database_name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "iceberg.glue_s3.s3_bucket": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "snowflake": {
@@ -1479,37 +1479,37 @@
           "required": true
         },
         "snowflake.credentials.account": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "snowflake.credentials.database": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "snowflake.credentials.password": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "snowflake.credentials.private_key": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "snowflake.credentials.role": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "snowflake.credentials.schema": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "snowflake.credentials.username": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "snowflake.credentials.warehouse": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "snowflake.storage_integration_name": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `deploy.create`, `deploy.read`"
@@ -1517,11 +1517,11 @@
     "chalk_private_gateway_binding": {
       "attributes": {
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "private_gateway_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -1530,13 +1530,13 @@
     "chalk_project": {
       "attributes": {
         "git_repo": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -1549,69 +1549,69 @@
           "required": true
         },
         "container_spec.authentication": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "container_spec.entrypoint": {
-          "type": "tftypes.List[tftypes.String]"
+          "type": "list(string)"
         },
         "container_spec.env_vars": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "container_spec.image": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "container_spec.port": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "container_spec.protocol": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "container_spec.resources": {
           "type": "object"
         },
         "container_spec.resources.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "container_spec.resources.gpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "container_spec.resources.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "container_spec.routing": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "container_spec.tags": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "container_spec.volumes": {
           "type": "list(object)"
         },
         "container_spec.volumes.mount_path": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "container_spec.volumes.name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "container_spec.volumes.size_limit": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "container_spec.volumes.type": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "scaling_spec": {
@@ -1619,50 +1619,50 @@
           "required": true
         },
         "scaling_spec.max_replicas": {
-          "type": "tftypes.Number",
+          "type": "number",
           "required": true
         },
         "scaling_spec.min_replicas": {
-          "type": "tftypes.Number",
+          "type": "number",
           "required": true
         },
         "scaling_spec.shutdown_delay_seconds": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "scaling_spec.target_cpu_utilization_percentage": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "web_url": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       }
     },
     "chalk_service_token": {
       "attributes": {
         "client_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "client_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "custom_claims": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "default_permission": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "feature_tag_to_permission": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "permissions": {
-          "type": "tftypes.List[tftypes.String]"
+          "type": "list(string)"
         }
       },
       "permissions": "**Required permissions:** `tokens.write`, `tokens.list`"
@@ -1673,82 +1673,82 @@
           "type": "object"
         },
         "aggregator_spec.image_version": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "aggregator_spec.request": {
           "type": "object"
         },
         "aggregator_spec.request.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aggregator_spec.request.ephemeral_storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aggregator_spec.request.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "aggregator_spec.request.storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec": {
           "type": "object"
         },
         "clickhouse_deployment_spec.gateway_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.limit": {
           "type": "object"
         },
         "clickhouse_deployment_spec.limit.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.limit.ephemeral_storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.limit.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.limit.storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.request": {
           "type": "object"
         },
         "clickhouse_deployment_spec.request.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.request.ephemeral_storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.request.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.request.storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.storage": {
           "type": "object"
         },
         "clickhouse_deployment_spec.storage.storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.storage.storage_class_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "clickhouse_deployment_spec.version": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kube_cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "namespace": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "otel_collector_spec": {
           "type": "object"
@@ -1757,34 +1757,34 @@
           "type": "object"
         },
         "otel_collector_spec.limit.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "otel_collector_spec.limit.ephemeral_storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "otel_collector_spec.limit.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "otel_collector_spec.limit.storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "otel_collector_spec.request": {
           "type": "object"
         },
         "otel_collector_spec.request.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "otel_collector_spec.request.ephemeral_storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "otel_collector_spec.request.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "otel_collector_spec.request.storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "otel_collector_spec.version": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -1793,11 +1793,11 @@
     "chalk_telemetry_binding": {
       "attributes": {
         "cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "telemetry_deployment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -1806,17 +1806,17 @@
     "chalk_unmanaged_cloud_storage": {
       "attributes": {
         "cloud_credential_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kind": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "uri": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -1825,22 +1825,22 @@
     "chalk_unmanaged_cluster_background_persistence": {
       "attributes": {
         "api_server_host": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "autodiscover_key": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "bus_writer_image_bswl": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "bus_writer_image_go": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "bus_writer_image_python": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "bus_writer_image_rust": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "google_pubsub": {
           "type": "object"
@@ -1850,11 +1850,11 @@
           "required": true
         },
         "google_pubsub.metrics_bus.subscription_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "google_pubsub.metrics_bus.topic_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "google_pubsub.offline_store_streaming_write_bus": {
@@ -1862,11 +1862,11 @@
           "required": true
         },
         "google_pubsub.offline_store_streaming_write_bus.subscription_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "google_pubsub.offline_store_streaming_write_bus.topic_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "google_pubsub.offline_store_upload_bus": {
@@ -1874,11 +1874,11 @@
           "required": true
         },
         "google_pubsub.offline_store_upload_bus.subscription_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "google_pubsub.offline_store_upload_bus.topic_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "google_pubsub.result_bus": {
@@ -1886,71 +1886,71 @@
           "required": true
         },
         "google_pubsub.result_bus.offline_store_subscription_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "google_pubsub.result_bus.online_store_subscription_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "google_pubsub.result_bus.topic_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kafka": {
           "type": "object"
         },
         "kafka.bootstrap_servers": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kafka.dlq_topic": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "kafka.metrics_bus_topic_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "kafka.offline_store_bus_streaming_write_topic_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "kafka.offline_store_bus_upload_topic_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "kafka.result_bus_topic_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "kafka.sasl_mechanism": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kafka.sasl_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kafka.security_protocol": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kube_cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "namespace": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "offline_store_snowflake_storage_integration_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "offline_store_upload_bucket_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "service_account_name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "writers": {
@@ -1958,111 +1958,111 @@
           "required": true
         },
         "writers.additional_env_vars": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "writers.bus_subscriber_type": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "writers.default_replica_count": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "writers.gke_spot": {
-          "type": "tftypes.Bool"
+          "type": "bool"
         },
         "writers.hpa_specs": {
           "type": "object"
         },
         "writers.hpa_specs.hpa_max_replicas": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "writers.hpa_specs.hpa_min_replicas": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "writers.hpa_specs.hpa_pubsub_subscription_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "writers.hpa_specs.hpa_target_average_value": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "writers.image_override": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.kafka_consumer_group_override": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.limit": {
           "type": "object"
         },
         "writers.limit.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.limit.ephemeral_storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.limit.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.limit.storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.load_writer_configmap": {
-          "type": "tftypes.Bool"
+          "type": "bool"
         },
         "writers.max_batch_size": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "writers.message_processing_concurrency": {
-          "type": "tftypes.Number"
+          "type": "number"
         },
         "writers.metadata_sql_ssl_ca_cert_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.metadata_sql_ssl_client_cert_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.metadata_sql_ssl_client_key_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.metadata_sql_uri_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.nodepool": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.offline_store_inserter_db_type": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.query_table_write_drop_ratio": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.request": {
           "type": "object"
         },
         "writers.request.cpu": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.request.ephemeral_storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.request.memory": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.request.storage": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.results_writer_skip_producing_feature_metrics": {
-          "type": "tftypes.Bool"
+          "type": "bool"
         },
         "writers.storage_cache_prefix": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "writers.version": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
@@ -2070,14 +2070,14 @@
     "chalk_unmanaged_container_registry": {
       "attributes": {
         "cloud_credential_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         }
       },
@@ -2086,59 +2086,59 @@
     "chalk_unmanaged_environment": {
       "attributes": {
         "additional_env_vars": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "customer_metadata": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "default_build_profile": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "engine_docker_registry_path": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kube_cluster_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "kube_cluster_mode": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kube_job_namespace": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "kube_service_account_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "online_store_kind": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "online_store_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "pinned_base_image": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "private_pip_repositories": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "project_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "service_url": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "specs_config_json": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `environment.create` *(team-scoped)*"
@@ -2148,167 +2148,167 @@
     "chalk_environment": {
       "attributes": {
         "active_deployment_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "additional_cron_env_vars": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "additional_env_vars": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "archived_at": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "background_persistence_deployment_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "bigtable_instance_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "bigtable_table_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "branch_kube_cluster_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "branch_url": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "cloud_account_locator": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "cloud_config": {
-          "type": "tftypes.Object[\"aws\":tftypes.Object[\"account_id\":tftypes.String, \"external_id\":tftypes.String, \"management_role_arn\":tftypes.String, \"region\":tftypes.String], \"gcp\":tftypes.Object[\"management_service_account\":tftypes.String, \"project_id\":tftypes.String, \"region\":tftypes.String]]"
+          "type": "object({aws = object({account_id = string, external_id = string, management_role_arn = string, region = string}), gcp = object({management_service_account = string, project_id = string, region = string})})"
         },
         "cloud_provider": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "cloud_region": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "cloud_tenancy_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "cluster_gateway_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "cluster_timescaledb_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "cluster_timescaledb_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "dashboard_url": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "default_planner": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "emq_uri": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "engine_docker_registry_path": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "engine_kube_cluster_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "environment_buckets": {
-          "type": "tftypes.Object[\"dataset_bucket\":tftypes.String, \"model_registry_bucket\":tftypes.String, \"plan_stages_bucket\":tftypes.String, \"source_bundle_bucket\":tftypes.String]"
+          "type": "object({dataset_bucket = string, model_registry_bucket = string, plan_stages_bucket = string, source_bundle_bucket = string})"
         },
         "feature_store_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "grpc_engine_url": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "is_sandbox": {
-          "type": "tftypes.Bool"
+          "type": "bool"
         },
         "kube_cluster_mode": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kube_cluster_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kube_job_namespace": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kube_preview_namespace": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "kube_service_account_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "metadata_server_metrics_store_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "metrics_bus_topic": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "offline_store_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "online_persistence_mode": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "online_store_kind": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "online_store_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "pinned_base_image": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "postgres_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "private_pip_repositories": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "project_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "query_server_metrics_store_secret": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "result_bus_topic": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "service_url": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "shadow_engine_kube_cluster_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "skip_offline_writes_for_online_cached_features": {
-          "type": "tftypes.Bool"
+          "type": "bool"
         },
         "source_bundle_bucket": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "spec_config_json": {
-          "type": "tftypes.Map[tftypes.String]"
+          "type": "map(string)"
         },
         "streaming_query_service_uri": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "team_id": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "vpc_connector_name": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "worker_url": {
-          "type": "tftypes.String"
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `deploy.read`"
@@ -2316,18 +2316,18 @@
     "chalk_offline_store_connection_test": {
       "attributes": {
         "environment_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "error_message": {
-          "type": "tftypes.String"
+          "type": "string"
         },
         "offline_store_connection_id": {
-          "type": "tftypes.String",
+          "type": "string",
           "required": true
         },
         "success": {
-          "type": "tftypes.Bool"
+          "type": "bool"
         }
       }
     }

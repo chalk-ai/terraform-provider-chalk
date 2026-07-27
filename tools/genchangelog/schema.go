@@ -17,6 +17,7 @@ import (
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 var versionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
@@ -116,7 +117,7 @@ func snapshotDataSource(ctx context.Context, constructor func() datasource.DataS
 func collectResourceSchema(ctx context.Context, result map[string]Attribute, prefix string, attributes map[string]rschema.Attribute, blocks map[string]rschema.Block) error {
 	for name, attribute := range attributes {
 		path := joinPath(prefix, name)
-		attributeType := attribute.GetType().TerraformType(ctx).String()
+		attributeType := formatTerraformType(attribute.GetType().TerraformType(ctx))
 		var nested map[string]rschema.Attribute
 		switch value := attribute.(type) {
 		case rschema.SingleNestedAttribute:
@@ -159,7 +160,7 @@ func collectResourceSchema(ctx context.Context, result map[string]Attribute, pre
 func collectDataSourceSchema(ctx context.Context, result map[string]Attribute, prefix string, attributes map[string]dschema.Attribute, blocks map[string]dschema.Block) error {
 	for name, attribute := range attributes {
 		path := joinPath(prefix, name)
-		attributeType := attribute.GetType().TerraformType(ctx).String()
+		attributeType := formatTerraformType(attribute.GetType().TerraformType(ctx))
 		var nested map[string]dschema.Attribute
 		switch value := attribute.(type) {
 		case dschema.SingleNestedAttribute:
@@ -201,6 +202,52 @@ func collectDataSourceSchema(ctx context.Context, result map[string]Attribute, p
 
 func trackedAttribute(attribute frameworkAttribute, attributeType string) Attribute {
 	return Attribute{Type: attributeType, Required: attribute.IsRequired()}
+}
+
+func formatTerraformType(terraformType tftypes.Type) string {
+	switch {
+	case terraformType.Is(tftypes.String):
+		return "string"
+	case terraformType.Is(tftypes.Number):
+		return "number"
+	case terraformType.Is(tftypes.Bool):
+		return "bool"
+	case terraformType.Is(tftypes.DynamicPseudoType):
+		return "dynamic"
+	}
+
+	switch value := terraformType.(type) {
+	case tftypes.List:
+		return "list(" + formatTerraformType(value.ElementType) + ")"
+	case tftypes.Set:
+		return "set(" + formatTerraformType(value.ElementType) + ")"
+	case tftypes.Map:
+		return "map(" + formatTerraformType(value.ElementType) + ")"
+	case tftypes.Tuple:
+		elements := make([]string, len(value.ElementTypes))
+		for index, elementType := range value.ElementTypes {
+			elements[index] = formatTerraformType(elementType)
+		}
+		return "tuple([" + strings.Join(elements, ", ") + "])"
+	case tftypes.Object:
+		names := make([]string, 0, len(value.AttributeTypes))
+		for name := range value.AttributeTypes {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+
+		attributes := make([]string, 0, len(names))
+		for _, name := range names {
+			attributeType := formatTerraformType(value.AttributeTypes[name])
+			if _, optional := value.OptionalAttributes[name]; optional {
+				attributeType = "optional(" + attributeType + ")"
+			}
+			attributes = append(attributes, name+" = "+attributeType)
+		}
+		return "object({" + strings.Join(attributes, ", ") + "})"
+	default:
+		return terraformType.String()
+	}
 }
 
 func joinPath(prefix, name string) string {
