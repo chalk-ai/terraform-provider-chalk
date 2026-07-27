@@ -17,7 +17,6 @@ description: |-
 
 # Chalk provider changelog
 
-This file is generated from provider schema snapshots.
 For migration guidance and non-schema changes, see the [project changelog](https://github.com/chalk-ai/terraform-provider-chalk/blob/main/CHANGELOG.md).
 
 ## Unreleased
@@ -29,9 +28,6 @@ For migration guidance and non-schema changes, see the [project changelog](https
 		fmt.Fprintf(&output, "\n## %s\n\n", snapshots[index].Version)
 		writeChanges(&output, diffSnapshots(snapshots[index-1], snapshots[index]))
 	}
-
-	fmt.Fprintf(&output, "\n## %s\n\n", snapshots[0].Version)
-	output.WriteString("Baseline snapshot.\n")
 	return output.Bytes()
 }
 
