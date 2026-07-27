@@ -15,3 +15,6 @@ import (
 
 // Generate documentation.
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-dir .. --provider-name chalk
+
+// Generate the changelog after tfplugindocs resets the guides directory.
+//go:generate go run ../tools/genchangelog --provider-dir ..
