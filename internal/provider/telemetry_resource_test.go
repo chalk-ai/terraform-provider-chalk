@@ -483,3 +483,161 @@ resource "chalk_telemetry" "test" {
 		},
 	})
 }
+
+// TestTelemetryResourceCustomerVectorAggregator verifies both exporters round-trip and
+// that a signal's presence, not its value, is what the server sees as "export this".
+func TestTelemetryResourceCustomerVectorAggregator(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerTelemetry(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+  customer_vector_aggregator = {
+    datadog_export = {
+      api_key_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:dd-abc123"
+      api_host                 = "datadoghq.eu"
+      logs                     = { enabled = true }
+      traces                   = {}
+      metrics                  = { enabled = false }
+    }
+    otlp_metrics_export = {
+      url                                   = "https://otlp.example.com/v1/metrics"
+      authorization_header_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:otlp-def456"
+    }
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.datadog_export.api_host", "datadoghq.eu"),
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.datadog_export.logs.enabled", "true"),
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.otlp_metrics_export.url", "https://otlp.example.com/v1/metrics"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateTelemetryDeployment")
+						require.Len(t, captured, 1, "Expected exactly one CreateTelemetryDeployment call")
+
+						req := captured[0].(*serverv1.CreateTelemetryDeploymentRequest)
+						agg := req.Spec.GetCustomerVectorAggregator()
+						require.NotNil(t, agg)
+
+						dd := agg.GetDatadogExport()
+						require.NotNil(t, dd)
+						assert.Equal(t, "arn:aws:secretsmanager:us-west-2:123456789012:secret:dd-abc123", dd.GetApiKeySecretArn())
+						assert.Equal(t, "datadoghq.eu", dd.GetApiHost())
+
+						require.NotNil(t, dd.GetLogs())
+						assert.Equal(t, true, dd.GetLogs().GetEnabled())
+						// An empty block must still send a message: the server reads presence as
+						// enabled, and a nil traces field would silently drop trace export.
+						require.NotNil(t, dd.GetTraces())
+						assert.Nil(t, dd.GetTraces().Enabled)
+						require.NotNil(t, dd.GetMetrics())
+						assert.Equal(t, false, dd.GetMetrics().GetEnabled())
+
+						otlp := agg.GetOtlpMetricsExport()
+						require.NotNil(t, otlp)
+						assert.Equal(t, "https://otlp.example.com/v1/metrics", otlp.GetUrl())
+						assert.Equal(t, "arn:aws:secretsmanager:us-west-2:123456789012:secret:otlp-def456", otlp.GetAuthorizationHeaderSecretArn())
+
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// TestTelemetryResourceCustomerVectorAggregatorFieldMask verifies the mask names the two
+// exporters rather than their parent, so unmanaged siblings on that message survive.
+func TestTelemetryResourceCustomerVectorAggregatorFieldMask(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerTelemetry(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+  customer_vector_aggregator = {
+    datadog_export = {
+      api_key_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:dd-abc123"
+      logs                     = { enabled = true }
+    }
+  }
+}
+`,
+			},
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+  customer_vector_aggregator = {
+    datadog_export = {
+      api_key_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:dd-abc123"
+      logs                     = { enabled = false }
+    }
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
+						require.NotEmpty(t, captured, "Expected at least one UpdateTelemetryDeployment call")
+
+						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
+						require.NotNil(t, req.UpdateMask)
+						assert.Equal(t, []string{
+							"customer_vector_aggregator.datadog_export",
+							"customer_vector_aggregator.otlp_metrics_export",
+						}, req.UpdateMask.Paths)
+
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// TestTelemetryResourceCustomerVectorAggregatorOmitted verifies that a deployment carrying
+// only fields this resource does not model reads back as unset instead of drifting.
+func TestTelemetryResourceCustomerVectorAggregatorOmitted(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerTelemetry(t)
+
+	server.OnGetTelemetryDeployment().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		return &serverv1.GetTelemetryDeploymentResponse{
+			Deployment: &serverv1.TelemetryDeployment{
+				Id:        "test-telemetry-id",
+				ClusterId: "test-cluster-id",
+				Spec: &serverv1.TelemetryDeploymentSpec{
+					CustomerVectorAggregator: &serverv1.CustomerVectorAggregatorConfig{
+						Replicas: proto.Int32(3),
+					},
+				},
+			},
+		}, nil
+	})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.datadog_export"),
+				),
+			},
+		},
+	})
+}

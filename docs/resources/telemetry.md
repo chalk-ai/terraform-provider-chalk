@@ -26,6 +26,7 @@ Chalk telemetry resource
 
 - `aggregator_spec` (Attributes) Aggregator specification (see [below for nested schema](#nestedatt--aggregator_spec))
 - `clickhouse_deployment_spec` (Attributes) Clickhouse deployment specification (see [below for nested schema](#nestedatt--clickhouse_deployment_spec))
+- `customer_vector_aggregator` (Attributes) Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. (see [below for nested schema](#nestedatt--customer_vector_aggregator))
 - `id` (String) Telemetry deployment identifier
 - `namespace` (String) Kubernetes namespace for the telemetry deployment
 - `otel_collector_spec` (Attributes) Otel collector specification (see [below for nested schema](#nestedatt--otel_collector_spec))
@@ -96,6 +97,67 @@ Optional:
 
 - `storage` (String) Storage resource specification
 - `storage_class_name` (String) Storage class name
+
+
+
+<a id="nestedatt--customer_vector_aggregator"></a>
+### Nested Schema for `customer_vector_aggregator`
+
+Optional:
+
+- `datadog_export` (Attributes) Export telemetry to your own Datadog account. Nothing is exported until at least one of `logs`, `traces`, or `metrics` is present. (see [below for nested schema](#nestedatt--customer_vector_aggregator--datadog_export))
+- `otlp_metrics_export` (Attributes) Export metrics to an OTLP/HTTP endpoint you own. (see [below for nested schema](#nestedatt--customer_vector_aggregator--otlp_metrics_export))
+
+<a id="nestedatt--customer_vector_aggregator--datadog_export"></a>
+### Nested Schema for `customer_vector_aggregator.datadog_export`
+
+Required:
+
+- `api_key_secret_reference` (String) Reference to the cloud secret holding your Datadog API key: an AWS Secrets Manager ARN, a GCP `projects/<project>/secrets/<name>` resource name, or an Azure Key Vault secret URL. The secret must live in the telemetry cluster's own account, and its latest version is read at deploy time.
+
+Optional:
+
+- `api_host` (String) Datadog site to export to, for example `datadoghq.eu`. Defaults to `datadoghq.com`.
+- `logs` (Attributes) Export logs to your Datadog account. Omitting this block leaves logs unexported. (see [below for nested schema](#nestedatt--customer_vector_aggregator--datadog_export--logs))
+- `metrics` (Attributes) Export metrics to your Datadog account. Omitting this block leaves metrics unexported. (see [below for nested schema](#nestedatt--customer_vector_aggregator--datadog_export--metrics))
+- `traces` (Attributes) Export traces to your Datadog account. Omitting this block leaves traces unexported. (see [below for nested schema](#nestedatt--customer_vector_aggregator--datadog_export--traces))
+
+<a id="nestedatt--customer_vector_aggregator--datadog_export--logs"></a>
+### Nested Schema for `customer_vector_aggregator.datadog_export.logs`
+
+Optional:
+
+- `enabled` (Boolean) Whether to export logs. Defaults to `true` when this block is present.
+
+
+<a id="nestedatt--customer_vector_aggregator--datadog_export--metrics"></a>
+### Nested Schema for `customer_vector_aggregator.datadog_export.metrics`
+
+Optional:
+
+- `enabled` (Boolean) Whether to export metrics. Defaults to `true` when this block is present.
+
+
+<a id="nestedatt--customer_vector_aggregator--datadog_export--traces"></a>
+### Nested Schema for `customer_vector_aggregator.datadog_export.traces`
+
+Optional:
+
+- `enabled` (Boolean) Whether to export traces. Defaults to `true` when this block is present.
+
+
+
+<a id="nestedatt--customer_vector_aggregator--otlp_metrics_export"></a>
+### Nested Schema for `customer_vector_aggregator.otlp_metrics_export`
+
+Required:
+
+- `url` (String) Full OTLP/HTTP metrics URL, including the `/v1/metrics` path.
+
+Optional:
+
+- `authorization_header_secret_reference` (String) Reference to the cloud secret holding the complete `Authorization` header value, for example `Bearer <token>`. Accepts an AWS Secrets Manager ARN, a GCP `projects/<project>/secrets/<name>` resource name, or an Azure Key Vault secret URL.
+- `enabled` (Boolean) Whether to export metrics. Defaults to `true` when this block is present.
 
 
 

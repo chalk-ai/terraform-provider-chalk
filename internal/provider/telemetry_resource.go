@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
@@ -84,12 +85,13 @@ type AggregatorSpecModel struct {
 }
 
 type TelemetryResourceModel struct {
-	Id                       types.String `tfsdk:"id"`
-	Namespace                types.String `tfsdk:"namespace"`
-	KubeClusterId            types.String `tfsdk:"kube_cluster_id"`
-	OtelCollectorSpec        types.Object `tfsdk:"otel_collector_spec"`
-	ClickhouseDeploymentSpec types.Object `tfsdk:"clickhouse_deployment_spec"`
-	AggregatorSpec           types.Object `tfsdk:"aggregator_spec"`
+	Id                       types.String                   `tfsdk:"id"`
+	Namespace                types.String                   `tfsdk:"namespace"`
+	KubeClusterId            types.String                   `tfsdk:"kube_cluster_id"`
+	OtelCollectorSpec        types.Object                   `tfsdk:"otel_collector_spec"`
+	ClickhouseDeploymentSpec types.Object                   `tfsdk:"clickhouse_deployment_spec"`
+	AggregatorSpec           types.Object                   `tfsdk:"aggregator_spec"`
+	CustomerVectorAggregator *customerVectorAggregatorModel `tfsdk:"customer_vector_aggregator"`
 }
 
 func (r *TelemetryResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -245,6 +247,7 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 					objectplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"customer_vector_aggregator": customerVectorAggregatorSchema(),
 		},
 	}
 }
@@ -271,7 +274,8 @@ func (r *TelemetryResource) Configure(ctx context.Context, req resource.Configur
 // buildTelemetryDeploymentSpec builds a TelemetryDeploymentSpec proto from a Terraform model.
 func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceModel, diags *diag.Diagnostics) *serverv1.TelemetryDeploymentSpec {
 	spec := &serverv1.TelemetryDeploymentSpec{
-		Namespace: data.Namespace.ValueStringPointer(),
+		Namespace:                data.Namespace.ValueStringPointer(),
+		CustomerVectorAggregator: data.CustomerVectorAggregator.toProto(),
 	}
 
 	if !data.ClickhouseDeploymentSpec.IsNull() && !data.ClickhouseDeploymentSpec.IsUnknown() {
@@ -369,6 +373,7 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 	}
 
 	data.Namespace = types.StringPointerValue(spec.Namespace)
+	data.CustomerVectorAggregator = customerVectorAggregatorFromProto(spec.CustomerVectorAggregator)
 
 	if spec.ClickHouse != nil {
 		ch := spec.ClickHouse
@@ -421,6 +426,14 @@ func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
 	}
 	if !data.AggregatorSpec.IsUnknown() && !data.AggregatorSpec.Equal(state.AggregatorSpec) {
 		paths = append(paths, "aggregator")
+	}
+	// Mask the exporters, not their parent: other surfaces set replicas, statsd_export
+	// and the remap VRL on that same message, and a parent path would clear them.
+	if !proto.Equal(data.CustomerVectorAggregator.toProto(), state.CustomerVectorAggregator.toProto()) {
+		paths = append(paths,
+			"customer_vector_aggregator.datadog_export",
+			"customer_vector_aggregator.otlp_metrics_export",
+		)
 	}
 	return paths
 }
