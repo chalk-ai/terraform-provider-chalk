@@ -484,8 +484,7 @@ resource "chalk_telemetry" "test" {
 	})
 }
 
-// TestTelemetryResourceCustomerVectorAggregator verifies both exporters round-trip and
-// that a signal's presence, not its value, is what the server sees as "export this".
+// TestTelemetryResourceCustomerVectorAggregator verifies both exporters round-trip and that presence enables a signal.
 func TestTelemetryResourceCustomerVectorAggregator(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
@@ -531,8 +530,7 @@ resource "chalk_telemetry" "test" {
 
 						require.NotNil(t, dd.GetLogs())
 						assert.Equal(t, true, dd.GetLogs().GetEnabled())
-						// An empty block must still send a message: the server reads presence as
-						// enabled, and a nil traces field would silently drop trace export.
+						// A nil traces field would silently drop trace export; presence is the opt-in.
 						require.NotNil(t, dd.GetTraces())
 						assert.Nil(t, dd.GetTraces().Enabled)
 						require.NotNil(t, dd.GetMetrics())
@@ -551,8 +549,7 @@ resource "chalk_telemetry" "test" {
 	})
 }
 
-// TestTelemetryResourceCustomerVectorAggregatorFieldMask verifies the mask names the two
-// exporters rather than their parent, so unmanaged siblings on that message survive.
+// TestTelemetryResourceCustomerVectorAggregatorFieldMask verifies the mask names the exporters, not their parent.
 func TestTelemetryResourceCustomerVectorAggregatorFieldMask(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
@@ -605,8 +602,7 @@ resource "chalk_telemetry" "test" {
 	})
 }
 
-// TestTelemetryResourceCustomerVectorAggregatorOmitted verifies that a deployment carrying
-// only fields this resource does not model reads back as unset instead of drifting.
+// TestTelemetryResourceCustomerVectorAggregatorOmitted verifies an unmodelled-only config reads back as unset.
 func TestTelemetryResourceCustomerVectorAggregatorOmitted(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)

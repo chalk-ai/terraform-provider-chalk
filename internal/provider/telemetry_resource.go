@@ -427,8 +427,7 @@ func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
 	if !data.AggregatorSpec.IsUnknown() && !data.AggregatorSpec.Equal(state.AggregatorSpec) {
 		paths = append(paths, "aggregator")
 	}
-	// Mask the exporters, not their parent: other surfaces set replicas, statsd_export
-	// and the remap VRL on that same message, and a parent path would clear them.
+	// Mask the exporters, not the parent: unmodelled siblings like replicas live there too.
 	if !proto.Equal(data.CustomerVectorAggregator.toProto(), state.CustomerVectorAggregator.toProto()) {
 		paths = append(paths,
 			"customer_vector_aggregator.datadog_export",

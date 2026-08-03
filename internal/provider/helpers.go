@@ -54,9 +54,7 @@ func stringPointerValue(p *string) types.String {
 	return types.StringValue(*p)
 }
 
-// boolPointerValue converts an optional (nullable) proto bool to a types.Bool
-// using presence: a nil pointer becomes null. Pair it with
-// types.Bool.ValueBoolPointer() so "unset" survives a round trip.
+// boolPointerValue maps a nil proto bool to null so "unset" survives a round trip.
 func boolPointerValue(p *bool) types.Bool {
 	if p == nil {
 		return types.BoolNull()

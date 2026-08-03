@@ -35,8 +35,7 @@ type customerOtlpMetricsExportModel struct {
 
 const secretReferenceFormats = "an AWS Secrets Manager ARN, a GCP `projects/<project>/secrets/<name>` resource name, or an Azure Key Vault secret URL"
 
-// datadogSignalExportSchema describes one Datadog signal. Presence is what turns the
-// signal on, so `logs = {}` means "export logs" and omitting the block means "don't".
+// datadogSignalExportSchema describes one Datadog signal, which presence alone enables.
 func datadogSignalExportSchema(signal string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		MarkdownDescription: fmt.Sprintf("Export %s to your Datadog account. Omitting this block leaves %s unexported.", signal, signal),
@@ -146,9 +145,7 @@ func (m *customerOtlpMetricsExportModel) toProto() *serverv1.CustomerVectorAggre
 }
 
 func customerVectorAggregatorFromProto(p *serverv1.CustomerVectorAggregatorConfig) *customerVectorAggregatorModel {
-	// The same proto message also carries replicas, statsd_export and remap VRL, which
-	// this resource does not model. A deployment holding only those must read back as
-	// unset, or a configuration that never declared the block would drift every plan.
+	// Nil unless an exporter is set, so unmodelled siblings like replicas don't drift.
 	if p.GetDatadogExport() == nil && p.GetOtlpMetricsExport() == nil {
 		return nil
 	}
@@ -163,8 +160,7 @@ func customerDatadogExportFromProto(p *serverv1.CustomerVectorAggregatorDatadogE
 		return nil
 	}
 	return &customerDatadogExportModel{
-		// Empty when the deployment stores an inline API key instead, which this
-		// resource never writes; the plan then shows the configured reference.
+		// Empty when the deployment stores an inline API key, which this resource never writes.
 		ApiKeySecretReference: optionalStringValue(p.GetApiKeySecretArn()),
 		ApiHost:               stringPointerValue(p.ApiHost),
 		Logs:                  customerDatadogSignalFromProto(p.GetLogs()),
