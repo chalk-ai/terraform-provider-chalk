@@ -484,7 +484,7 @@ resource "chalk_telemetry" "test" {
 	})
 }
 
-// TestTelemetryResourceCustomerVectorAggregator verifies both exporters round-trip and that presence enables a signal.
+// TestTelemetryResourceCustomerVectorAggregator verifies both exporters round-trip faithfully.
 func TestTelemetryResourceCustomerVectorAggregator(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
@@ -530,7 +530,7 @@ resource "chalk_telemetry" "test" {
 
 						require.NotNil(t, dd.GetLogs())
 						assert.Equal(t, true, dd.GetLogs().GetEnabled())
-						// A nil traces field would silently drop trace export; presence is the opt-in.
+						// An empty block must round-trip as a present message with enabled unset.
 						require.NotNil(t, dd.GetTraces())
 						assert.Nil(t, dd.GetTraces().Enabled)
 						require.NotNil(t, dd.GetMetrics())

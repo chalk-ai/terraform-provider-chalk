@@ -105,7 +105,7 @@ Optional:
 
 Optional:
 
-- `datadog` (Attributes) Export telemetry to your own Datadog account. Nothing is exported until at least one of `logs`, `traces`, or `metrics` is present. (see [below for nested schema](#nestedatt--exporters--datadog))
+- `datadog` (Attributes) Export telemetry to your own Datadog account. Logs, traces, and metrics all export by default; disable one with `enabled = false`. (see [below for nested schema](#nestedatt--exporters--datadog))
 - `otlp` (Attributes) Export metrics to an OTLP/HTTP endpoint you own. (see [below for nested schema](#nestedatt--exporters--otlp))
 
 <a id="nestedatt--exporters--datadog"></a>
@@ -118,16 +118,16 @@ Required:
 Optional:
 
 - `api_host` (String) Datadog site to export to, for example `datadoghq.eu`. Defaults to `datadoghq.com`.
-- `logs` (Attributes) Export logs to your Datadog account. Omitting this block leaves logs unexported. (see [below for nested schema](#nestedatt--exporters--datadog--logs))
-- `metrics` (Attributes) Export metrics to your Datadog account. Omitting this block leaves metrics unexported. (see [below for nested schema](#nestedatt--exporters--datadog--metrics))
-- `traces` (Attributes) Export traces to your Datadog account. Omitting this block leaves traces unexported. (see [below for nested schema](#nestedatt--exporters--datadog--traces))
+- `logs` (Attributes) Controls logs export, which is on by default. (see [below for nested schema](#nestedatt--exporters--datadog--logs))
+- `metrics` (Attributes) Controls metrics export, which is on by default. (see [below for nested schema](#nestedatt--exporters--datadog--metrics))
+- `traces` (Attributes) Controls traces export, which is on by default. (see [below for nested schema](#nestedatt--exporters--datadog--traces))
 
 <a id="nestedatt--exporters--datadog--logs"></a>
 ### Nested Schema for `exporters.datadog.logs`
 
 Optional:
 
-- `enabled` (Boolean) Whether to export logs. Defaults to `true` when this block is present.
+- `enabled` (Boolean) Whether to export logs. Defaults to `true`.
 
 
 <a id="nestedatt--exporters--datadog--metrics"></a>
@@ -135,7 +135,7 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether to export metrics. Defaults to `true` when this block is present.
+- `enabled` (Boolean) Whether to export metrics. Defaults to `true`.
 
 
 <a id="nestedatt--exporters--datadog--traces"></a>
@@ -143,7 +143,7 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether to export traces. Defaults to `true` when this block is present.
+- `enabled` (Boolean) Whether to export traces. Defaults to `true`.
 
 
 

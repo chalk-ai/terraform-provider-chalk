@@ -38,14 +38,14 @@ type customerOtlpMetricsExportModel struct {
 
 const secretReferenceFormats = "an AWS Secrets Manager ARN, a GCP `projects/<project>/secrets/<name>` resource name, or an Azure Key Vault secret URL"
 
-// datadogSignalExportSchema describes one Datadog signal, which presence alone enables.
+// datadogSignalExportSchema describes one Datadog signal.
 func datadogSignalExportSchema(signal string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: fmt.Sprintf("Export %s to your Datadog account. Omitting this block leaves %s unexported.", signal, signal),
+		MarkdownDescription: fmt.Sprintf("Controls %s export, which is on by default.", signal),
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
-				MarkdownDescription: fmt.Sprintf("Whether to export %s. Defaults to `true` when this block is present.", signal),
+				MarkdownDescription: fmt.Sprintf("Whether to export %s. Defaults to `true`.", signal),
 				Optional:            true,
 			},
 		},
@@ -58,7 +58,7 @@ func customerVectorAggregatorSchema() schema.SingleNestedAttribute {
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"datadog": schema.SingleNestedAttribute{
-				MarkdownDescription: "Export telemetry to your own Datadog account. Nothing is exported until at least one of `logs`, `traces`, or `metrics` is present.",
+				MarkdownDescription: "Export telemetry to your own Datadog account. Logs, traces, and metrics all export by default; disable one with `enabled = false`.",
 				Optional:            true,
 				Validators: []validator.Object{
 					objectvalidator.AtLeastOneOf(
