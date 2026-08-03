@@ -549,7 +549,8 @@ resource "chalk_telemetry" "test" {
 	})
 }
 
-// TestTelemetryResourceCustomerVectorAggregatorFieldMask verifies the mask names the exporters, not their parent.
+// TestTelemetryResourceCustomerVectorAggregatorFieldMask verifies the mask names only owned
+// leaves of the changed exporter, so unmodelled fields and the unchanged exporter survive.
 func TestTelemetryResourceCustomerVectorAggregatorFieldMask(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
@@ -566,6 +567,9 @@ resource "chalk_telemetry" "test" {
       api_key_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:dd-abc123"
       logs                     = { enabled = true }
     }
+    otlp_metrics_export = {
+      url = "https://otlp.example.com/v1/metrics"
+    }
   }
 }
 `,
@@ -579,6 +583,9 @@ resource "chalk_telemetry" "test" {
       api_key_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:dd-abc123"
       logs                     = { enabled = false }
     }
+    otlp_metrics_export = {
+      url = "https://otlp.example.com/v1/metrics"
+    }
   }
 }
 `,
@@ -590,13 +597,38 @@ resource "chalk_telemetry" "test" {
 						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
 						require.NotNil(t, req.UpdateMask)
 						assert.Equal(t, []string{
-							"customer_vector_aggregator.datadog_export",
-							"customer_vector_aggregator.otlp_metrics_export",
+							"customer_vector_aggregator.datadog_export.api_key_secret_arn",
+							"customer_vector_aggregator.datadog_export.api_host",
+							"customer_vector_aggregator.datadog_export.logs.enabled",
+							"customer_vector_aggregator.datadog_export.traces",
+							"customer_vector_aggregator.datadog_export.metrics",
 						}, req.UpdateMask.Paths)
 
 						return nil
 					},
 				),
+			},
+		},
+	})
+}
+
+// TestTelemetryResourceCustomerVectorAggregatorEmptyBlock verifies an empty block is
+// rejected up front; it would otherwise drift forever since state reads it back as unset.
+func TestTelemetryResourceCustomerVectorAggregatorEmptyBlock(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerTelemetry(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id            = "test-cluster-id"
+  customer_vector_aggregator = {}
+}
+`,
+				ExpectError: regexp.MustCompile("At least one attribute"),
 			},
 		},
 	})

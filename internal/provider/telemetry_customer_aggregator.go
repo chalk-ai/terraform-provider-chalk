@@ -4,10 +4,13 @@ import (
 	"fmt"
 
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"google.golang.org/protobuf/proto"
 )
 
 type customerVectorAggregatorModel struct {
@@ -51,12 +54,17 @@ func datadogSignalExportSchema(signal string) schema.SingleNestedAttribute {
 
 func customerVectorAggregatorSchema() schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present.",
+		MarkdownDescription: "Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Requires the Vector telemetry runtime; deployments on the OTel runtime store this configuration without deploying an exporter.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"datadog_export": schema.SingleNestedAttribute{
 				MarkdownDescription: "Export telemetry to your own Datadog account. Nothing is exported until at least one of `logs`, `traces`, or `metrics` is present.",
 				Optional:            true,
+				Validators: []validator.Object{
+					objectvalidator.AtLeastOneOf(
+						path.MatchRelative().AtParent().AtName("otlp_metrics_export"),
+					),
+				},
 				Attributes: map[string]schema.Attribute{
 					"api_key_secret_reference": schema.StringAttribute{
 						MarkdownDescription: "Reference to the cloud secret holding your Datadog API key: " + secretReferenceFormats + ". The secret must live in the telemetry cluster's own account, and its latest version is read at deploy time.",
@@ -142,6 +150,46 @@ func (m *customerOtlpMetricsExportModel) toProto() *serverv1.CustomerVectorAggre
 		Url:                          m.Url.ValueString(),
 		AuthorizationHeaderSecretArn: m.AuthorizationHeaderSecretReference.ValueStringPointer(),
 	}
+}
+
+// customerVectorAggregatorMaskPaths masks only fields this resource owns, so unmodelled
+// fields like remap_vrl and metrics_sink survive; whole-message paths are used only to clear.
+func customerVectorAggregatorMaskPaths(plan, state *customerVectorAggregatorModel) []string {
+	var paths []string
+	planProto, stateProto := plan.toProto(), state.toProto()
+	if dd := planProto.GetDatadogExport(); !proto.Equal(dd, stateProto.GetDatadogExport()) {
+		if dd == nil {
+			paths = append(paths, "customer_vector_aggregator.datadog_export")
+		} else {
+			paths = append(paths,
+				"customer_vector_aggregator.datadog_export.api_key_secret_arn",
+				"customer_vector_aggregator.datadog_export.api_host",
+			)
+			for _, signal := range []struct {
+				name string
+				set  *serverv1.CustomerVectorAggregatorDatadogSignalExportSpec
+			}{{"logs", dd.GetLogs()}, {"traces", dd.GetTraces()}, {"metrics", dd.GetMetrics()}} {
+				if signal.set == nil {
+					paths = append(paths, "customer_vector_aggregator.datadog_export."+signal.name)
+				} else {
+					// Masking enabled under an absent signal would create it; fmutils fills in parents.
+					paths = append(paths, "customer_vector_aggregator.datadog_export."+signal.name+".enabled")
+				}
+			}
+		}
+	}
+	if otlp := planProto.GetOtlpMetricsExport(); !proto.Equal(otlp, stateProto.GetOtlpMetricsExport()) {
+		if otlp == nil {
+			paths = append(paths, "customer_vector_aggregator.otlp_metrics_export")
+		} else {
+			paths = append(paths,
+				"customer_vector_aggregator.otlp_metrics_export.enabled",
+				"customer_vector_aggregator.otlp_metrics_export.url",
+				"customer_vector_aggregator.otlp_metrics_export.authorization_header_secret_arn",
+			)
+		}
+	}
+	return paths
 }
 
 func customerVectorAggregatorFromProto(p *serverv1.CustomerVectorAggregatorConfig) *customerVectorAggregatorModel {

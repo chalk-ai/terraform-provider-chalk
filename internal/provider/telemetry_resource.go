@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
@@ -427,13 +426,7 @@ func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
 	if !data.AggregatorSpec.IsUnknown() && !data.AggregatorSpec.Equal(state.AggregatorSpec) {
 		paths = append(paths, "aggregator")
 	}
-	// Mask the exporters, not the parent: unmodelled siblings like replicas live there too.
-	if !proto.Equal(data.CustomerVectorAggregator.toProto(), state.CustomerVectorAggregator.toProto()) {
-		paths = append(paths,
-			"customer_vector_aggregator.datadog_export",
-			"customer_vector_aggregator.otlp_metrics_export",
-		)
-	}
+	paths = append(paths, customerVectorAggregatorMaskPaths(data.CustomerVectorAggregator, state.CustomerVectorAggregator)...)
 	return paths
 }
 
