@@ -105,7 +105,7 @@ Optional:
 
 Optional:
 
-- `datadog` (Attributes) Export telemetry to your own Datadog account. With no signal blocks, all of logs, traces, and metrics export; declaring any signal block exports only the declared signals. (see [below for nested schema](#nestedatt--exporters--datadog))
+- `datadog` (Attributes) Export telemetry to your own Datadog account. Logs, traces, and metrics all export by default; disable one with `enabled = false`. (see [below for nested schema](#nestedatt--exporters--datadog))
 - `otlp` (Attributes) Export metrics to an OTLP/HTTP endpoint you own. (see [below for nested schema](#nestedatt--exporters--otlp))
 
 <a id="nestedatt--exporters--datadog"></a>
@@ -127,7 +127,7 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether to export logs. Defaults to `true` when this block is declared.
+- `enabled` (Boolean) Whether to export logs. Defaults to `true`.
 
 
 <a id="nestedatt--exporters--datadog--metrics"></a>
@@ -135,7 +135,7 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether to export metrics. Defaults to `true` when this block is declared.
+- `enabled` (Boolean) Whether to export metrics. Defaults to `true`.
 
 
 <a id="nestedatt--exporters--datadog--traces"></a>
@@ -143,7 +143,7 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether to export traces. Defaults to `true` when this block is declared.
+- `enabled` (Boolean) Whether to export traces. Defaults to `true`.
 
 
 

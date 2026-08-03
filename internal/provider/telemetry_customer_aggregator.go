@@ -45,7 +45,7 @@ func datadogSignalExportSchema(signal string) schema.SingleNestedAttribute {
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
-				MarkdownDescription: fmt.Sprintf("Whether to export %s. Defaults to `true` when this block is declared.", signal),
+				MarkdownDescription: fmt.Sprintf("Whether to export %s. Defaults to `true`.", signal),
 				Optional:            true,
 			},
 		},
@@ -58,7 +58,7 @@ func customerVectorAggregatorSchema() schema.SingleNestedAttribute {
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"datadog": schema.SingleNestedAttribute{
-				MarkdownDescription: "Export telemetry to your own Datadog account. With no signal blocks, all of logs, traces, and metrics export; declaring any signal block exports only the declared signals.",
+				MarkdownDescription: "Export telemetry to your own Datadog account. Logs, traces, and metrics all export by default; disable one with `enabled = false`.",
 				Optional:            true,
 				Validators: []validator.Object{
 					objectvalidator.AtLeastOneOf(
