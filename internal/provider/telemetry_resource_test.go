@@ -496,15 +496,15 @@ func TestTelemetryResourceCustomerVectorAggregator(t *testing.T) {
 				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
-  customer_vector_aggregator = {
-    datadog_export = {
+  exporters = {
+    datadog = {
       api_key_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:dd-abc123"
       api_host                 = "datadoghq.eu"
       logs                     = { enabled = true }
       traces                   = {}
       metrics                  = { enabled = false }
     }
-    otlp_metrics_export = {
+    otlp = {
       url                                   = "https://otlp.example.com/v1/metrics"
       authorization_header_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:otlp-def456"
     }
@@ -512,9 +512,9 @@ resource "chalk_telemetry" "test" {
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.datadog_export.api_host", "datadoghq.eu"),
-					resource.TestCheckResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.datadog_export.logs.enabled", "true"),
-					resource.TestCheckResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.otlp_metrics_export.url", "https://otlp.example.com/v1/metrics"),
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "exporters.datadog.api_host", "datadoghq.eu"),
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "exporters.datadog.logs.enabled", "true"),
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "exporters.otlp.url", "https://otlp.example.com/v1/metrics"),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("CreateTelemetryDeployment")
 						require.Len(t, captured, 1, "Expected exactly one CreateTelemetryDeployment call")
@@ -562,12 +562,12 @@ func TestTelemetryResourceCustomerVectorAggregatorFieldMask(t *testing.T) {
 				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
-  customer_vector_aggregator = {
-    datadog_export = {
+  exporters = {
+    datadog = {
       api_key_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:dd-abc123"
       logs                     = { enabled = true }
     }
-    otlp_metrics_export = {
+    otlp = {
       url = "https://otlp.example.com/v1/metrics"
     }
   }
@@ -578,12 +578,12 @@ resource "chalk_telemetry" "test" {
 				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
-  customer_vector_aggregator = {
-    datadog_export = {
+  exporters = {
+    datadog = {
       api_key_secret_reference = "arn:aws:secretsmanager:us-west-2:123456789012:secret:dd-abc123"
       logs                     = { enabled = false }
     }
-    otlp_metrics_export = {
+    otlp = {
       url = "https://otlp.example.com/v1/metrics"
     }
   }
@@ -625,7 +625,7 @@ func TestTelemetryResourceCustomerVectorAggregatorEmptyBlock(t *testing.T) {
 				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id            = "test-cluster-id"
-  customer_vector_aggregator = {}
+  exporters = {}
 }
 `,
 				ExpectError: regexp.MustCompile("At least one attribute"),
@@ -667,7 +667,7 @@ resource "chalk_telemetry" "test" {
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.datadog_export"),
+					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "exporters.datadog"),
 				),
 			},
 		},
@@ -707,16 +707,16 @@ func TestTelemetryResourceCustomerVectorAggregatorUnownedExporter(t *testing.T) 
 				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
-  customer_vector_aggregator = {
-    otlp_metrics_export = {
+  exporters = {
+    otlp = {
       url = "https://otlp.example.com/v1/metrics"
     }
   }
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.otlp_metrics_export.url", "https://otlp.example.com/v1/metrics"),
-					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.datadog_export"),
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "exporters.otlp.url", "https://otlp.example.com/v1/metrics"),
+					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "exporters.datadog"),
 				),
 			},
 		},

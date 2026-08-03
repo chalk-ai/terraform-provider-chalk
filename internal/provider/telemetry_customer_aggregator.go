@@ -14,8 +14,8 @@ import (
 )
 
 type customerVectorAggregatorModel struct {
-	DatadogExport     *customerDatadogExportModel     `tfsdk:"datadog_export"`
-	OtlpMetricsExport *customerOtlpMetricsExportModel `tfsdk:"otlp_metrics_export"`
+	Datadog *customerDatadogExportModel     `tfsdk:"datadog"`
+	Otlp    *customerOtlpMetricsExportModel `tfsdk:"otlp"`
 }
 
 type customerDatadogExportModel struct {
@@ -57,12 +57,12 @@ func customerVectorAggregatorSchema() schema.SingleNestedAttribute {
 		MarkdownDescription: "Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Exporters configured outside Terraform are ignored until declared here. Requires the Vector telemetry runtime; deployments on the OTel runtime store this configuration without deploying an exporter.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
-			"datadog_export": schema.SingleNestedAttribute{
+			"datadog": schema.SingleNestedAttribute{
 				MarkdownDescription: "Export telemetry to your own Datadog account. Nothing is exported until at least one of `logs`, `traces`, or `metrics` is present.",
 				Optional:            true,
 				Validators: []validator.Object{
 					objectvalidator.AtLeastOneOf(
-						path.MatchRelative().AtParent().AtName("otlp_metrics_export"),
+						path.MatchRelative().AtParent().AtName("otlp"),
 					),
 				},
 				Attributes: map[string]schema.Attribute{
@@ -82,7 +82,7 @@ func customerVectorAggregatorSchema() schema.SingleNestedAttribute {
 					"metrics": datadogSignalExportSchema("metrics"),
 				},
 			},
-			"otlp_metrics_export": schema.SingleNestedAttribute{
+			"otlp": schema.SingleNestedAttribute{
 				MarkdownDescription: "Export metrics to an OTLP/HTTP endpoint you own.",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
@@ -112,8 +112,8 @@ func (m *customerVectorAggregatorModel) toProto() *serverv1.CustomerVectorAggreg
 		return nil
 	}
 	return &serverv1.CustomerVectorAggregatorConfig{
-		DatadogExport:     m.DatadogExport.toProto(),
-		OtlpMetricsExport: m.OtlpMetricsExport.toProto(),
+		DatadogExport:     m.Datadog.toProto(),
+		OtlpMetricsExport: m.Otlp.toProto(),
 	}
 }
 
@@ -199,13 +199,13 @@ func customerVectorAggregatorFromProto(p *serverv1.CustomerVectorAggregatorConfi
 		return nil
 	}
 	m := &customerVectorAggregatorModel{}
-	if prior.DatadogExport != nil {
-		m.DatadogExport = customerDatadogExportFromProto(p.GetDatadogExport())
+	if prior.Datadog != nil {
+		m.Datadog = customerDatadogExportFromProto(p.GetDatadogExport())
 	}
-	if prior.OtlpMetricsExport != nil {
-		m.OtlpMetricsExport = customerOtlpMetricsExportFromProto(p.GetOtlpMetricsExport())
+	if prior.Otlp != nil {
+		m.Otlp = customerOtlpMetricsExportFromProto(p.GetOtlpMetricsExport())
 	}
-	if m.DatadogExport == nil && m.OtlpMetricsExport == nil {
+	if m.Datadog == nil && m.Otlp == nil {
 		return nil
 	}
 	return m

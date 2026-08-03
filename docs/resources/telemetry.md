@@ -26,7 +26,7 @@ Chalk telemetry resource
 
 - `aggregator_spec` (Attributes) Aggregator specification (see [below for nested schema](#nestedatt--aggregator_spec))
 - `clickhouse_deployment_spec` (Attributes) Clickhouse deployment specification (see [below for nested schema](#nestedatt--clickhouse_deployment_spec))
-- `customer_vector_aggregator` (Attributes) Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Exporters configured outside Terraform are ignored until declared here. Requires the Vector telemetry runtime; deployments on the OTel runtime store this configuration without deploying an exporter. (see [below for nested schema](#nestedatt--customer_vector_aggregator))
+- `exporters` (Attributes) Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Exporters configured outside Terraform are ignored until declared here. Requires the Vector telemetry runtime; deployments on the OTel runtime store this configuration without deploying an exporter. (see [below for nested schema](#nestedatt--exporters))
 - `id` (String) Telemetry deployment identifier
 - `namespace` (String) Kubernetes namespace for the telemetry deployment
 - `otel_collector_spec` (Attributes) Otel collector specification (see [below for nested schema](#nestedatt--otel_collector_spec))
@@ -100,16 +100,16 @@ Optional:
 
 
 
-<a id="nestedatt--customer_vector_aggregator"></a>
-### Nested Schema for `customer_vector_aggregator`
+<a id="nestedatt--exporters"></a>
+### Nested Schema for `exporters`
 
 Optional:
 
-- `datadog_export` (Attributes) Export telemetry to your own Datadog account. Nothing is exported until at least one of `logs`, `traces`, or `metrics` is present. (see [below for nested schema](#nestedatt--customer_vector_aggregator--datadog_export))
-- `otlp_metrics_export` (Attributes) Export metrics to an OTLP/HTTP endpoint you own. (see [below for nested schema](#nestedatt--customer_vector_aggregator--otlp_metrics_export))
+- `datadog` (Attributes) Export telemetry to your own Datadog account. Nothing is exported until at least one of `logs`, `traces`, or `metrics` is present. (see [below for nested schema](#nestedatt--exporters--datadog))
+- `otlp` (Attributes) Export metrics to an OTLP/HTTP endpoint you own. (see [below for nested schema](#nestedatt--exporters--otlp))
 
-<a id="nestedatt--customer_vector_aggregator--datadog_export"></a>
-### Nested Schema for `customer_vector_aggregator.datadog_export`
+<a id="nestedatt--exporters--datadog"></a>
+### Nested Schema for `exporters.datadog`
 
 Required:
 
@@ -118,28 +118,28 @@ Required:
 Optional:
 
 - `api_host` (String) Datadog site to export to, for example `datadoghq.eu`. Defaults to `datadoghq.com`.
-- `logs` (Attributes) Export logs to your Datadog account. Omitting this block leaves logs unexported. (see [below for nested schema](#nestedatt--customer_vector_aggregator--datadog_export--logs))
-- `metrics` (Attributes) Export metrics to your Datadog account. Omitting this block leaves metrics unexported. (see [below for nested schema](#nestedatt--customer_vector_aggregator--datadog_export--metrics))
-- `traces` (Attributes) Export traces to your Datadog account. Omitting this block leaves traces unexported. (see [below for nested schema](#nestedatt--customer_vector_aggregator--datadog_export--traces))
+- `logs` (Attributes) Export logs to your Datadog account. Omitting this block leaves logs unexported. (see [below for nested schema](#nestedatt--exporters--datadog--logs))
+- `metrics` (Attributes) Export metrics to your Datadog account. Omitting this block leaves metrics unexported. (see [below for nested schema](#nestedatt--exporters--datadog--metrics))
+- `traces` (Attributes) Export traces to your Datadog account. Omitting this block leaves traces unexported. (see [below for nested schema](#nestedatt--exporters--datadog--traces))
 
-<a id="nestedatt--customer_vector_aggregator--datadog_export--logs"></a>
-### Nested Schema for `customer_vector_aggregator.datadog_export.logs`
+<a id="nestedatt--exporters--datadog--logs"></a>
+### Nested Schema for `exporters.datadog.logs`
 
 Optional:
 
 - `enabled` (Boolean) Whether to export logs. Defaults to `true` when this block is present.
 
 
-<a id="nestedatt--customer_vector_aggregator--datadog_export--metrics"></a>
-### Nested Schema for `customer_vector_aggregator.datadog_export.metrics`
+<a id="nestedatt--exporters--datadog--metrics"></a>
+### Nested Schema for `exporters.datadog.metrics`
 
 Optional:
 
 - `enabled` (Boolean) Whether to export metrics. Defaults to `true` when this block is present.
 
 
-<a id="nestedatt--customer_vector_aggregator--datadog_export--traces"></a>
-### Nested Schema for `customer_vector_aggregator.datadog_export.traces`
+<a id="nestedatt--exporters--datadog--traces"></a>
+### Nested Schema for `exporters.datadog.traces`
 
 Optional:
 
@@ -147,8 +147,8 @@ Optional:
 
 
 
-<a id="nestedatt--customer_vector_aggregator--otlp_metrics_export"></a>
-### Nested Schema for `customer_vector_aggregator.otlp_metrics_export`
+<a id="nestedatt--exporters--otlp"></a>
+### Nested Schema for `exporters.otlp`
 
 Required:
 

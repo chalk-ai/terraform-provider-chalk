@@ -90,7 +90,7 @@ type TelemetryResourceModel struct {
 	OtelCollectorSpec        types.Object                   `tfsdk:"otel_collector_spec"`
 	ClickhouseDeploymentSpec types.Object                   `tfsdk:"clickhouse_deployment_spec"`
 	AggregatorSpec           types.Object                   `tfsdk:"aggregator_spec"`
-	CustomerVectorAggregator *customerVectorAggregatorModel `tfsdk:"customer_vector_aggregator"`
+	Exporters                *customerVectorAggregatorModel `tfsdk:"exporters"`
 }
 
 func (r *TelemetryResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -246,7 +246,7 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 					objectplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"customer_vector_aggregator": customerVectorAggregatorSchema(),
+			"exporters": customerVectorAggregatorSchema(),
 		},
 	}
 }
@@ -274,7 +274,7 @@ func (r *TelemetryResource) Configure(ctx context.Context, req resource.Configur
 func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceModel, diags *diag.Diagnostics) *serverv1.TelemetryDeploymentSpec {
 	spec := &serverv1.TelemetryDeploymentSpec{
 		Namespace:                data.Namespace.ValueStringPointer(),
-		CustomerVectorAggregator: data.CustomerVectorAggregator.toProto(),
+		CustomerVectorAggregator: data.Exporters.toProto(),
 	}
 
 	if !data.ClickhouseDeploymentSpec.IsNull() && !data.ClickhouseDeploymentSpec.IsUnknown() {
@@ -372,7 +372,7 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 	}
 
 	data.Namespace = types.StringPointerValue(spec.Namespace)
-	data.CustomerVectorAggregator = customerVectorAggregatorFromProto(spec.CustomerVectorAggregator, data.CustomerVectorAggregator)
+	data.Exporters = customerVectorAggregatorFromProto(spec.CustomerVectorAggregator, data.Exporters)
 
 	if spec.ClickHouse != nil {
 		ch := spec.ClickHouse
@@ -426,7 +426,7 @@ func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
 	if !data.AggregatorSpec.IsUnknown() && !data.AggregatorSpec.Equal(state.AggregatorSpec) {
 		paths = append(paths, "aggregator")
 	}
-	paths = append(paths, customerVectorAggregatorMaskPaths(data.CustomerVectorAggregator, state.CustomerVectorAggregator)...)
+	paths = append(paths, customerVectorAggregatorMaskPaths(data.Exporters, state.Exporters)...)
 	return paths
 }
 
