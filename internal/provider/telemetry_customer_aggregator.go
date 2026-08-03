@@ -41,11 +41,11 @@ const secretReferenceFormats = "an AWS Secrets Manager ARN, a GCP `projects/<pro
 // datadogSignalExportSchema describes one Datadog signal.
 func datadogSignalExportSchema(signal string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: fmt.Sprintf("Controls %s export, which is on by default.", signal),
+		MarkdownDescription: fmt.Sprintf("Export %s to your Datadog account.", signal),
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
-				MarkdownDescription: fmt.Sprintf("Whether to export %s. Defaults to `true`.", signal),
+				MarkdownDescription: fmt.Sprintf("Whether to export %s. Defaults to `true` when this block is declared.", signal),
 				Optional:            true,
 			},
 		},
@@ -58,7 +58,7 @@ func customerVectorAggregatorSchema() schema.SingleNestedAttribute {
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"datadog": schema.SingleNestedAttribute{
-				MarkdownDescription: "Export telemetry to your own Datadog account. Logs, traces, and metrics all export by default; disable one with `enabled = false`.",
+				MarkdownDescription: "Export telemetry to your own Datadog account. With no signal blocks, all of logs, traces, and metrics export; declaring any signal block exports only the declared signals.",
 				Optional:            true,
 				Validators: []validator.Object{
 					objectvalidator.AtLeastOneOf(
