@@ -634,7 +634,8 @@ resource "chalk_telemetry" "test" {
 	})
 }
 
-// TestTelemetryResourceCustomerVectorAggregatorOmitted verifies an unmodelled-only config reads back as unset.
+// TestTelemetryResourceCustomerVectorAggregatorOmitted verifies exporters configured
+// outside Terraform are not adopted into state and planned away.
 func TestTelemetryResourceCustomerVectorAggregatorOmitted(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerTelemetry(t)
@@ -647,6 +648,9 @@ func TestTelemetryResourceCustomerVectorAggregatorOmitted(t *testing.T) {
 				Spec: &serverv1.TelemetryDeploymentSpec{
 					CustomerVectorAggregator: &serverv1.CustomerVectorAggregatorConfig{
 						Replicas: proto.Int32(3),
+						OtlpMetricsExport: &serverv1.CustomerVectorAggregatorOtlpMetricsExportConfig{
+							Url: "https://external.example.com/v1/metrics",
+						},
 					},
 				},
 			},
@@ -663,6 +667,55 @@ resource "chalk_telemetry" "test" {
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.datadog_export"),
+				),
+			},
+		},
+	})
+}
+
+// TestTelemetryResourceCustomerVectorAggregatorUnownedExporter verifies owning one exporter
+// does not adopt the other when another client configures it.
+func TestTelemetryResourceCustomerVectorAggregatorUnownedExporter(t *testing.T) {
+	t.Parallel()
+	server := testserver.NewMockBuilderServer(t)
+	t.Cleanup(func() { server.Close() })
+
+	var currentSpec *serverv1.TelemetryDeploymentSpec
+	server.OnCreateTelemetryDeployment().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		currentSpec = req.(*serverv1.CreateTelemetryDeploymentRequest).Spec
+		return &serverv1.CreateTelemetryDeploymentResponse{TelemetryDeploymentId: "test-telemetry-id"}, nil
+	})
+	server.OnGetTelemetryDeployment().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		spec := proto.Clone(currentSpec).(*serverv1.TelemetryDeploymentSpec)
+		spec.CustomerVectorAggregator.DatadogExport = &serverv1.CustomerVectorAggregatorDatadogExportConfig{
+			ApiKeySource: &serverv1.CustomerVectorAggregatorDatadogExportConfig_ApiKeySecretArn{
+				ApiKeySecretArn: "arn:aws:secretsmanager:us-west-2:123456789012:secret:dashboard-dd",
+			},
+			Logs: &serverv1.CustomerVectorAggregatorDatadogSignalExportSpec{},
+		}
+		return &serverv1.GetTelemetryDeploymentResponse{
+			Deployment: &serverv1.TelemetryDeployment{Id: "test-telemetry-id", ClusterId: "test-cluster-id", Spec: spec},
+		}, nil
+	})
+	server.OnDeleteTelemetryDeployment().Return(&serverv1.DeleteTelemetryDeploymentResponse{})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+  customer_vector_aggregator = {
+    otlp_metrics_export = {
+      url = "https://otlp.example.com/v1/metrics"
+    }
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.otlp_metrics_export.url", "https://otlp.example.com/v1/metrics"),
 					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "customer_vector_aggregator.datadog_export"),
 				),
 			},

@@ -54,7 +54,7 @@ func datadogSignalExportSchema(signal string) schema.SingleNestedAttribute {
 
 func customerVectorAggregatorSchema() schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Requires the Vector telemetry runtime; deployments on the OTel runtime store this configuration without deploying an exporter.",
+		MarkdownDescription: "Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Exporters configured outside Terraform are ignored until declared here. Requires the Vector telemetry runtime; deployments on the OTel runtime store this configuration without deploying an exporter.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"datadog_export": schema.SingleNestedAttribute{
@@ -192,15 +192,23 @@ func customerVectorAggregatorMaskPaths(plan, state *customerVectorAggregatorMode
 	return paths
 }
 
-func customerVectorAggregatorFromProto(p *serverv1.CustomerVectorAggregatorConfig) *customerVectorAggregatorModel {
-	// Nil unless an exporter is set, so unmodelled siblings like replicas don't drift.
-	if p.GetDatadogExport() == nil && p.GetOtlpMetricsExport() == nil {
+// Each exporter is adopted from the server only when prior state owns it, so exporters
+// configured through other clients are never pulled into state and planned away.
+func customerVectorAggregatorFromProto(p *serverv1.CustomerVectorAggregatorConfig, prior *customerVectorAggregatorModel) *customerVectorAggregatorModel {
+	if prior == nil {
 		return nil
 	}
-	return &customerVectorAggregatorModel{
-		DatadogExport:     customerDatadogExportFromProto(p.GetDatadogExport()),
-		OtlpMetricsExport: customerOtlpMetricsExportFromProto(p.GetOtlpMetricsExport()),
+	m := &customerVectorAggregatorModel{}
+	if prior.DatadogExport != nil {
+		m.DatadogExport = customerDatadogExportFromProto(p.GetDatadogExport())
 	}
+	if prior.OtlpMetricsExport != nil {
+		m.OtlpMetricsExport = customerOtlpMetricsExportFromProto(p.GetOtlpMetricsExport())
+	}
+	if m.DatadogExport == nil && m.OtlpMetricsExport == nil {
+		return nil
+	}
+	return m
 }
 
 func customerDatadogExportFromProto(p *serverv1.CustomerVectorAggregatorDatadogExportConfig) *customerDatadogExportModel {

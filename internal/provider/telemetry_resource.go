@@ -372,7 +372,7 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 	}
 
 	data.Namespace = types.StringPointerValue(spec.Namespace)
-	data.CustomerVectorAggregator = customerVectorAggregatorFromProto(spec.CustomerVectorAggregator)
+	data.CustomerVectorAggregator = customerVectorAggregatorFromProto(spec.CustomerVectorAggregator, data.CustomerVectorAggregator)
 
 	if spec.ClickHouse != nil {
 		ch := spec.ClickHouse
