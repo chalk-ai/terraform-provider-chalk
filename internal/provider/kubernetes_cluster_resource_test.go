@@ -1,5 +1,7 @@
 package provider
 
+//lint:file-ignore SA1019 Covers the deprecated host_pools attribute, which is still released.
+
 import (
 	"regexp"
 	"testing"

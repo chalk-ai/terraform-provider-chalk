@@ -26,6 +26,7 @@ Chalk telemetry resource
 
 - `aggregator_spec` (Attributes) Aggregator specification (see [below for nested schema](#nestedatt--aggregator_spec))
 - `clickhouse_deployment_spec` (Attributes) Clickhouse deployment specification (see [below for nested schema](#nestedatt--clickhouse_deployment_spec))
+- `exporters` (Attributes) Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Exporters configured outside Terraform are ignored until declared here. Requires the Vector telemetry runtime; deployments on the OTel runtime store this configuration without deploying an exporter. (see [below for nested schema](#nestedatt--exporters))
 - `id` (String) Telemetry deployment identifier
 - `namespace` (String) Kubernetes namespace for the telemetry deployment
 - `otel_collector_spec` (Attributes) Otel collector specification (see [below for nested schema](#nestedatt--otel_collector_spec))
@@ -96,6 +97,67 @@ Optional:
 
 - `storage` (String) Storage resource specification
 - `storage_class_name` (String) Storage class name
+
+
+
+<a id="nestedatt--exporters"></a>
+### Nested Schema for `exporters`
+
+Optional:
+
+- `datadog` (Attributes) Export telemetry to your own Datadog account. Logs, traces, and metrics all export by default; disable one with `enabled = false`. (see [below for nested schema](#nestedatt--exporters--datadog))
+- `otlp` (Attributes) Export metrics to an OTLP/HTTP endpoint you own. (see [below for nested schema](#nestedatt--exporters--otlp))
+
+<a id="nestedatt--exporters--datadog"></a>
+### Nested Schema for `exporters.datadog`
+
+Required:
+
+- `api_key_secret_reference` (String) Reference to the cloud secret holding your Datadog API key: an AWS Secrets Manager ARN, a GCP `projects/<project>/secrets/<name>` resource name, or an Azure Key Vault secret URL. The secret must live in the telemetry cluster's own account, and its latest version is read at deploy time.
+
+Optional:
+
+- `api_host` (String) Datadog site to export to, for example `datadoghq.eu`. Defaults to `datadoghq.com`.
+- `logs` (Attributes) Export logs to your Datadog account. (see [below for nested schema](#nestedatt--exporters--datadog--logs))
+- `metrics` (Attributes) Export metrics to your Datadog account. (see [below for nested schema](#nestedatt--exporters--datadog--metrics))
+- `traces` (Attributes) Export traces to your Datadog account. (see [below for nested schema](#nestedatt--exporters--datadog--traces))
+
+<a id="nestedatt--exporters--datadog--logs"></a>
+### Nested Schema for `exporters.datadog.logs`
+
+Optional:
+
+- `enabled` (Boolean) Whether to export logs. Defaults to `true`.
+
+
+<a id="nestedatt--exporters--datadog--metrics"></a>
+### Nested Schema for `exporters.datadog.metrics`
+
+Optional:
+
+- `enabled` (Boolean) Whether to export metrics. Defaults to `true`.
+
+
+<a id="nestedatt--exporters--datadog--traces"></a>
+### Nested Schema for `exporters.datadog.traces`
+
+Optional:
+
+- `enabled` (Boolean) Whether to export traces. Defaults to `true`.
+
+
+
+<a id="nestedatt--exporters--otlp"></a>
+### Nested Schema for `exporters.otlp`
+
+Required:
+
+- `url` (String) Full OTLP/HTTP metrics URL, including the `/v1/metrics` path.
+
+Optional:
+
+- `authorization_header_secret_reference` (String) Reference to the cloud secret holding the complete `Authorization` header value, for example `Bearer <token>`. Accepts an AWS Secrets Manager ARN, a GCP `projects/<project>/secrets/<name>` resource name, or an Azure Key Vault secret URL.
+- `enabled` (Boolean) Whether to export metrics. Defaults to `true` when this block is present.
 
 
 

@@ -15,6 +15,8 @@ import (
 // This file holds the cluster-level configuration that both chalk_managed_cluster
 // and chalk_kubernetes_cluster expose on the CloudComponentCluster spec.
 
+//lint:file-ignore SA1019 host_pools is a released attribute; moving it to HostPoolService is a separate, breaking change.
+
 // Maintenance window modes, exposed as short (prefix-stripped) strings.
 const (
 	maintenanceModeUnspecified  = "UNSPECIFIED"
