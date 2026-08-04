@@ -46,6 +46,7 @@ resource "chalk_unmanaged_cloud_storage" "datasets" {
 
 ### Read-Only
 
+- `designator` (String) Server-assigned designator. Only populated for managed storages.
 - `id` (String) Cloud storage identifier.
 
 ## Import

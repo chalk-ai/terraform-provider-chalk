@@ -13,6 +13,11 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 ### Resources
 
+- Added attribute `chalk_managed_aws_vpc.designator` (`string`).
+- Added attribute `chalk_managed_cloud_storage.designator` (`string`).
+- Added attribute `chalk_managed_cluster.designator` (`string`).
+- Added attribute `chalk_managed_container_registry.designator` (`string`).
+- Added attribute `chalk_managed_gcp_vpc.designator` (`string`).
 - Added attribute `chalk_telemetry.exporters` (`object`).
 - Added attribute `chalk_telemetry.exporters.datadog` (`object`).
 - Added attribute `chalk_telemetry.exporters.datadog.api_host` (`string`).
@@ -27,3 +32,5 @@ For migration guidance and non-schema changes, see the [project changelog](https
 - Added attribute `chalk_telemetry.exporters.otlp.authorization_header_secret_reference` (`string`).
 - Added attribute `chalk_telemetry.exporters.otlp.enabled` (`bool`).
 - Added attribute `chalk_telemetry.exporters.otlp.url` (`string`).
+- Added attribute `chalk_unmanaged_cloud_storage.designator` (`string`).
+- Added attribute `chalk_unmanaged_container_registry.designator` (`string`).

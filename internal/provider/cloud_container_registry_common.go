@@ -20,6 +20,7 @@ type cloudContainerRegistryResourceModel struct {
 	Id                types.String `tfsdk:"id"`
 	Name              types.String `tfsdk:"name"`
 	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
+	Designator        types.String `tfsdk:"designator"`
 }
 
 // cloudContainerRegistrySchema builds the schema shared by the managed and
@@ -69,6 +70,11 @@ func cloudContainerRegistrySchema(managed bool) schema.Schema {
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"designator": schema.StringAttribute{
+				MarkdownDescription: "Server-assigned designator. Only populated for managed registries.",
+				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
 		},
 	}
 }
@@ -85,6 +91,12 @@ func setCloudContainerRegistryState(data *cloudContainerRegistryResourceModel, r
 
 	if registry.CloudCredentialId != nil {
 		data.CloudCredentialId = types.StringValue(registry.GetCloudCredentialId())
+	}
+
+	if registry.Designator != nil {
+		data.Designator = types.StringValue(registry.GetDesignator())
+	} else {
+		data.Designator = types.StringNull()
 	}
 }
 
