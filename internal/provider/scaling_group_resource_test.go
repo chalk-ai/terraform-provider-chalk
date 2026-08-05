@@ -128,7 +128,7 @@ resource "chalk_scaling_group" "test" {
     min_replicas                      = 0
     max_replicas                      = 10
     target_cpu_utilization_percentage = 80
-    shutdown_delay_seconds            = 60
+    shutdown_delay                    = "60s"
   }
 }
 `, name),
@@ -140,7 +140,7 @@ resource "chalk_scaling_group" "test" {
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "container_spec.volumes.0.name", "shm"),
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "container_spec.volumes.0.size_limit", "2Gi"),
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "scaling_spec.target_cpu_utilization_percentage", "80"),
-					resource.TestCheckResourceAttr("chalk_scaling_group.test", "scaling_spec.shutdown_delay_seconds", "60"),
+					resource.TestCheckResourceAttr("chalk_scaling_group.test", "scaling_spec.shutdown_delay", "60s"),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("CreateScalingGroup")
 						require.Len(t, captured, 1)

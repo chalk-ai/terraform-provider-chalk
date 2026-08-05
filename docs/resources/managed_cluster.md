@@ -38,25 +38,9 @@ Chalk managed Kubernetes cluster resource. Creates a fully managed cluster using
 
 Optional:
 
-- `host_pools` (Attributes List) Host pools to deploy for this cluster. (see [below for nested schema](#nestedatt--data_plane_controller--host_pools))
 - `node_pool` (String) Node pool to pin non-restricted (open) container/scaling-group workloads to.
 - `restricted_node_pool` (String) Node pool to pin restricted container/scaling-group workloads to.
 - `tier` (String) Resource tier for the dataplane controller. One of `DISABLED`, `SMALL`, `MEDIUM`, `LARGE`.
-
-<a id="nestedatt--data_plane_controller--host_pools"></a>
-### Nested Schema for `data_plane_controller.host_pools`
-
-Required:
-
-- `count` (Number) Number of hosts in the pool.
-- `name` (String) Name of the pool.
-
-Optional:
-
-- `cpu` (String) CPU resources for each host, e.g. `4`.
-- `machine_family` (String) Machine family for this pool's hosts to run on.
-- `memory` (String) Memory resources for each host, e.g. `8Gi`.
-
 
 
 <a id="nestedatt--data_plane_redis"></a>

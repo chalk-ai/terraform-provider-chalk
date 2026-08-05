@@ -1,7 +1,5 @@
 package provider
 
-//lint:file-ignore SA1019 Covers the deprecated host_pools attribute, which is still released.
-
 import (
 	"regexp"
 	"testing"
@@ -52,19 +50,12 @@ const kubeControllerBlockMedium = `
     tier                 = "MEDIUM"
     node_pool            = "open-pool"
     restricted_node_pool = "restricted-pool"
-    host_pools = [
-      { name = "workers", count = 2, cpu = "4", memory = "8Gi" },
-    ]
   }
 `
 
 const kubeControllerBlockLarge = `
   data_plane_controller = {
     tier = "LARGE"
-    host_pools = [
-      { name = "workers", count = 3 },
-      { name = "gpu", count = 1, cpu = "8", machine_family = "n2" },
-    ]
   }
 `
 
@@ -196,9 +187,6 @@ func TestKubernetesClusterResourceConfigRoundTrip(t *testing.T) {
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.tier", "MEDIUM"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.node_pool", "open-pool"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.restricted_node_pool", "restricted-pool"),
-					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.#", "1"),
-					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.0.name", "workers"),
-					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.0.count", "2"),
 					func(s *terraform.State) error {
 						reqs := server.GetCapturedRequests("CreateCloudComponentCluster")
 						require.Len(t, reqs, 1)
@@ -206,8 +194,6 @@ func TestKubernetesClusterResourceConfigRoundTrip(t *testing.T) {
 						assert.Equal(t, serverv1.MaintenanceWindow_MODE_CUSTOM, spec.GetMaintenanceWindow().GetMode())
 						assert.Equal(t, "MANAGED", spec.GetDataPlaneRedis().GetKind())
 						assert.Equal(t, serverv1.DataplaneController_TIER_MEDIUM, spec.GetDataplaneController().GetTier())
-						require.Len(t, spec.GetDataplaneController().GetHostPools(), 1)
-						assert.Equal(t, int32(2), spec.GetDataplaneController().GetHostPools()[0].GetCount())
 						// available_tiers is output-only and must never be sent.
 						assert.Nil(t, spec.GetDataplaneController().GetAvailableTiers())
 						return nil
@@ -220,9 +206,6 @@ func TestKubernetesClusterResourceConfigRoundTrip(t *testing.T) {
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "maintenance_window.mode", "UNRESTRICTED"),
 					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.tier", "LARGE"),
 					resource.TestCheckNoResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.node_pool"),
-					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.#", "2"),
-					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.1.name", "gpu"),
-					resource.TestCheckResourceAttr("chalk_kubernetes_cluster.cluster", "data_plane_controller.host_pools.1.machine_family", "n2"),
 				),
 			},
 		},
@@ -373,36 +356,6 @@ resource "chalk_kubernetes_cluster" "cluster" {
 			{
 				Config:      config,
 				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination|At least one attribute`),
-			},
-		},
-	})
-}
-
-// TestKubernetesClusterResourceHostPoolsRejectsEmptyList verifies that an empty
-// host_pools list is rejected in favor of omitting the attribute.
-func TestKubernetesClusterResourceHostPoolsRejectsEmptyList(t *testing.T) {
-	t.Parallel()
-
-	server := setupClusterConfigServer(t, false)
-
-	config := providerConfig(server.URL) + `
-resource "chalk_kubernetes_cluster" "cluster" {
-  name = "test-cluster"
-  kind = "EKS_STANDARD"
-
-  data_plane_controller = {
-    tier       = "SMALL"
-    host_pools = []
-  }
-}
-`
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
-		Steps: []resource.TestStep{
-			{
-				Config:      config,
-				ExpectError: regexp.MustCompile(`(?s)must contain at least 1`),
 			},
 		},
 	})

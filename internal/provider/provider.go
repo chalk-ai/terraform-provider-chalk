@@ -232,6 +232,8 @@ var allResourceCtors = []func() resource.Resource{
 	NewEnvironmentOfflineStoreConnectionBindingResource,
 	NewUnmanagedClusterBackgroundPersistenceResource,
 	NewScalingGroupResource,
+	NewEnvironmentHostPoolResource,
+	NewClusterHostPoolResource,
 	NewManagedCloudStorageResource,
 	NewUnmanagedCloudStorageResource,
 	NewManagedContainerRegistryResource,

@@ -108,3 +108,9 @@ func NewScalingGroupManagerClient(ctx context.Context, options *GrpcClientOption
 	return scalinggroupv1connect.NewScalingGroupManagerServiceClient(
 		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
+
+// NewHostPoolClient creates a new HostPoolServiceClient
+func NewHostPoolClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.HostPoolServiceClient {
+	return serverv1connect.NewHostPoolServiceClient(
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
+}

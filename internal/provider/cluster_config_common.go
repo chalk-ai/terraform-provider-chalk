@@ -2,8 +2,6 @@ package provider
 
 import (
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -14,8 +12,6 @@ import (
 
 // This file holds the cluster-level configuration that both chalk_managed_cluster
 // and chalk_kubernetes_cluster expose on the CloudComponentCluster spec.
-
-//lint:file-ignore SA1019 host_pools is a released attribute; moving it to HostPoolService is a separate, breaking change.
 
 // Maintenance window modes, exposed as short (prefix-stripped) strings.
 const (
@@ -86,18 +82,9 @@ type dataPlaneRedisSelfHostedModel struct {
 }
 
 type dataPlaneControllerModel struct {
-	Tier               types.String    `tfsdk:"tier"`
-	NodePool           types.String    `tfsdk:"node_pool"`
-	RestrictedNodePool types.String    `tfsdk:"restricted_node_pool"`
-	HostPools          []hostPoolModel `tfsdk:"host_pools"`
-}
-
-type hostPoolModel struct {
-	Name          types.String `tfsdk:"name"`
-	Count         types.Int64  `tfsdk:"count"`
-	Cpu           types.String `tfsdk:"cpu"`
-	Memory        types.String `tfsdk:"memory"`
-	MachineFamily types.String `tfsdk:"machine_family"`
+	Tier               types.String `tfsdk:"tier"`
+	NodePool           types.String `tfsdk:"node_pool"`
+	RestrictedNodePool types.String `tfsdk:"restricted_node_pool"`
 }
 
 // clusterConfigSchemaAttributes returns the shared cluster-level config
@@ -187,7 +174,6 @@ func clusterConfigSchemaAttributes() map[string]schema.Attribute {
 						stringvalidator.AtLeastOneOf(
 							path.MatchRelative().AtParent().AtName("node_pool"),
 							path.MatchRelative().AtParent().AtName("restricted_node_pool"),
-							path.MatchRelative().AtParent().AtName("host_pools"),
 						),
 					},
 				},
@@ -198,42 +184,6 @@ func clusterConfigSchemaAttributes() map[string]schema.Attribute {
 				"restricted_node_pool": schema.StringAttribute{
 					MarkdownDescription: "Node pool to pin restricted container/scaling-group workloads to.",
 					Optional:            true,
-				},
-				"host_pools": schema.ListNestedAttribute{
-					MarkdownDescription: "Host pools to deploy for this cluster.",
-					Optional:            true,
-					Validators: []validator.List{
-						// An empty list means the same as omitting the attribute and would
-						// drift to null after apply, so require at least one entry.
-						listvalidator.SizeAtLeast(1),
-					},
-					NestedObject: schema.NestedAttributeObject{
-						Attributes: map[string]schema.Attribute{
-							"name": schema.StringAttribute{
-								MarkdownDescription: "Name of the pool.",
-								Required:            true,
-							},
-							"count": schema.Int64Attribute{
-								MarkdownDescription: "Number of hosts in the pool.",
-								Required:            true,
-								Validators: []validator.Int64{
-									int64validator.AtLeast(1),
-								},
-							},
-							"cpu": schema.StringAttribute{
-								MarkdownDescription: "CPU resources for each host, e.g. `4`.",
-								Optional:            true,
-							},
-							"memory": schema.StringAttribute{
-								MarkdownDescription: "Memory resources for each host, e.g. `8Gi`.",
-								Optional:            true,
-							},
-							"machine_family": schema.StringAttribute{
-								MarkdownDescription: "Machine family for this pool's hosts to run on.",
-								Optional:            true,
-							},
-						},
-					},
 				},
 			},
 		},
@@ -290,21 +240,11 @@ func (m *dataPlaneControllerModel) toProto() *serverv1.DataplaneController {
 	if m == nil {
 		return nil
 	}
-	c := &serverv1.DataplaneController{
+	return &serverv1.DataplaneController{
 		Tier:               dataPlaneControllerTierToProto[m.Tier.ValueString()],
 		NodePool:           m.NodePool.ValueStringPointer(),
 		RestrictedNodePool: m.RestrictedNodePool.ValueStringPointer(),
 	}
-	for _, pool := range m.HostPools {
-		c.HostPools = append(c.HostPools, &serverv1.ChalkHostPool{
-			Name:          pool.Name.ValueString(),
-			Count:         int32(pool.Count.ValueInt64()),
-			Cpu:           pool.Cpu.ValueStringPointer(),
-			Memory:        pool.Memory.ValueStringPointer(),
-			MachineFamily: pool.MachineFamily.ValueStringPointer(),
-		})
-	}
-	return c
 }
 
 func maintenanceWindowFromProto(p *serverv1.MaintenanceWindow) *maintenanceWindowModel {
@@ -348,22 +288,12 @@ func dataPlaneControllerFromProto(p *serverv1.DataplaneController) *dataPlaneCon
 	// go-api-server). Treat an otherwise-empty controller as unconfigured so a
 	// cluster with no controller block doesn't drift into a phantom object.
 	if p == nil || (p.GetTier() == serverv1.DataplaneController_TIER_UNSPECIFIED &&
-		p.GetNodePool() == "" && p.GetRestrictedNodePool() == "" && len(p.GetHostPools()) == 0) {
+		p.GetNodePool() == "" && p.GetRestrictedNodePool() == "") {
 		return nil
 	}
-	m := &dataPlaneControllerModel{
+	return &dataPlaneControllerModel{
 		Tier:               optionalStringValue(dataPlaneControllerTierFromProto[p.GetTier()]),
 		NodePool:           stringPointerValue(p.NodePool),
 		RestrictedNodePool: stringPointerValue(p.RestrictedNodePool),
 	}
-	for _, pool := range p.GetHostPools() {
-		m.HostPools = append(m.HostPools, hostPoolModel{
-			Name:          types.StringValue(pool.GetName()),
-			Count:         types.Int64Value(int64(pool.GetCount())),
-			Cpu:           stringPointerValue(pool.Cpu),
-			Memory:        stringPointerValue(pool.Memory),
-			MachineFamily: stringPointerValue(pool.MachineFamily),
-		})
-	}
-	return m
 }

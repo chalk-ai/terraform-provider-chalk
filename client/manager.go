@@ -184,6 +184,25 @@ func (cm *Manager) NewOfflineStoreConnectionClient(ctx context.Context, envId st
 	})
 }
 
+// NewHostPoolClient creates a HostPoolServiceClient with standard headers and auth.
+// If envId is provided (non-empty), adds the x-chalk-env-id header, which the
+// environment-scoped RPCs use to resolve the target environment.
+func (cm *Manager) NewHostPoolClient(ctx context.Context, envId ...string) serverv1connect.HostPoolServiceClient {
+	interceptors := []connect.Interceptor{}
+	if len(envId) > 0 && envId[0] != "" {
+		interceptors = append(interceptors, MakeApiServerHeaderInterceptor("x-chalk-env-id", envId[0]))
+	}
+	interceptors = append(interceptors,
+		MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+		cm.makeAuthInterceptor(ctx),
+	)
+	return NewHostPoolClient(ctx, &GrpcClientOptions{
+		HTTPClient:   cm.httpClient,
+		Host:         cm.config.ApiServer,
+		Interceptors: interceptors,
+	})
+}
+
 // GetAuthClient returns the AuthServiceClient, creating it if necessary
 func (cm *Manager) GetAuthClient(ctx context.Context) serverv1connect.AuthServiceClient {
 	cm.mu.RLock()

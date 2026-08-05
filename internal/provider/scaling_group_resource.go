@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	containerv1 "github.com/chalk-ai/chalk-go/gen/chalk/container/v1"
 	scalinggroupv1 "github.com/chalk-ai/chalk-go/gen/chalk/scalinggroup/v1"
 	"github.com/chalk-ai/terraform-provider-chalk/client"
+	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -57,10 +59,10 @@ type ContainerSpecModel struct {
 }
 
 type ScalingSpecModel struct {
-	MinReplicas                    types.Int64 `tfsdk:"min_replicas"`
-	MaxReplicas                    types.Int64 `tfsdk:"max_replicas"`
-	TargetCPUUtilizationPercentage types.Int64 `tfsdk:"target_cpu_utilization_percentage"`
-	ShutdownDelaySeconds           types.Int64 `tfsdk:"shutdown_delay_seconds"`
+	MinReplicas                    types.Int64          `tfsdk:"min_replicas"`
+	MaxReplicas                    types.Int64          `tfsdk:"max_replicas"`
+	TargetCPUUtilizationPercentage types.Int64          `tfsdk:"target_cpu_utilization_percentage"`
+	ShutdownDelay                  timetypes.GoDuration `tfsdk:"shutdown_delay"`
 }
 
 type ResourceLimitsModel struct {
@@ -221,9 +223,10 @@ func (r *ScalingGroupResource) Schema(ctx context.Context, req resource.SchemaRe
 						MarkdownDescription: "Target CPU utilization percentage for autoscaling.",
 						Optional:            true,
 					},
-					"shutdown_delay_seconds": schema.Int64Attribute{
-						MarkdownDescription: "Graceful termination period in seconds (default: 30).",
+					"shutdown_delay": schema.StringAttribute{
+						MarkdownDescription: "Graceful termination period, e.g. `30s` or `2m` (default: `30s`). Resolution is one second; sub-second values are truncated.",
 						Optional:            true,
+						CustomType:          timetypes.GoDurationType{},
 					},
 				},
 			},
@@ -349,7 +352,11 @@ func buildScalingGroupSpec(ctx context.Context, data *ScalingGroupResourceModel)
 		return nil, diags
 	}
 
-	scalingSpec := buildScalingSpec(data.ScalingSpec)
+	scalingSpec, d := buildScalingSpec(data.ScalingSpec)
+	diags.Append(d...)
+	if diags.HasError() {
+		return nil, diags
+	}
 
 	return &scalinggroupv1.ScalingGroupSpec{
 		ContainerSpec: containerSpec,
@@ -430,7 +437,9 @@ func buildContainerSpec(ctx context.Context, data *ScalingGroupResourceModel) (*
 	return spec, diags
 }
 
-func buildScalingSpec(m *ScalingSpecModel) *scalinggroupv1.ScalingSpec {
+func buildScalingSpec(m *ScalingSpecModel) (*scalinggroupv1.ScalingSpec, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
 	spec := &scalinggroupv1.ScalingSpec{
 		MinReplicas: int32(m.MinReplicas.ValueInt64()),
 		MaxReplicas: int32(m.MaxReplicas.ValueInt64()),
@@ -441,12 +450,17 @@ func buildScalingSpec(m *ScalingSpecModel) *scalinggroupv1.ScalingSpec {
 		spec.TargetCpuUtilizationPercentage = &v
 	}
 
-	if !m.ShutdownDelaySeconds.IsNull() && !m.ShutdownDelaySeconds.IsUnknown() {
-		v := int32(m.ShutdownDelaySeconds.ValueInt64())
+	if !m.ShutdownDelay.IsNull() && !m.ShutdownDelay.IsUnknown() {
+		shutdownDelay, d := m.ShutdownDelay.ValueGoDuration()
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		v := int32(shutdownDelay / time.Second)
 		spec.ShutdownDelaySeconds = &v
 	}
 
-	return spec
+	return spec, diags
 }
 
 func updateScalingGroupState(ctx context.Context, data *ScalingGroupResourceModel, sg *scalinggroupv1.ScalingGroupResponse) diag.Diagnostics {
@@ -530,9 +544,9 @@ func scalingSpecModelFromProto(ss *scalinggroupv1.ScalingSpec) *ScalingSpecModel
 		m.TargetCPUUtilizationPercentage = types.Int64Null()
 	}
 	if ss.ShutdownDelaySeconds != nil {
-		m.ShutdownDelaySeconds = types.Int64Value(int64(*ss.ShutdownDelaySeconds))
+		m.ShutdownDelay = timetypes.NewGoDurationValue(time.Duration(*ss.ShutdownDelaySeconds) * time.Second)
 	} else {
-		m.ShutdownDelaySeconds = types.Int64Null()
+		m.ShutdownDelay = timetypes.NewGoDurationNull()
 	}
 	return m
 }
