@@ -11,7 +11,24 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 ## Unreleased
 
-No schema or permission changes.
+### Resources
+
+- Added `chalk_cluster_host_pool`.
+- Added `chalk_environment_host_pool`.
+- Removed attribute `chalk_kubernetes_cluster.data_plane_controller.host_pools` (`list(object)`).
+- Removed attribute `chalk_kubernetes_cluster.data_plane_controller.host_pools.count` (`number`).
+- Removed attribute `chalk_kubernetes_cluster.data_plane_controller.host_pools.cpu` (`string`).
+- Removed attribute `chalk_kubernetes_cluster.data_plane_controller.host_pools.machine_family` (`string`).
+- Removed attribute `chalk_kubernetes_cluster.data_plane_controller.host_pools.memory` (`string`).
+- Removed attribute `chalk_kubernetes_cluster.data_plane_controller.host_pools.name` (`string`).
+- Removed attribute `chalk_managed_cluster.data_plane_controller.host_pools` (`list(object)`).
+- Removed attribute `chalk_managed_cluster.data_plane_controller.host_pools.count` (`number`).
+- Removed attribute `chalk_managed_cluster.data_plane_controller.host_pools.cpu` (`string`).
+- Removed attribute `chalk_managed_cluster.data_plane_controller.host_pools.machine_family` (`string`).
+- Removed attribute `chalk_managed_cluster.data_plane_controller.host_pools.memory` (`string`).
+- Removed attribute `chalk_managed_cluster.data_plane_controller.host_pools.name` (`string`).
+- Added attribute `chalk_scaling_group.scaling_spec.shutdown_delay` (`string`).
+- Removed attribute `chalk_scaling_group.scaling_spec.shutdown_delay_seconds` (`number`).
 
 ## v1.0.7
 

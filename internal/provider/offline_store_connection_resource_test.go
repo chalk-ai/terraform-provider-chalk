@@ -473,6 +473,8 @@ func snowflakeStoredConn(secretField string) *serverv1.OfflineStoreConnection {
 // fields (password/private_key) are preserved from state on refresh, since the server only
 // returns secret IDs. Subtests cover both auth methods.
 func TestOfflineStoreConnectionSnowflakeSensitivePreserved(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		configField string // "password" or "private_key"

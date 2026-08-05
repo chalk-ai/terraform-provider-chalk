@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	scalinggroupv1 "github.com/chalk-ai/chalk-go/gen/chalk/scalinggroup/v1"
@@ -128,7 +129,7 @@ resource "chalk_scaling_group" "test" {
     min_replicas                      = 0
     max_replicas                      = 10
     target_cpu_utilization_percentage = 80
-    shutdown_delay_seconds            = 60
+    shutdown_delay                    = "60s"
   }
 }
 `, name),
@@ -140,7 +141,7 @@ resource "chalk_scaling_group" "test" {
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "container_spec.volumes.0.name", "shm"),
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "container_spec.volumes.0.size_limit", "2Gi"),
 					resource.TestCheckResourceAttr("chalk_scaling_group.test", "scaling_spec.target_cpu_utilization_percentage", "80"),
-					resource.TestCheckResourceAttr("chalk_scaling_group.test", "scaling_spec.shutdown_delay_seconds", "60"),
+					resource.TestCheckResourceAttr("chalk_scaling_group.test", "scaling_spec.shutdown_delay", "60s"),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("CreateScalingGroup")
 						require.Len(t, captured, 1)
@@ -169,6 +170,54 @@ resource "chalk_scaling_group" "test" {
 			},
 		},
 	})
+}
+
+func TestScalingGroupShutdownDelayValidation(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		value       string
+		expectError *regexp.Regexp
+	}{
+		{name: "zero", value: "0s", expectError: regexp.MustCompile(`(?s)shutdown_delay must be greater than zero`)},
+		{name: "negative", value: "-1s", expectError: regexp.MustCompile(`(?s)shutdown_delay must be greater than zero`)},
+		{name: "subsecond", value: "1.5s", expectError: regexp.MustCompile(`(?s)shutdown_delay must resolve to a whole number of seconds`)},
+		{name: "int32Overflow", value: "2147483648s", expectError: regexp.MustCompile(`(?s)shutdown_delay must not exceed 2147483647 seconds`)},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := testserver.NewMockBuilderServer(t)
+			t.Cleanup(func() { server.Close() })
+			name := "test-sg-" + uuid.New().String()[:8]
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+				Steps: []resource.TestStep{
+					{
+						Config: providerConfig(server.URL) + fmt.Sprintf(`
+resource "chalk_scaling_group" "test" {
+  name           = %q
+  environment_id = "test-env-id"
+  container_spec = {
+    image = "my-image:latest"
+  }
+  scaling_spec = {
+    min_replicas   = 1
+    max_replicas   = 3
+    shutdown_delay = %q
+  }
+}
+`, name, tc.value),
+						ExpectError: tc.expectError,
+					},
+				},
+			})
+		})
+	}
 }
 
 func TestScalingGroupResourceDelete(t *testing.T) {

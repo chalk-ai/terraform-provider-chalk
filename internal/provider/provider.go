@@ -233,6 +233,8 @@ var allResourceCtors = []func() resource.Resource{
 	NewUnmanagedClusterBackgroundPersistenceResource,
 	NewScalingGroupResource,
 	NewSandboxResource,
+	NewEnvironmentHostPoolResource,
+	NewClusterHostPoolResource,
 	NewManagedCloudStorageResource,
 	NewUnmanagedCloudStorageResource,
 	NewManagedContainerRegistryResource,
