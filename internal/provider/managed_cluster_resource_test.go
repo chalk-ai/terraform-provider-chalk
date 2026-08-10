@@ -102,6 +102,7 @@ func clusterResponse(status string, statusErr string) *serverv1.CloudComponentCl
 		Managed:           true,
 		CloudCredentialId: new("cc-test-id"),
 		VpcId:             new("vpc-test-id"),
+		Designator:        new("abcd"),
 		Status:            status,
 		Spec:              &serverv1.CloudComponentCluster{Name: "test-cluster"},
 	}
@@ -170,6 +171,8 @@ func TestManagedClusterResourceCreatePollsUntilActive(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_managed_cluster.cluster", "id", "cluster-test-id"),
 					resource.TestCheckResourceAttr("chalk_managed_cluster.cluster", "vpc_id", "vpc-test-id"),
+					// The server generates the designator; it must reach state.
+					resource.TestCheckResourceAttr("chalk_managed_cluster.cluster", "designator", "abcd"),
 					// status must not be persisted to state.
 					resource.TestCheckNoResourceAttr("chalk_managed_cluster.cluster", "status"),
 					func(s *terraform.State) error {

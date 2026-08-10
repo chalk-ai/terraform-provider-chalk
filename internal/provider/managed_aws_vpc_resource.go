@@ -48,6 +48,7 @@ type ManagedAWSVPCResource struct {
 
 type ManagedAWSVPCResourceModel struct {
 	Id                      types.String `tfsdk:"id"`
+	Designator              types.String `tfsdk:"designator"`
 	CloudCredentialId       types.String `tfsdk:"cloud_credential_id"`
 	CidrBlock               types.String `tfsdk:"cidr_block"`
 	AdditionalCidrBlocks    types.List   `tfsdk:"additional_cidr_blocks"`
@@ -80,6 +81,13 @@ func (r *ManagedAWSVPCResource) Schema(ctx context.Context, req resource.SchemaR
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "VPC identifier",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"designator": schema.StringAttribute{
+				MarkdownDescription: "VPC designator",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -514,6 +522,12 @@ func (r *ManagedAWSVPCResource) updateModelFromProto(ctx context.Context, model 
 	var diags diag.Diagnostics
 
 	model.Id = types.StringValue(vpc.Id)
+
+	if vpc.Designator != nil {
+		model.Designator = types.StringValue(*vpc.Designator)
+	} else {
+		model.Designator = types.StringNull()
+	}
 
 	if vpc.CloudCredentialId != nil {
 		model.CloudCredentialId = types.StringValue(*vpc.CloudCredentialId)

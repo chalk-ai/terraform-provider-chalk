@@ -60,6 +60,7 @@ type cloudStorageResourceModel struct {
 	Kind              types.String `tfsdk:"kind"`
 	Uri               types.String `tfsdk:"uri"`
 	CloudCredentialId types.String `tfsdk:"cloud_credential_id"`
+	Designator        types.String `tfsdk:"designator"`
 }
 
 // cloudStorageSchema builds the schema shared by the managed and unmanaged storage
@@ -119,6 +120,11 @@ func cloudStorageSchema(managed bool) schema.Schema {
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"designator": schema.StringAttribute{
+				MarkdownDescription: "Server-assigned designator. Only populated for managed storages.",
+				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
 		},
 	}
 }
@@ -142,6 +148,12 @@ func setCloudStorageState(data *cloudStorageResourceModel, storage *serverv1.Clo
 
 	if storage.CloudCredentialId != nil {
 		data.CloudCredentialId = types.StringValue(storage.GetCloudCredentialId())
+	}
+
+	if storage.Designator != nil {
+		data.Designator = types.StringValue(storage.GetDesignator())
+	} else {
+		data.Designator = types.StringNull()
 	}
 }
 
