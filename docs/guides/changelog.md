@@ -11,6 +11,10 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 ## Unreleased
 
+No schema or permission changes.
+
+## v1.0.4
+
 ### Resources
 
 - Added attribute `chalk_managed_aws_vpc.designator` (`string`).
