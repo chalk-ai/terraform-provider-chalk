@@ -1,12 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.0.4
 
 NOTES:
 
 * Restore the read-only `designator` attribute on `chalk_managed_cloud_storage`, `chalk_unmanaged_cloud_storage`, `chalk_managed_container_registry`, `chalk_unmanaged_container_registry`, `chalk_managed_cluster`, `chalk_managed_aws_vpc`, and `chalk_managed_gcp_vpc`. The server generates it and it cannot be derived, and it appears in managed cluster DNS zones, so it must be readable from Terraform.
 
-## 1.1.0
+## 1.0.2
 
 NOTES:
 
