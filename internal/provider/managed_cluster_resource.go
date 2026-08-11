@@ -47,6 +47,7 @@ type ManagedClusterResource struct {
 
 type ManagedClusterResourceModel struct {
 	Id                  types.String              `tfsdk:"id"`
+	Designator          types.String              `tfsdk:"designator"`
 	CloudCredentialId   types.String              `tfsdk:"cloud_credential_id"`
 	VpcId               types.String              `tfsdk:"vpc_id"`
 	MaintenanceWindow   *maintenanceWindowModel   `tfsdk:"maintenance_window"`
@@ -65,6 +66,13 @@ func (r *ManagedClusterResource) Schema(ctx context.Context, req resource.Schema
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "Cluster identifier",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"designator": schema.StringAttribute{
+				MarkdownDescription: "Cluster designator",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -347,6 +355,12 @@ func (r *ManagedClusterResource) waitForClusterActive(
 
 func (r *ManagedClusterResource) updateModelFromProto(model *ManagedClusterResourceModel, cluster *serverv1.CloudComponentClusterResponse) {
 	model.Id = types.StringValue(cluster.Id)
+
+	if cluster.Designator != nil {
+		model.Designator = types.StringValue(*cluster.Designator)
+	} else {
+		model.Designator = types.StringNull()
+	}
 
 	if cluster.CloudCredentialId != nil {
 		model.CloudCredentialId = types.StringValue(*cluster.CloudCredentialId)

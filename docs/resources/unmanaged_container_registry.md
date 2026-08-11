@@ -42,6 +42,7 @@ resource "chalk_unmanaged_container_registry" "gar" {
 
 ### Read-Only
 
+- `designator` (String) Server-assigned designator. Only populated for managed registries.
 - `id` (String) Cloud container registry identifier.
 
 ## Import

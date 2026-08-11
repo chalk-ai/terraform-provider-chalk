@@ -54,6 +54,14 @@ func stringPointerValue(p *string) types.String {
 	return types.StringValue(*p)
 }
 
+// boolPointerValue maps a nil proto bool to null so "unset" survives a round trip.
+func boolPointerValue(p *bool) types.Bool {
+	if p == nil {
+		return types.BoolNull()
+	}
+	return types.BoolValue(*p)
+}
+
 // kubeResourceConfigObject converts a KubeResourceConfig proto to a types.Object.
 func kubeResourceConfigObject(rc *serverv1.KubeResourceConfig) types.Object {
 	if rc == nil {

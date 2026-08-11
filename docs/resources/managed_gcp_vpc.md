@@ -30,6 +30,7 @@ Chalk managed GCP VPC resource. Creates a fully managed VPC using the provided c
 
 ### Read-Only
 
+- `designator` (String) VPC designator
 - `id` (String) VPC identifier
 
 <a id="nestedatt--subnets"></a>
