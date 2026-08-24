@@ -32,6 +32,7 @@ func TestMain(m *testing.M) {
 	// mutating these shared package vars.
 	vpcPollInterval = time.Millisecond
 	clusterPollInterval = time.Millisecond
+	sandboxPollInterval = time.Millisecond
 	os.Exit(m.Run())
 }
 

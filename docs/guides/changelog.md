@@ -11,7 +11,9 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 ## Unreleased
 
-No schema or permission changes.
+### Resources
+
+- Added `chalk_sandbox`.
 
 ## v1.0.4
 
