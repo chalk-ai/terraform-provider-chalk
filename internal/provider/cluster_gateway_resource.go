@@ -158,7 +158,7 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					useStateForUnknownIncludingNull(),
 				},
 			},
 			"replicas": schema.Int64Attribute{
@@ -447,7 +447,9 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 	// Convert flattened Envoy config
 	envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
 	envoyConfig.TimeoutDuration = data.TimeoutDuration.ValueStringPointer()
-	envoyConfig.DnsHostname = data.DNSHostname.ValueStringPointer()
+	if !data.DNSHostname.IsNull() && !data.DNSHostname.IsUnknown() {
+		envoyConfig.DnsHostname = data.DNSHostname.ValueStringPointer()
+	}
 	if !data.Replicas.IsNull() {
 		val := int32(data.Replicas.ValueInt64())
 		envoyConfig.Replicas = &val
@@ -638,7 +640,9 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 	// Convert flattened Envoy config
 	envoyConfig := &serverv1.EnvoyGatewayProviderConfig{}
 	envoyConfig.TimeoutDuration = data.TimeoutDuration.ValueStringPointer()
-	envoyConfig.DnsHostname = data.DNSHostname.ValueStringPointer()
+	if !data.DNSHostname.IsNull() && !data.DNSHostname.IsUnknown() {
+		envoyConfig.DnsHostname = data.DNSHostname.ValueStringPointer()
+	}
 	if !data.Replicas.IsNull() {
 		val := int32(data.Replicas.ValueInt64())
 		envoyConfig.Replicas = &val

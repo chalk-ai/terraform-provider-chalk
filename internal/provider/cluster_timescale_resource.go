@@ -279,7 +279,7 @@ func (r *ClusterTimescaleResource) Schema(ctx context.Context, req resource.Sche
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIfConfigured(),
-					stringplanmodifier.UseStateForUnknown(),
+					useStateForUnknownIncludingNull(),
 				},
 			},
 			"bootstrap_cloud_resources": schema.BoolAttribute{
