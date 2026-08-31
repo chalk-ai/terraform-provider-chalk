@@ -63,6 +63,8 @@ func applyUnmanagedEnvField(dst, src *serverv1.Environment, path string) {
 		dst.KubeServiceAccountName = src.KubeServiceAccountName
 	case "kube_cluster_mode":
 		dst.KubeClusterMode = src.KubeClusterMode
+	case "offline_store_secret":
+		dst.OfflineStoreSecret = src.OfflineStoreSecret
 	case "online_store_kind":
 		dst.OnlineStoreKind = src.OnlineStoreKind
 	case "online_store_secret":
@@ -93,10 +95,11 @@ func TestUnmanagedEnvironmentCreate(t *testing.T) {
 			{
 				Config: providerConfig(server.URL) + `
 resource "chalk_unmanaged_environment" "test" {
-  name               = "test-env"
-  project_id         = "test-project"
-  kube_cluster_id    = "test-cluster-id"
-  kube_job_namespace = "test-namespace"
+  name                 = "test-env"
+  project_id           = "test-project"
+  kube_cluster_id      = "test-cluster-id"
+  kube_job_namespace   = "test-namespace"
+  dataplane_db_secret = "secret://dataplane-db"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -105,6 +108,7 @@ resource "chalk_unmanaged_environment" "test" {
 					resource.TestCheckResourceAttr("chalk_unmanaged_environment.test", "project_id", "test-project"),
 					resource.TestCheckResourceAttr("chalk_unmanaged_environment.test", "kube_cluster_id", "test-cluster-id"),
 					resource.TestCheckResourceAttr("chalk_unmanaged_environment.test", "kube_job_namespace", "test-namespace"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_environment.test", "dataplane_db_secret", "secret://dataplane-db"),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("CreateEnvironmentV2")
 						require.Len(t, captured, 1, "Expected exactly one CreateEnvironment call")
@@ -117,6 +121,82 @@ resource "chalk_unmanaged_environment" "test" {
 						assert.Equal(t, "test-cluster-id", *req.Environment.KubeClusterId)
 						require.NotNil(t, req.Environment.KubeJobNamespace)
 						assert.Equal(t, "test-namespace", *req.Environment.KubeJobNamespace)
+						require.NotNil(t, req.Environment.OfflineStoreSecret)
+						assert.Equal(t, "secret://dataplane-db", *req.Environment.OfflineStoreSecret)
+
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// TestUnmanagedEnvironmentDataplaneDbSecretUpdate verifies that dataplane_db_secret maps
+// to the API's offline_store_secret field, including the update mask and clearing the value.
+func TestUnmanagedEnvironmentDataplaneDbSecretUpdate(t *testing.T) {
+	t.Parallel()
+	server := setupMockServerUnmanagedEnvironment(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_unmanaged_environment" "test" {
+  name                 = "test-env"
+  project_id           = "test-project"
+  kube_cluster_id      = "test-cluster-id"
+  kube_job_namespace   = "test-namespace"
+  dataplane_db_secret = "secret://dataplane-db/original"
+}
+`,
+			},
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_unmanaged_environment" "test" {
+  name                 = "test-env"
+  project_id           = "test-project"
+  kube_cluster_id      = "test-cluster-id"
+  kube_job_namespace   = "test-namespace"
+  dataplane_db_secret = "secret://dataplane-db/updated"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_unmanaged_environment.test", "dataplane_db_secret", "secret://dataplane-db/updated"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateEnvironmentV2")
+						require.Len(t, captured, 1, "Expected exactly one UpdateEnvironment call")
+
+						req := captured[0].(*serverv1.UpdateEnvironmentV2Request)
+						require.NotNil(t, req.UpdateMask)
+						assert.Equal(t, []string{"offline_store_secret"}, req.UpdateMask.Paths)
+						require.NotNil(t, req.Environment.OfflineStoreSecret)
+						assert.Equal(t, "secret://dataplane-db/updated", *req.Environment.OfflineStoreSecret)
+
+						return nil
+					},
+				),
+			},
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_unmanaged_environment" "test" {
+  name               = "test-env"
+  project_id         = "test-project"
+  kube_cluster_id    = "test-cluster-id"
+  kube_job_namespace = "test-namespace"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_unmanaged_environment.test", "dataplane_db_secret"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateEnvironmentV2")
+						require.Len(t, captured, 2, "Expected one update and one clear call")
+
+						req := captured[1].(*serverv1.UpdateEnvironmentV2Request)
+						require.NotNil(t, req.UpdateMask)
+						assert.Equal(t, []string{"offline_store_secret"}, req.UpdateMask.Paths)
+						assert.Nil(t, req.Environment.OfflineStoreSecret)
 
 						return nil
 					},

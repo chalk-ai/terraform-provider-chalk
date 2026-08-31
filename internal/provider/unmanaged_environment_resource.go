@@ -34,6 +34,7 @@ type UnmanagedEnvironmentResourceModel struct {
 	BaseEnvironmentModel
 	KubeServiceAccountName types.String `tfsdk:"kube_service_account_name"`
 	KubeClusterMode        types.String `tfsdk:"kube_cluster_mode"`
+	OfflineStoreSecret     types.String `tfsdk:"dataplane_db_secret"`
 }
 
 func (r *UnmanagedEnvironmentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -54,6 +55,10 @@ func (r *UnmanagedEnvironmentResource) Schema(ctx context.Context, req resource.
 	}
 	attrs["kube_cluster_mode"] = schema.StringAttribute{
 		MarkdownDescription: "Kubernetes cluster mode (unmanaged environments only)",
+		Optional:            true,
+	}
+	attrs["dataplane_db_secret"] = schema.StringAttribute{
+		MarkdownDescription: "Dataplane database secret reference",
 		Optional:            true,
 	}
 	resp.Schema = schema.Schema{
@@ -151,6 +156,10 @@ func (r *UnmanagedEnvironmentResource) Update(ctx context.Context, req resource.
 			v := plan.KubeClusterMode.ValueString()
 			env.KubeClusterMode = &v
 		}
+		if !plan.OfflineStoreSecret.IsNull() {
+			v := plan.OfflineStoreSecret.ValueString()
+			env.OfflineStoreSecret = &v
+		}
 		populateBaseEnvUpdateProto(ctx, &plan.BaseEnvironmentModel, env, &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
 			return
@@ -216,6 +225,9 @@ func buildUnmanagedEnvUpdateMask(plan, state *UnmanagedEnvironmentResourceModel)
 	if !plan.KubeClusterMode.IsUnknown() && !plan.KubeClusterMode.Equal(state.KubeClusterMode) {
 		paths = append(paths, "kube_cluster_mode")
 	}
+	if !plan.OfflineStoreSecret.IsUnknown() && !plan.OfflineStoreSecret.Equal(state.OfflineStoreSecret) {
+		paths = append(paths, "offline_store_secret")
+	}
 	return paths
 }
 
@@ -232,6 +244,10 @@ func unmanagedEnvToProto(ctx context.Context, data *UnmanagedEnvironmentResource
 	if !data.KubeClusterMode.IsNull() && !data.KubeClusterMode.IsUnknown() {
 		v := data.KubeClusterMode.ValueString()
 		env.KubeClusterMode = &v
+	}
+	if !data.OfflineStoreSecret.IsNull() && !data.OfflineStoreSecret.IsUnknown() {
+		v := data.OfflineStoreSecret.ValueString()
+		env.OfflineStoreSecret = &v
 	}
 	return env
 }
@@ -267,4 +283,5 @@ func updateStateFromEnvironment(data *UnmanagedEnvironmentResourceModel, e *serv
 	}
 	data.KubeServiceAccountName = types.StringPointerValue(e.KubeServiceAccountName)
 	data.KubeClusterMode = types.StringPointerValue(e.KubeClusterMode)
+	data.OfflineStoreSecret = types.StringPointerValue(e.OfflineStoreSecret)
 }
