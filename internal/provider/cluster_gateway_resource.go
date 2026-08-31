@@ -8,6 +8,8 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -17,12 +19,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ resource.Resource = &ClusterGatewayResource{}
 var _ resource.ResourceWithImportState = &ClusterGatewayResource{}
+var _ resource.ResourceWithConfigValidators = &ClusterGatewayResource{}
 
 func NewClusterGatewayResource() resource.Resource {
 	return &ClusterGatewayResource{}
@@ -44,6 +48,12 @@ type TLSCertificateConfigModel struct {
 	SecretNamespace types.String `tfsdk:"secret_namespace"`
 }
 
+type CertificateIssuerRefModel struct {
+	Name  types.String `tfsdk:"name"`
+	Kind  types.String `tfsdk:"kind"`
+	Group types.String `tfsdk:"group"`
+}
+
 type ClusterGatewayResourceModel struct {
 	Id types.String `tfsdk:"id"`
 
@@ -53,14 +63,15 @@ type ClusterGatewayResourceModel struct {
 	GatewayClassName types.String `tfsdk:"gateway_class_name"`
 
 	// Flattened Envoy config fields
-	TimeoutDuration                    types.String `tfsdk:"timeout_duration"`
-	DNSHostname                        types.String `tfsdk:"dns_hostname"`
-	Replicas                           types.Int64  `tfsdk:"replicas"`
-	MinAvailable                       types.Int64  `tfsdk:"min_available"`
-	LetsencryptClusterIssuer           types.String `tfsdk:"letsencrypt_cluster_issuer"`
-	AdditionalDNSNames                 types.List   `tfsdk:"additional_dns_names"`
-	Nodepool                           types.String `tfsdk:"nodepool"`
-	AllowCollocationWithChalkWorkloads types.Bool   `tfsdk:"allow_collocation_with_chalk_workloads"`
+	TimeoutDuration                    types.String               `tfsdk:"timeout_duration"`
+	DNSHostname                        types.String               `tfsdk:"dns_hostname"`
+	Replicas                           types.Int64                `tfsdk:"replicas"`
+	MinAvailable                       types.Int64                `tfsdk:"min_available"`
+	LetsencryptClusterIssuer           types.String               `tfsdk:"letsencrypt_cluster_issuer"`
+	CertificateIssuerRef               *CertificateIssuerRefModel `tfsdk:"certificate_issuer_ref"`
+	AdditionalDNSNames                 types.List                 `tfsdk:"additional_dns_names"`
+	Nodepool                           types.String               `tfsdk:"nodepool"`
+	AllowCollocationWithChalkWorkloads types.Bool                 `tfsdk:"allow_collocation_with_chalk_workloads"`
 
 	// Optional fields
 	IPAllowlist        types.List                 `tfsdk:"ip_allowlist"`
@@ -72,6 +83,15 @@ type ClusterGatewayResourceModel struct {
 
 	// Required field
 	KubeClusterId types.String `tfsdk:"kube_cluster_id"`
+}
+
+func (r *ClusterGatewayResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.Conflicting(
+			path.MatchRoot("letsencrypt_cluster_issuer"),
+			path.MatchRoot("certificate_issuer_ref"),
+		),
+	}
 }
 
 func (r *ClusterGatewayResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -181,8 +201,36 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				MarkdownDescription: "Let's Encrypt cluster issuer for Envoy gateway",
 				Optional:            true,
 				Computed:            true,
+				DeprecationMessage:  "Use certificate_issuer_ref instead.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"certificate_issuer_ref": schema.SingleNestedAttribute{
+				MarkdownDescription: "cert-manager issuer used to provision the gateway's managed TLS certificate. Namespaced issuers must live in the gateway namespace; cluster-scoped issuers ignore it.",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						MarkdownDescription: "Kubernetes resource name of the issuer.",
+						Required:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
+					},
+					"kind": schema.StringAttribute{
+						MarkdownDescription: "Issuer resource kind, for example `ClusterIssuer` or `AWSPCAClusterIssuer`.",
+						Required:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
+					},
+					"group": schema.StringAttribute{
+						MarkdownDescription: "Issuer API group, for example `cert-manager.io` or `awspca.cert-manager.io`.",
+						Required:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
+					},
 				},
 			},
 			"additional_dns_names": schema.ListAttribute{
@@ -350,6 +398,16 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 			data.LetsencryptClusterIssuer = types.StringNull()
 		}
 
+		certificateIssuerRef, err := certificateIssuerRefFromProto(envoyConfig)
+		if err != nil {
+			diags.AddError(
+				"Error Reading Certificate Issuer Reference",
+				fmt.Sprintf("Could not decode certificate_issuer_ref from the gateway response: %v", err),
+			)
+			return
+		}
+		data.CertificateIssuerRef = certificateIssuerRef
+
 		if len(envoyConfig.AdditionalDnsNames) > 0 {
 			var dnsValues []attr.Value
 			for _, dns := range envoyConfig.AdditionalDnsNames {
@@ -457,6 +515,7 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 		envoyConfig.MinAvailable = &val
 	}
 	envoyConfig.LetsencryptClusterIssuer = data.LetsencryptClusterIssuer.ValueStringPointer()
+	setCertificateIssuerRefOnProto(envoyConfig, data.CertificateIssuerRef)
 	if !data.AdditionalDNSNames.IsNull() {
 		var dnsNames []string
 		diags := data.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
@@ -648,6 +707,7 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 		envoyConfig.MinAvailable = &val
 	}
 	envoyConfig.LetsencryptClusterIssuer = data.LetsencryptClusterIssuer.ValueStringPointer()
+	setCertificateIssuerRefOnProto(envoyConfig, data.CertificateIssuerRef)
 	if !data.AdditionalDNSNames.IsNull() {
 		var dnsNames []string
 		diags := data.AdditionalDNSNames.ElementsAs(ctx, &dnsNames, false)
