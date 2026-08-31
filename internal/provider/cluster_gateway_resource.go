@@ -201,7 +201,6 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				MarkdownDescription: "Let's Encrypt cluster issuer for Envoy gateway",
 				Optional:            true,
 				Computed:            true,
-				DeprecationMessage:  "Use certificate_issuer_ref instead.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
