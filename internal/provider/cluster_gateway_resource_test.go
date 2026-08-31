@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"regexp"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -73,6 +74,85 @@ resource "chalk_cluster_gateway" "test" {
 	})
 }
 
+func TestClusterGatewayCertificateIssuerRef(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerGateway(t)
+
+	config := func(issuerName string) string {
+		return providerConfig(server.URL) + `
+resource "chalk_cluster_gateway" "test" {
+  kube_cluster_id = "test-kube-cluster"
+  certificate_issuer_ref = {
+    name  = "` + issuerName + `"
+    kind  = "AWSPCAClusterIssuer"
+    group = "awspca.cert-manager.io"
+  }
+}
+`
+	}
+
+	checkIssuer := func(requestIndex int, expectedName string) resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			captured := server.GetCapturedRequests("CreateClusterGateway")
+			require.Len(t, captured, requestIndex+1)
+			req := captured[requestIndex].(*serverv1.CreateClusterGatewayRequest)
+			issuer, err := certificateIssuerRefFromProto(req.Specs.GetConfig().GetEnvoy())
+			require.NoError(t, err)
+			require.NotNil(t, issuer)
+			assert.Equal(t, expectedName, issuer.Name.ValueString())
+			assert.Equal(t, "AWSPCAClusterIssuer", issuer.Kind.ValueString())
+			assert.Equal(t, "awspca.cert-manager.io", issuer.Group.ValueString())
+			return nil
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config("corporate-pca"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "certificate_issuer_ref.name", "corporate-pca"),
+					resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "certificate_issuer_ref.kind", "AWSPCAClusterIssuer"),
+					resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "certificate_issuer_ref.group", "awspca.cert-manager.io"),
+					checkIssuer(0, "corporate-pca"),
+				),
+			},
+			{
+				Config: config("replacement-pca"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "certificate_issuer_ref.name", "replacement-pca"),
+					checkIssuer(1, "replacement-pca"),
+				),
+			},
+		},
+	})
+}
+
+func TestClusterGatewayCertificateIssuerRefConflictsWithLegacyIssuer(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerGateway(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_cluster_gateway" "test" {
+  kube_cluster_id            = "test-kube-cluster"
+  letsencrypt_cluster_issuer = "legacy-issuer"
+  certificate_issuer_ref = {
+    name  = "custom-issuer"
+    kind  = "AWSPCAClusterIssuer"
+    group = "awspca.cert-manager.io"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(".*cannot be configured together.*"),
+			},
+		},
+	})
+}
 func TestClusterGatewayDelete(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerGateway(t)

@@ -26,6 +26,7 @@ Chalk cluster gateway resource
 
 - `additional_dns_names` (List of String) Additional DNS names for Envoy gateway
 - `allow_collocation_with_chalk_workloads` (Boolean) Allow collocation with Chalk workloads
+- `certificate_issuer_ref` (Attributes) cert-manager issuer used to provision the gateway's managed TLS certificate. Namespaced issuers must live in the gateway namespace; cluster-scoped issuers ignore it. (see [below for nested schema](#nestedatt--certificate_issuer_ref))
 - `dns_hostname` (String) DNS hostname
 - `gateway_class_name` (String) Gateway class name
 - `gateway_name` (String) Name of the gateway
@@ -45,6 +46,16 @@ Chalk cluster gateway resource
 ### Read-Only
 
 - `id` (String) Gateway identifier
+
+<a id="nestedatt--certificate_issuer_ref"></a>
+### Nested Schema for `certificate_issuer_ref`
+
+Required:
+
+- `group` (String) Issuer API group, for example `cert-manager.io` or `awspca.cert-manager.io`.
+- `kind` (String) Issuer resource kind, for example `ClusterIssuer` or `AWSPCAClusterIssuer`.
+- `name` (String) Kubernetes resource name of the issuer.
+
 
 <a id="nestedatt--listeners"></a>
 ### Nested Schema for `listeners`
