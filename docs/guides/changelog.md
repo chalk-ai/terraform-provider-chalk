@@ -11,7 +11,12 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 ## Unreleased
 
-No schema or permission changes.
+### Resources
+
+- Added attribute `chalk_cluster_gateway.certificate_issuer_ref` (`object`).
+- Added attribute `chalk_cluster_gateway.certificate_issuer_ref.group` (`string`).
+- Added attribute `chalk_cluster_gateway.certificate_issuer_ref.kind` (`string`).
+- Added attribute `chalk_cluster_gateway.certificate_issuer_ref.name` (`string`).
 
 ## v1.0.5
 
