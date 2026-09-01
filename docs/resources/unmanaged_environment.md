@@ -29,6 +29,7 @@ Chalk unmanaged environment resource
 
 - `additional_env_vars` (Map of String) Additional environment variables
 - `customer_metadata` (String) Customer metadata as a JSON object
+- `dataplane_db_secret` (String) Dataplane database secret reference
 - `default_build_profile` (String) Default deployment build profile
 - `engine_docker_registry_path` (String) Engine Docker registry path (immutable)
 - `id` (String) Environment identifier; server-generated (immutable)
