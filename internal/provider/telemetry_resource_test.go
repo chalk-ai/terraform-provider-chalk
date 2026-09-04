@@ -108,6 +108,169 @@ resource "chalk_telemetry" "test" {
 	})
 }
 
+// TestTelemetryResourceRuntime verifies that an explicitly configured runtime is sent
+// as the proto enum and that removing it returns ownership to the server without drift.
+// The mock mirrors the API's read behavior by hydrating an unspecified runtime to Vector.
+func TestTelemetryResourceRuntime(t *testing.T) {
+	t.Parallel()
+	server := testserver.NewMockBuilderServer(t)
+	t.Cleanup(func() { server.Close() })
+
+	var rawRuntime serverv1.TelemetryRuntime
+	const deploymentID = "test-telemetry-id"
+	const clusterID = "test-cluster-id"
+
+	effectiveSpec := func() *serverv1.TelemetryDeploymentSpec {
+		runtime := rawRuntime
+		if runtime == serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_UNSPECIFIED {
+			runtime = serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR
+		}
+		return &serverv1.TelemetryDeploymentSpec{TelemetryRuntime: runtime}
+	}
+
+	server.OnCreateTelemetryDeployment().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		createReq := req.(*serverv1.CreateTelemetryDeploymentRequest)
+		rawRuntime = createReq.Spec.TelemetryRuntime
+		return &serverv1.CreateTelemetryDeploymentResponse{TelemetryDeploymentId: deploymentID}, nil
+	})
+	server.OnUpdateTelemetryDeployment().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		updateReq := req.(*serverv1.UpdateTelemetryDeploymentRequest)
+		rawRuntime = updateReq.Spec.TelemetryRuntime
+		return &serverv1.UpdateTelemetryDeploymentResponse{
+			Deployment: &serverv1.TelemetryDeployment{
+				Id: deploymentID, ClusterId: clusterID, Spec: effectiveSpec(),
+			},
+		}, nil
+	})
+	server.OnGetTelemetryDeployment().WithBehavior(func(req proto.Message) (proto.Message, error) {
+		return &serverv1.GetTelemetryDeploymentResponse{
+			Deployment: &serverv1.TelemetryDeployment{
+				Id: deploymentID, ClusterId: clusterID, Spec: effectiveSpec(),
+			},
+		}, nil
+	})
+	server.OnDeleteTelemetryDeployment().Return(&serverv1.DeleteTelemetryDeploymentResponse{})
+
+	otelConfig := providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id    = "test-cluster-id"
+  runtime         = "otel"
+}
+`
+	vectorConfig := providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id    = "test-cluster-id"
+  runtime         = "vector"
+}
+`
+	defaultConfig := providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: otelConfig,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "runtime", telemetryRuntimeOtel),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateTelemetryDeployment")
+						require.Len(t, captured, 1)
+						req := captured[0].(*serverv1.CreateTelemetryDeploymentRequest)
+						assert.Equal(t, serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_OTEL, req.Spec.TelemetryRuntime)
+						return nil
+					},
+				),
+			},
+			{
+				Config:             otelConfig,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			{
+				Config: vectorConfig,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "runtime", telemetryRuntimeVector),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
+						require.NotEmpty(t, captured)
+						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
+						assert.Equal(t, []string{"telemetry_runtime"}, req.UpdateMask.Paths)
+						assert.Equal(t, serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR, req.Spec.TelemetryRuntime)
+						return nil
+					},
+				),
+			},
+			{
+				Config:             vectorConfig,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			{
+				Config: otelConfig,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "runtime", telemetryRuntimeOtel),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
+						require.NotEmpty(t, captured)
+						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
+						assert.Equal(t, []string{"telemetry_runtime"}, req.UpdateMask.Paths)
+						assert.Equal(t, serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_OTEL, req.Spec.TelemetryRuntime)
+						return nil
+					},
+				),
+			},
+			{
+				Config:             otelConfig,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			{
+				Config: defaultConfig,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "runtime"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
+						require.NotEmpty(t, captured)
+						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
+						assert.Equal(t, []string{"telemetry_runtime"}, req.UpdateMask.Paths)
+						assert.Equal(t, serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_UNSPECIFIED, req.Spec.TelemetryRuntime)
+						return nil
+					},
+				),
+			},
+			{
+				Config:             defaultConfig,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestTelemetryResourceRuntimeRejectsInvalidValue(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerTelemetry(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id  = "test-cluster-id"
+  runtime         = "invalid"
+}
+`,
+				ExpectError: regexp.MustCompile(`Attribute runtime value must be one of`),
+			},
+		},
+	})
+}
+
 // TestTelemetryResourceUpdate verifies that UpdateTelemetryDeployment is called for updates.
 func TestTelemetryResourceUpdate(t *testing.T) {
 	t.Parallel()
@@ -356,8 +519,10 @@ func TestTelemetryResourceServerDefaults(t *testing.T) {
 	const deploymentID = "test-telemetry-id"
 	const clusterID = "test-cluster-id"
 
-	// Server always returns all three specs with defaults, regardless of what was sent.
+	// Server always returns the hydrated runtime and all three specs with defaults,
+	// regardless of what was sent.
 	serverDefaultSpec := &serverv1.TelemetryDeploymentSpec{
+		TelemetryRuntime: serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR,
 		ClickHouse: &serverv1.ClickHouseSpec{
 			ClickHouseVersion: "23.8",
 		},
@@ -395,7 +560,19 @@ resource "chalk_telemetry" "test" {
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			// Step 1: apply should succeed (no "inconsistent result after apply" error).
-			{Config: config},
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "runtime"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateTelemetryDeployment")
+						require.Len(t, captured, 1)
+						req := captured[0].(*serverv1.CreateTelemetryDeploymentRequest)
+						assert.Equal(t, serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_UNSPECIFIED, req.Spec.TelemetryRuntime)
+						return nil
+					},
+				),
+			},
 			// Step 2: re-plan with same config should show no changes despite server returning defaults.
 			{
 				Config:             config,

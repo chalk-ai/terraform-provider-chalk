@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -24,6 +26,11 @@ import (
 
 var _ resource.Resource = &TelemetryResource{}
 var _ resource.ResourceWithImportState = &TelemetryResource{}
+
+const (
+	telemetryRuntimeOtel   = "otel"
+	telemetryRuntimeVector = "vector"
+)
 
 // Attribute type maps used to construct types.Object values and null objects.
 var kubePVCAttrTypes = map[string]attr.Type{
@@ -87,6 +94,7 @@ type TelemetryResourceModel struct {
 	Id                       types.String                   `tfsdk:"id"`
 	Namespace                types.String                   `tfsdk:"namespace"`
 	KubeClusterId            types.String                   `tfsdk:"kube_cluster_id"`
+	Runtime                  types.String                   `tfsdk:"runtime"`
 	OtelCollectorSpec        types.Object                   `tfsdk:"otel_collector_spec"`
 	ClickhouseDeploymentSpec types.Object                   `tfsdk:"clickhouse_deployment_spec"`
 	AggregatorSpec           types.Object                   `tfsdk:"aggregator_spec"`
@@ -219,6 +227,13 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"runtime": schema.StringAttribute{
+				MarkdownDescription: "Telemetry runtime. One of `vector` or `otel`. This generally should not be set unless Chalk requests it. If setting, use `vector`; `otel` is deprecated.",
+				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf(telemetryRuntimeVector, telemetryRuntimeOtel),
+				},
+			},
 			"otel_collector_spec": schema.SingleNestedAttribute{
 				MarkdownDescription: "Otel collector specification",
 				Optional:            true,
@@ -275,6 +290,20 @@ func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceMo
 	spec := &serverv1.TelemetryDeploymentSpec{
 		Namespace:                data.Namespace.ValueStringPointer(),
 		CustomerVectorAggregator: data.Exporters.toProto(),
+	}
+	if !data.Runtime.IsNull() && !data.Runtime.IsUnknown() {
+		switch data.Runtime.ValueString() {
+		case telemetryRuntimeOtel:
+			spec.TelemetryRuntime = serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_OTEL
+		case telemetryRuntimeVector:
+			spec.TelemetryRuntime = serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR
+		default:
+			diags.AddError(
+				"Invalid telemetry runtime",
+				fmt.Sprintf("Unsupported telemetry runtime %q", data.Runtime.ValueString()),
+			)
+			return nil
+		}
 	}
 
 	if !data.ClickhouseDeploymentSpec.IsNull() && !data.ClickhouseDeploymentSpec.IsUnknown() {
@@ -373,6 +402,20 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 
 	data.Namespace = types.StringPointerValue(spec.Namespace)
 	data.Exporters = customerVectorAggregatorFromProto(spec.CustomerVectorAggregator, data.Exporters)
+	// runtime is configuration-owned. The server hydrates an omitted runtime
+	// to its effective default on reads, so keep null state null to avoid claiming that
+	// default and causing a perpetual plan. Explicitly configured values still round-trip
+	// and detect out-of-band changes.
+	if !data.Runtime.IsNull() {
+		switch spec.TelemetryRuntime {
+		case serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_OTEL:
+			data.Runtime = types.StringValue(telemetryRuntimeOtel)
+		case serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR:
+			data.Runtime = types.StringValue(telemetryRuntimeVector)
+		default:
+			data.Runtime = types.StringNull()
+		}
+	}
 
 	if spec.ClickHouse != nil {
 		ch := spec.ClickHouse
@@ -417,6 +460,9 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
 	var paths []string
 	// Skip Unknown plan values — Terraform hasn't determined them yet (Computed field with no prior state).
+	if !data.Runtime.IsUnknown() && !data.Runtime.Equal(state.Runtime) {
+		paths = append(paths, "telemetry_runtime")
+	}
 	if !data.ClickhouseDeploymentSpec.IsUnknown() && !data.ClickhouseDeploymentSpec.Equal(state.ClickhouseDeploymentSpec) {
 		paths = append(paths, "click_house")
 	}
