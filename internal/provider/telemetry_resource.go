@@ -228,7 +228,7 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 				},
 			},
 			"telemetry_runtime": schema.StringAttribute{
-				MarkdownDescription: "Telemetry runtime. One of `vector` or `otel`. When omitted, Chalk uses its server-side default.",
+				MarkdownDescription: "Telemetry runtime. One of `vector` or `otel`. This generally should not be set unless Chalk requests it. If setting, use `vector`; `otel` is deprecated.",
 				Optional:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(telemetryRuntimeVector, telemetryRuntimeOtel),

@@ -30,7 +30,7 @@ Chalk telemetry resource
 - `id` (String) Telemetry deployment identifier
 - `namespace` (String) Kubernetes namespace for the telemetry deployment
 - `otel_collector_spec` (Attributes) Otel collector specification (see [below for nested schema](#nestedatt--otel_collector_spec))
-- `telemetry_runtime` (String) Telemetry runtime. One of `vector` or `otel`. When omitted, Chalk uses its server-side default.
+- `telemetry_runtime` (String) Telemetry runtime. One of `vector` or `otel`. This generally should not be set unless Chalk requests it. If setting, use `vector`; `otel` is deprecated.
 
 <a id="nestedatt--aggregator_spec"></a>
 ### Nested Schema for `aggregator_spec`
