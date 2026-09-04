@@ -1,0 +1,2520 @@
+{
+  "version": "v1.0.7",
+  "resources": {
+    "chalk_aws_cloud_credentials": {
+      "attributes": {
+        "aws_account_id": {
+          "type": "string",
+          "required": true
+        },
+        "aws_external_id": {
+          "type": "string"
+        },
+        "aws_management_role_arn": {
+          "type": "string",
+          "required": true
+        },
+        "aws_permissions_boundary_arn": {
+          "type": "string"
+        },
+        "aws_region": {
+          "type": "string",
+          "required": true
+        },
+        "docker_build_config.builder": {
+          "type": "string"
+        },
+        "docker_build_config.notification_topic": {
+          "type": "string"
+        },
+        "docker_build_config.push_registry_tag_prefix": {
+          "type": "string"
+        },
+        "docker_build_config.push_registry_type": {
+          "type": "string"
+        },
+        "docker_build_config.registry_credentials_secret_id": {
+          "type": "string"
+        },
+        "gcp_workload_identity.pool_id": {
+          "type": "string"
+        },
+        "gcp_workload_identity.project_number": {
+          "type": "string"
+        },
+        "gcp_workload_identity.provider_id": {
+          "type": "string"
+        },
+        "gcp_workload_identity.service_account": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create`"
+    },
+    "chalk_azure_cloud_credentials": {
+      "attributes": {
+        "container_registry_config.registry_name": {
+          "type": "string"
+        },
+        "docker_build_config.builder": {
+          "type": "string"
+        },
+        "docker_build_config.notification_topic": {
+          "type": "string"
+        },
+        "docker_build_config.push_registry_tag_prefix": {
+          "type": "string"
+        },
+        "docker_build_config.push_registry_type": {
+          "type": "string"
+        },
+        "docker_build_config.registry_credentials_secret_id": {
+          "type": "string"
+        },
+        "gcp_workload_identity.pool_id": {
+          "type": "string"
+        },
+        "gcp_workload_identity.project_number": {
+          "type": "string"
+        },
+        "gcp_workload_identity.provider_id": {
+          "type": "string"
+        },
+        "gcp_workload_identity.service_account": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "key_vault_config.vault_name": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "region": {
+          "type": "string",
+          "required": true
+        },
+        "resource_group": {
+          "type": "string",
+          "required": true
+        },
+        "subscription_id": {
+          "type": "string",
+          "required": true
+        },
+        "tenant_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create`"
+    },
+    "chalk_cluster_background_persistence_deployment_binding": {
+      "attributes": {
+        "background_persistence_deployment_id": {
+          "type": "string",
+          "required": true
+        },
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_cluster_container_registry_binding": {
+      "attributes": {
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "container_registry_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_cluster_dataset_cloud_storage_binding": {
+      "attributes": {
+        "cloud_storage_id": {
+          "type": "string",
+          "required": true
+        },
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_cluster_gateway": {
+      "attributes": {
+        "additional_dns_names": {
+          "type": "list(string)"
+        },
+        "allow_collocation_with_chalk_workloads": {
+          "type": "bool"
+        },
+        "certificate_issuer_ref": {
+          "type": "object"
+        },
+        "certificate_issuer_ref.group": {
+          "type": "string",
+          "required": true
+        },
+        "certificate_issuer_ref.kind": {
+          "type": "string",
+          "required": true
+        },
+        "certificate_issuer_ref.name": {
+          "type": "string",
+          "required": true
+        },
+        "dns_hostname": {
+          "type": "string"
+        },
+        "gateway_class_name": {
+          "type": "string"
+        },
+        "gateway_name": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "ip_allowlist": {
+          "type": "list(string)"
+        },
+        "kube_cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "letsencrypt_cluster_issuer": {
+          "type": "string"
+        },
+        "listeners": {
+          "type": "list(object)"
+        },
+        "listeners.from": {
+          "type": "string"
+        },
+        "listeners.name": {
+          "type": "string",
+          "required": true
+        },
+        "listeners.port": {
+          "type": "number",
+          "required": true
+        },
+        "listeners.protocol": {
+          "type": "string",
+          "required": true
+        },
+        "load_balancer_class": {
+          "type": "string"
+        },
+        "min_available": {
+          "type": "number"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "nodepool": {
+          "type": "string"
+        },
+        "replicas": {
+          "type": "number"
+        },
+        "routing": {
+          "type": "string"
+        },
+        "service_annotations": {
+          "type": "map(string)"
+        },
+        "timeout_duration": {
+          "type": "string"
+        },
+        "tls_certificate": {
+          "type": "object"
+        },
+        "tls_certificate.secret_name": {
+          "type": "string",
+          "required": true
+        },
+        "tls_certificate.secret_namespace": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
+    },
+    "chalk_cluster_gateway_binding": {
+      "attributes": {
+        "cluster_gateway_id": {
+          "type": "string",
+          "required": true
+        },
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_cluster_model_registry_cloud_storage_binding": {
+      "attributes": {
+        "cloud_storage_id": {
+          "type": "string",
+          "required": true
+        },
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_cluster_plan_stages_cloud_storage_binding": {
+      "attributes": {
+        "cloud_storage_id": {
+          "type": "string",
+          "required": true
+        },
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_cluster_source_bundle_cloud_storage_binding": {
+      "attributes": {
+        "cloud_storage_id": {
+          "type": "string",
+          "required": true
+        },
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_cluster_timescale": {
+      "attributes": {
+        "backup_bucket": {
+          "type": "string"
+        },
+        "backup_gcp_service_account": {
+          "type": "string"
+        },
+        "backup_iam_role_arn": {
+          "type": "string"
+        },
+        "bootstrap_cloud_resources": {
+          "type": "bool"
+        },
+        "connection_pool_max_connections": {
+          "type": "string"
+        },
+        "connection_pool_replicas": {
+          "type": "number"
+        },
+        "connection_pool_size": {
+          "type": "string"
+        },
+        "database_name": {
+          "type": "string"
+        },
+        "database_replicas": {
+          "type": "number"
+        },
+        "dns_hostname": {
+          "type": "string"
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "gateway_id": {
+          "type": "string"
+        },
+        "gateway_port": {
+          "type": "number"
+        },
+        "id": {
+          "type": "string"
+        },
+        "instance_type": {
+          "type": "string"
+        },
+        "internal": {
+          "type": "bool"
+        },
+        "ip_allowlist": {
+          "type": "list(string)"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "node_selector": {
+          "type": "map(string)"
+        },
+        "nodepool": {
+          "type": "string"
+        },
+        "postgres_parameters": {
+          "type": "map(string)"
+        },
+        "request": {
+          "type": "object"
+        },
+        "request.cpu": {
+          "type": "string"
+        },
+        "request.ephemeral_storage": {
+          "type": "string"
+        },
+        "request.memory": {
+          "type": "string"
+        },
+        "request.storage": {
+          "type": "string"
+        },
+        "secret_name": {
+          "type": "string"
+        },
+        "service_type": {
+          "type": "string"
+        },
+        "storage": {
+          "type": "string"
+        },
+        "storage_class": {
+          "type": "string"
+        },
+        "timescale_image": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
+    },
+    "chalk_cluster_volume_cloud_storage_binding": {
+      "attributes": {
+        "cloud_storage_id": {
+          "type": "string",
+          "required": true
+        },
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_datasource": {
+      "attributes": {
+        "config": {
+          "type": "map(object)",
+          "required": true
+        },
+        "config.literal": {
+          "type": "string"
+        },
+        "config.secret_id": {
+          "type": "string"
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
+    },
+    "chalk_datasource_databricks": {
+      "attributes": {
+        "access_token": {
+          "type": "object"
+        },
+        "access_token.literal": {
+          "type": "string"
+        },
+        "access_token.secret_id": {
+          "type": "string"
+        },
+        "client_id": {
+          "type": "object"
+        },
+        "client_id.literal": {
+          "type": "string"
+        },
+        "client_id.secret_id": {
+          "type": "string"
+        },
+        "client_secret": {
+          "type": "object"
+        },
+        "client_secret.literal": {
+          "type": "string"
+        },
+        "client_secret.secret_id": {
+          "type": "string"
+        },
+        "config": {
+          "type": "map(object)"
+        },
+        "config.literal": {
+          "type": "string"
+        },
+        "config.secret_id": {
+          "type": "string"
+        },
+        "database": {
+          "type": "object"
+        },
+        "database.literal": {
+          "type": "string"
+        },
+        "database.secret_id": {
+          "type": "string"
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "host": {
+          "type": "object"
+        },
+        "host.literal": {
+          "type": "string"
+        },
+        "host.secret_id": {
+          "type": "string"
+        },
+        "http_path": {
+          "type": "object"
+        },
+        "http_path.literal": {
+          "type": "string"
+        },
+        "http_path.secret_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "port": {
+          "type": "object"
+        },
+        "port.literal": {
+          "type": "string"
+        },
+        "port.secret_id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
+    },
+    "chalk_datasource_kafka": {
+      "attributes": {
+        "additional_kafka_args": {
+          "type": "object"
+        },
+        "additional_kafka_args.literal": {
+          "type": "string"
+        },
+        "additional_kafka_args.secret_id": {
+          "type": "string"
+        },
+        "aws_region": {
+          "type": "object"
+        },
+        "aws_region.literal": {
+          "type": "string"
+        },
+        "aws_region.secret_id": {
+          "type": "string"
+        },
+        "aws_role_arn": {
+          "type": "object"
+        },
+        "aws_role_arn.literal": {
+          "type": "string"
+        },
+        "aws_role_arn.secret_id": {
+          "type": "string"
+        },
+        "bootstrap_server": {
+          "type": "object",
+          "required": true
+        },
+        "bootstrap_server.literal": {
+          "type": "string"
+        },
+        "bootstrap_server.secret_id": {
+          "type": "string"
+        },
+        "client_id_prefix": {
+          "type": "object"
+        },
+        "client_id_prefix.literal": {
+          "type": "string"
+        },
+        "client_id_prefix.secret_id": {
+          "type": "string"
+        },
+        "config": {
+          "type": "map(object)"
+        },
+        "config.literal": {
+          "type": "string"
+        },
+        "config.secret_id": {
+          "type": "string"
+        },
+        "dlq_topic": {
+          "type": "object"
+        },
+        "dlq_topic.literal": {
+          "type": "string"
+        },
+        "dlq_topic.secret_id": {
+          "type": "string"
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "group_id_prefix": {
+          "type": "object"
+        },
+        "group_id_prefix.literal": {
+          "type": "string"
+        },
+        "group_id_prefix.secret_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "msk_iam_auth": {
+          "type": "object"
+        },
+        "msk_iam_auth.literal": {
+          "type": "string"
+        },
+        "msk_iam_auth.secret_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "sasl_mechanism": {
+          "type": "object"
+        },
+        "sasl_mechanism.literal": {
+          "type": "string"
+        },
+        "sasl_mechanism.secret_id": {
+          "type": "string"
+        },
+        "sasl_password": {
+          "type": "object"
+        },
+        "sasl_password.literal": {
+          "type": "string"
+        },
+        "sasl_password.secret_id": {
+          "type": "string"
+        },
+        "sasl_username": {
+          "type": "object"
+        },
+        "sasl_username.literal": {
+          "type": "string"
+        },
+        "sasl_username.secret_id": {
+          "type": "string"
+        },
+        "security_protocol": {
+          "type": "object"
+        },
+        "security_protocol.literal": {
+          "type": "string"
+        },
+        "security_protocol.secret_id": {
+          "type": "string"
+        },
+        "ssl_ca_file": {
+          "type": "object"
+        },
+        "ssl_ca_file.literal": {
+          "type": "string"
+        },
+        "ssl_ca_file.secret_id": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "object",
+          "required": true
+        },
+        "topic.literal": {
+          "type": "string"
+        },
+        "topic.secret_id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
+    },
+    "chalk_datasource_kinesis": {
+      "attributes": {
+        "aws_access_key_id": {
+          "type": "object"
+        },
+        "aws_access_key_id.literal": {
+          "type": "string"
+        },
+        "aws_access_key_id.secret_id": {
+          "type": "string"
+        },
+        "aws_secret_access_key": {
+          "type": "object"
+        },
+        "aws_secret_access_key.literal": {
+          "type": "string"
+        },
+        "aws_secret_access_key.secret_id": {
+          "type": "string"
+        },
+        "aws_session_token": {
+          "type": "object"
+        },
+        "aws_session_token.literal": {
+          "type": "string"
+        },
+        "aws_session_token.secret_id": {
+          "type": "string"
+        },
+        "config": {
+          "type": "map(object)"
+        },
+        "config.literal": {
+          "type": "string"
+        },
+        "config.secret_id": {
+          "type": "string"
+        },
+        "consumer_role_arn": {
+          "type": "object"
+        },
+        "consumer_role_arn.literal": {
+          "type": "string"
+        },
+        "consumer_role_arn.secret_id": {
+          "type": "string"
+        },
+        "dead_letter_queue_stream_name": {
+          "type": "object"
+        },
+        "dead_letter_queue_stream_name.literal": {
+          "type": "string"
+        },
+        "dead_letter_queue_stream_name.secret_id": {
+          "type": "string"
+        },
+        "endpoint_url": {
+          "type": "object"
+        },
+        "endpoint_url.literal": {
+          "type": "string"
+        },
+        "endpoint_url.secret_id": {
+          "type": "string"
+        },
+        "enhanced_fanout_consumer_name": {
+          "type": "object"
+        },
+        "enhanced_fanout_consumer_name.literal": {
+          "type": "string"
+        },
+        "enhanced_fanout_consumer_name.secret_id": {
+          "type": "string"
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "late_arrival_deadline": {
+          "type": "object"
+        },
+        "late_arrival_deadline.literal": {
+          "type": "string"
+        },
+        "late_arrival_deadline.secret_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "region_name": {
+          "type": "object",
+          "required": true
+        },
+        "region_name.literal": {
+          "type": "string"
+        },
+        "region_name.secret_id": {
+          "type": "string"
+        },
+        "stream_arn": {
+          "type": "object"
+        },
+        "stream_arn.literal": {
+          "type": "string"
+        },
+        "stream_arn.secret_id": {
+          "type": "string"
+        },
+        "stream_name": {
+          "type": "object"
+        },
+        "stream_name.literal": {
+          "type": "string"
+        },
+        "stream_name.secret_id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
+    },
+    "chalk_datasource_postgresql": {
+      "attributes": {
+        "config": {
+          "type": "map(object)"
+        },
+        "config.literal": {
+          "type": "string"
+        },
+        "config.secret_id": {
+          "type": "string"
+        },
+        "database": {
+          "type": "object",
+          "required": true
+        },
+        "database.literal": {
+          "type": "string"
+        },
+        "database.secret_id": {
+          "type": "string"
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "host": {
+          "type": "object",
+          "required": true
+        },
+        "host.literal": {
+          "type": "string"
+        },
+        "host.secret_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "password": {
+          "type": "object"
+        },
+        "password.literal": {
+          "type": "string"
+        },
+        "password.secret_id": {
+          "type": "string"
+        },
+        "port": {
+          "type": "object",
+          "required": true
+        },
+        "port.literal": {
+          "type": "string"
+        },
+        "port.secret_id": {
+          "type": "string"
+        },
+        "user": {
+          "type": "object",
+          "required": true
+        },
+        "user.literal": {
+          "type": "string"
+        },
+        "user.secret_id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `secrets.write`, `secrets.decrypt`"
+    },
+    "chalk_environment_background_persistence_deployment_binding": {
+      "attributes": {
+        "background_persistence_deployment_id": {
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_environment_dataset_cloud_storage_binding": {
+      "attributes": {
+        "cloud_storage_id": {
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_environment_gateway_binding": {
+      "attributes": {
+        "cluster_gateway_id": {
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_environment_model_registry_cloud_storage_binding": {
+      "attributes": {
+        "cloud_storage_id": {
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_environment_offline_store_connection_binding": {
+      "attributes": {
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "offline_store_connection_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `deploy.create`, `deploy.read`"
+    },
+    "chalk_environment_plan_stages_cloud_storage_binding": {
+      "attributes": {
+        "cloud_storage_id": {
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_environment_source_bundle_cloud_storage_binding": {
+      "attributes": {
+        "cloud_storage_id": {
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_gcp_cloud_credentials": {
+      "attributes": {
+        "docker_build_config.builder": {
+          "type": "string"
+        },
+        "docker_build_config.notification_topic": {
+          "type": "string"
+        },
+        "docker_build_config.push_registry_tag_prefix": {
+          "type": "string"
+        },
+        "docker_build_config.push_registry_type": {
+          "type": "string"
+        },
+        "docker_build_config.registry_credentials_secret_id": {
+          "type": "string"
+        },
+        "gcp_management_service_account": {
+          "type": "string"
+        },
+        "gcp_project_id": {
+          "type": "string",
+          "required": true
+        },
+        "gcp_region": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create`"
+    },
+    "chalk_kubernetes_cluster": {
+      "attributes": {
+        "cloud_credential_id": {
+          "type": "string"
+        },
+        "data_plane_controller": {
+          "type": "object"
+        },
+        "data_plane_controller.host_pools": {
+          "type": "list(object)"
+        },
+        "data_plane_controller.host_pools.count": {
+          "type": "number",
+          "required": true
+        },
+        "data_plane_controller.host_pools.cpu": {
+          "type": "string"
+        },
+        "data_plane_controller.host_pools.machine_family": {
+          "type": "string"
+        },
+        "data_plane_controller.host_pools.memory": {
+          "type": "string"
+        },
+        "data_plane_controller.host_pools.name": {
+          "type": "string",
+          "required": true
+        },
+        "data_plane_controller.node_pool": {
+          "type": "string"
+        },
+        "data_plane_controller.restricted_node_pool": {
+          "type": "string"
+        },
+        "data_plane_controller.tier": {
+          "type": "string"
+        },
+        "data_plane_redis": {
+          "type": "object"
+        },
+        "data_plane_redis.managed": {
+          "type": "object"
+        },
+        "data_plane_redis.managed.cpu": {
+          "type": "string"
+        },
+        "data_plane_redis.managed.memory": {
+          "type": "string"
+        },
+        "data_plane_redis.self_hosted": {
+          "type": "object"
+        },
+        "data_plane_redis.self_hosted.cloud_secret_name": {
+          "type": "string",
+          "required": true
+        },
+        "dns_zone": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "required": true
+        },
+        "maintenance_window": {
+          "type": "object"
+        },
+        "maintenance_window.duration": {
+          "type": "string"
+        },
+        "maintenance_window.mode": {
+          "type": "string",
+          "required": true
+        },
+        "maintenance_window.schedule": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_managed_aws_vpc": {
+      "attributes": {
+        "additional_cidr_blocks": {
+          "type": "list(string)"
+        },
+        "additional_private_routes": {
+          "type": "list(object)"
+        },
+        "additional_private_routes.destination_cidr_block": {
+          "type": "string",
+          "required": true
+        },
+        "additional_private_routes.name": {
+          "type": "string",
+          "required": true
+        },
+        "additional_private_routes.peer_id": {
+          "type": "string",
+          "required": true
+        },
+        "additional_public_routes": {
+          "type": "list(object)"
+        },
+        "additional_public_routes.destination_cidr_block": {
+          "type": "string",
+          "required": true
+        },
+        "additional_public_routes.name": {
+          "type": "string",
+          "required": true
+        },
+        "additional_public_routes.peer_id": {
+          "type": "string",
+          "required": true
+        },
+        "cidr_block": {
+          "type": "string",
+          "required": true
+        },
+        "cloud_credential_id": {
+          "type": "string",
+          "required": true
+        },
+        "designator": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "subnets": {
+          "type": "list(object)",
+          "required": true
+        },
+        "subnets.availability_zone": {
+          "type": "string",
+          "required": true
+        },
+        "subnets.name": {
+          "type": "string",
+          "required": true
+        },
+        "subnets.private_cidr_block": {
+          "type": "string",
+          "required": true
+        },
+        "subnets.public_cidr_block": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*"
+    },
+    "chalk_managed_azure_vpc": {
+      "attributes": {}
+    },
+    "chalk_managed_cloud_storage": {
+      "attributes": {
+        "cloud_credential_id": {
+          "type": "string",
+          "required": true
+        },
+        "designator": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_managed_cluster": {
+      "attributes": {
+        "cloud_credential_id": {
+          "type": "string",
+          "required": true
+        },
+        "data_plane_controller": {
+          "type": "object"
+        },
+        "data_plane_controller.host_pools": {
+          "type": "list(object)"
+        },
+        "data_plane_controller.host_pools.count": {
+          "type": "number",
+          "required": true
+        },
+        "data_plane_controller.host_pools.cpu": {
+          "type": "string"
+        },
+        "data_plane_controller.host_pools.machine_family": {
+          "type": "string"
+        },
+        "data_plane_controller.host_pools.memory": {
+          "type": "string"
+        },
+        "data_plane_controller.host_pools.name": {
+          "type": "string",
+          "required": true
+        },
+        "data_plane_controller.node_pool": {
+          "type": "string"
+        },
+        "data_plane_controller.restricted_node_pool": {
+          "type": "string"
+        },
+        "data_plane_controller.tier": {
+          "type": "string"
+        },
+        "data_plane_redis": {
+          "type": "object"
+        },
+        "data_plane_redis.managed": {
+          "type": "object"
+        },
+        "data_plane_redis.managed.cpu": {
+          "type": "string"
+        },
+        "data_plane_redis.managed.memory": {
+          "type": "string"
+        },
+        "data_plane_redis.self_hosted": {
+          "type": "object"
+        },
+        "data_plane_redis.self_hosted.cloud_secret_name": {
+          "type": "string",
+          "required": true
+        },
+        "designator": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "maintenance_window": {
+          "type": "object"
+        },
+        "maintenance_window.duration": {
+          "type": "string"
+        },
+        "maintenance_window.mode": {
+          "type": "string",
+          "required": true
+        },
+        "maintenance_window.schedule": {
+          "type": "string"
+        },
+        "vpc_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_managed_container_registry": {
+      "attributes": {
+        "cloud_credential_id": {
+          "type": "string",
+          "required": true
+        },
+        "designator": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_managed_environment": {
+      "attributes": {
+        "additional_env_vars": {
+          "type": "map(string)"
+        },
+        "customer_metadata": {
+          "type": "string"
+        },
+        "default_build_profile": {
+          "type": "string"
+        },
+        "engine_docker_registry_path": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kube_cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "kube_job_namespace": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "online_store_kind": {
+          "type": "string"
+        },
+        "online_store_secret": {
+          "type": "string"
+        },
+        "pinned_base_image": {
+          "type": "string"
+        },
+        "private_pip_repositories": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string",
+          "required": true
+        },
+        "service_url": {
+          "type": "string"
+        },
+        "specs_config_json": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `environment.create` *(team-scoped)*"
+    },
+    "chalk_managed_gcp_vpc": {
+      "attributes": {
+        "backup_subnets": {
+          "type": "list(object)"
+        },
+        "backup_subnets.cidr_range": {
+          "type": "string",
+          "required": true
+        },
+        "backup_subnets.name": {
+          "type": "string",
+          "required": true
+        },
+        "backup_subnets.purpose": {
+          "type": "string",
+          "required": true
+        },
+        "backup_subnets.role": {
+          "type": "string"
+        },
+        "backup_subnets.secondary_ip_ranges": {
+          "type": "list(object)"
+        },
+        "backup_subnets.secondary_ip_ranges.ip_cidr_range": {
+          "type": "string",
+          "required": true
+        },
+        "backup_subnets.secondary_ip_ranges.range_name": {
+          "type": "string",
+          "required": true
+        },
+        "cloud_credential_id": {
+          "type": "string",
+          "required": true
+        },
+        "designator": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "subnets": {
+          "type": "list(object)",
+          "required": true
+        },
+        "subnets.cidr_range": {
+          "type": "string",
+          "required": true
+        },
+        "subnets.name": {
+          "type": "string",
+          "required": true
+        },
+        "subnets.purpose": {
+          "type": "string",
+          "required": true
+        },
+        "subnets.role": {
+          "type": "string"
+        },
+        "subnets.secondary_ip_ranges": {
+          "type": "list(object)"
+        },
+        "subnets.secondary_ip_ranges.ip_cidr_range": {
+          "type": "string",
+          "required": true
+        },
+        "subnets.secondary_ip_ranges.range_name": {
+          "type": "string",
+          "required": true
+        },
+        "vpc_peer_addr": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*"
+    },
+    "chalk_offline_store_connection": {
+      "attributes": {
+        "bigquery": {
+          "type": "object"
+        },
+        "bigquery.dataset_id": {
+          "type": "string",
+          "required": true
+        },
+        "bigquery.project_id": {
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "iceberg": {
+          "type": "object"
+        },
+        "iceberg.glue_s3": {
+          "type": "object",
+          "required": true
+        },
+        "iceberg.glue_s3.glue_database_name": {
+          "type": "string",
+          "required": true
+        },
+        "iceberg.glue_s3.s3_bucket": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "snowflake": {
+          "type": "object"
+        },
+        "snowflake.credentials": {
+          "type": "object",
+          "required": true
+        },
+        "snowflake.credentials.account": {
+          "type": "string",
+          "required": true
+        },
+        "snowflake.credentials.database": {
+          "type": "string",
+          "required": true
+        },
+        "snowflake.credentials.password": {
+          "type": "string"
+        },
+        "snowflake.credentials.private_key": {
+          "type": "string"
+        },
+        "snowflake.credentials.role": {
+          "type": "string",
+          "required": true
+        },
+        "snowflake.credentials.schema": {
+          "type": "string",
+          "required": true
+        },
+        "snowflake.credentials.username": {
+          "type": "string",
+          "required": true
+        },
+        "snowflake.credentials.warehouse": {
+          "type": "string",
+          "required": true
+        },
+        "snowflake.storage_integration_name": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `deploy.create`, `deploy.read`"
+    },
+    "chalk_private_gateway_binding": {
+      "attributes": {
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "private_gateway_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_project": {
+      "attributes": {
+        "git_repo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_sandbox": {
+      "attributes": {
+        "build_id": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "entrypoint": {
+          "type": "list(string)"
+        },
+        "env": {
+          "type": "map(string)"
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "type": "string"
+        },
+        "network_policy": {
+          "type": "object"
+        },
+        "network_policy.allowed_routes": {
+          "type": "list(object)"
+        },
+        "network_policy.allowed_routes.port_ranges": {
+          "type": "list(object)"
+        },
+        "network_policy.allowed_routes.port_ranges.end_port": {
+          "type": "number",
+          "required": true
+        },
+        "network_policy.allowed_routes.port_ranges.start_port": {
+          "type": "number",
+          "required": true
+        },
+        "network_policy.allowed_routes.route": {
+          "type": "string",
+          "required": true
+        },
+        "network_policy.denied_routes": {
+          "type": "list(string)"
+        },
+        "resource_limits": {
+          "type": "object"
+        },
+        "resource_limits.cpu": {
+          "type": "string"
+        },
+        "resource_limits.memory": {
+          "type": "string"
+        },
+        "restart_policy": {
+          "type": "string"
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "status_message": {
+          "type": "string"
+        },
+        "volumes": {
+          "type": "list(object)"
+        },
+        "volumes.mount_path": {
+          "type": "string",
+          "required": true
+        },
+        "volumes.name": {
+          "type": "string",
+          "required": true
+        },
+        "volumes.size_limit": {
+          "type": "string"
+        },
+        "volumes.type": {
+          "type": "string",
+          "required": true
+        },
+        "volumes.version_id": {
+          "type": "number"
+        },
+        "wait_for_ready": {
+          "type": "bool"
+        }
+      }
+    },
+    "chalk_scaling_group": {
+      "attributes": {
+        "container_spec": {
+          "type": "object",
+          "required": true
+        },
+        "container_spec.authentication": {
+          "type": "string"
+        },
+        "container_spec.entrypoint": {
+          "type": "list(string)"
+        },
+        "container_spec.env_vars": {
+          "type": "map(string)"
+        },
+        "container_spec.image": {
+          "type": "string",
+          "required": true
+        },
+        "container_spec.port": {
+          "type": "number"
+        },
+        "container_spec.protocol": {
+          "type": "string"
+        },
+        "container_spec.resources": {
+          "type": "object"
+        },
+        "container_spec.resources.cpu": {
+          "type": "string"
+        },
+        "container_spec.resources.gpu": {
+          "type": "string"
+        },
+        "container_spec.resources.memory": {
+          "type": "string"
+        },
+        "container_spec.routing": {
+          "type": "string"
+        },
+        "container_spec.tags": {
+          "type": "map(string)"
+        },
+        "container_spec.volumes": {
+          "type": "list(object)"
+        },
+        "container_spec.volumes.mount_path": {
+          "type": "string",
+          "required": true
+        },
+        "container_spec.volumes.name": {
+          "type": "string",
+          "required": true
+        },
+        "container_spec.volumes.size_limit": {
+          "type": "string"
+        },
+        "container_spec.volumes.type": {
+          "type": "string",
+          "required": true
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "scaling_spec": {
+          "type": "object",
+          "required": true
+        },
+        "scaling_spec.max_replicas": {
+          "type": "number",
+          "required": true
+        },
+        "scaling_spec.min_replicas": {
+          "type": "number",
+          "required": true
+        },
+        "scaling_spec.shutdown_delay_seconds": {
+          "type": "number"
+        },
+        "scaling_spec.target_cpu_utilization_percentage": {
+          "type": "number"
+        },
+        "web_url": {
+          "type": "string"
+        }
+      }
+    },
+    "chalk_service_token": {
+      "attributes": {
+        "client_id": {
+          "type": "string"
+        },
+        "client_secret": {
+          "type": "string"
+        },
+        "custom_claims": {
+          "type": "map(string)"
+        },
+        "default_permission": {
+          "type": "string"
+        },
+        "feature_tag_to_permission": {
+          "type": "map(string)"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "permissions": {
+          "type": "list(string)"
+        }
+      },
+      "permissions": "**Required permissions:** `tokens.write`, `tokens.list`"
+    },
+    "chalk_telemetry": {
+      "attributes": {
+        "aggregator_spec": {
+          "type": "object"
+        },
+        "aggregator_spec.image_version": {
+          "type": "string",
+          "required": true
+        },
+        "aggregator_spec.request": {
+          "type": "object"
+        },
+        "aggregator_spec.request.cpu": {
+          "type": "string"
+        },
+        "aggregator_spec.request.ephemeral_storage": {
+          "type": "string"
+        },
+        "aggregator_spec.request.memory": {
+          "type": "string"
+        },
+        "aggregator_spec.request.storage": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec": {
+          "type": "object"
+        },
+        "clickhouse_deployment_spec.gateway_id": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.limit": {
+          "type": "object"
+        },
+        "clickhouse_deployment_spec.limit.cpu": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.limit.ephemeral_storage": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.limit.memory": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.limit.storage": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.request": {
+          "type": "object"
+        },
+        "clickhouse_deployment_spec.request.cpu": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.request.ephemeral_storage": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.request.memory": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.request.storage": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.storage": {
+          "type": "object"
+        },
+        "clickhouse_deployment_spec.storage.storage": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.storage.storage_class_name": {
+          "type": "string"
+        },
+        "clickhouse_deployment_spec.version": {
+          "type": "string",
+          "required": true
+        },
+        "exporters": {
+          "type": "object"
+        },
+        "exporters.datadog": {
+          "type": "object"
+        },
+        "exporters.datadog.api_host": {
+          "type": "string"
+        },
+        "exporters.datadog.api_key_secret_reference": {
+          "type": "string",
+          "required": true
+        },
+        "exporters.datadog.logs": {
+          "type": "object"
+        },
+        "exporters.datadog.logs.enabled": {
+          "type": "bool"
+        },
+        "exporters.datadog.metrics": {
+          "type": "object"
+        },
+        "exporters.datadog.metrics.enabled": {
+          "type": "bool"
+        },
+        "exporters.datadog.traces": {
+          "type": "object"
+        },
+        "exporters.datadog.traces.enabled": {
+          "type": "bool"
+        },
+        "exporters.otlp": {
+          "type": "object"
+        },
+        "exporters.otlp.authorization_header_secret_reference": {
+          "type": "string"
+        },
+        "exporters.otlp.enabled": {
+          "type": "bool"
+        },
+        "exporters.otlp.url": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "kube_cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "otel_collector_spec": {
+          "type": "object"
+        },
+        "otel_collector_spec.limit": {
+          "type": "object"
+        },
+        "otel_collector_spec.limit.cpu": {
+          "type": "string"
+        },
+        "otel_collector_spec.limit.ephemeral_storage": {
+          "type": "string"
+        },
+        "otel_collector_spec.limit.memory": {
+          "type": "string"
+        },
+        "otel_collector_spec.limit.storage": {
+          "type": "string"
+        },
+        "otel_collector_spec.request": {
+          "type": "object"
+        },
+        "otel_collector_spec.request.cpu": {
+          "type": "string"
+        },
+        "otel_collector_spec.request.ephemeral_storage": {
+          "type": "string"
+        },
+        "otel_collector_spec.request.memory": {
+          "type": "string"
+        },
+        "otel_collector_spec.request.storage": {
+          "type": "string"
+        },
+        "otel_collector_spec.version": {
+          "type": "string",
+          "required": true
+        },
+        "runtime": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
+    },
+    "chalk_telemetry_binding": {
+      "attributes": {
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "telemetry_deployment_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_unmanaged_cloud_storage": {
+      "attributes": {
+        "cloud_credential_id": {
+          "type": "string",
+          "required": true
+        },
+        "designator": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_unmanaged_cluster_background_persistence": {
+      "attributes": {
+        "api_server_host": {
+          "type": "string"
+        },
+        "autodiscover_key": {
+          "type": "string"
+        },
+        "bus_writer_image_bswl": {
+          "type": "string"
+        },
+        "bus_writer_image_go": {
+          "type": "string"
+        },
+        "bus_writer_image_python": {
+          "type": "string"
+        },
+        "bus_writer_image_rust": {
+          "type": "string"
+        },
+        "google_pubsub": {
+          "type": "object"
+        },
+        "google_pubsub.metrics_bus": {
+          "type": "object",
+          "required": true
+        },
+        "google_pubsub.metrics_bus.subscription_id": {
+          "type": "string",
+          "required": true
+        },
+        "google_pubsub.metrics_bus.topic_id": {
+          "type": "string",
+          "required": true
+        },
+        "google_pubsub.offline_store_streaming_write_bus": {
+          "type": "object",
+          "required": true
+        },
+        "google_pubsub.offline_store_streaming_write_bus.subscription_id": {
+          "type": "string",
+          "required": true
+        },
+        "google_pubsub.offline_store_streaming_write_bus.topic_id": {
+          "type": "string",
+          "required": true
+        },
+        "google_pubsub.offline_store_upload_bus": {
+          "type": "object",
+          "required": true
+        },
+        "google_pubsub.offline_store_upload_bus.subscription_id": {
+          "type": "string",
+          "required": true
+        },
+        "google_pubsub.offline_store_upload_bus.topic_id": {
+          "type": "string",
+          "required": true
+        },
+        "google_pubsub.result_bus": {
+          "type": "object",
+          "required": true
+        },
+        "google_pubsub.result_bus.offline_store_subscription_id": {
+          "type": "string",
+          "required": true
+        },
+        "google_pubsub.result_bus.online_store_subscription_id": {
+          "type": "string",
+          "required": true
+        },
+        "google_pubsub.result_bus.topic_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "kafka": {
+          "type": "object"
+        },
+        "kafka.bootstrap_servers": {
+          "type": "string"
+        },
+        "kafka.dlq_topic": {
+          "type": "string",
+          "required": true
+        },
+        "kafka.metrics_bus_topic_id": {
+          "type": "string",
+          "required": true
+        },
+        "kafka.offline_store_bus_streaming_write_topic_id": {
+          "type": "string",
+          "required": true
+        },
+        "kafka.offline_store_bus_upload_topic_id": {
+          "type": "string",
+          "required": true
+        },
+        "kafka.result_bus_topic_id": {
+          "type": "string",
+          "required": true
+        },
+        "kafka.sasl_mechanism": {
+          "type": "string"
+        },
+        "kafka.sasl_secret": {
+          "type": "string"
+        },
+        "kafka.security_protocol": {
+          "type": "string"
+        },
+        "kube_cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "namespace": {
+          "type": "string",
+          "required": true
+        },
+        "offline_store_snowflake_storage_integration_name": {
+          "type": "string"
+        },
+        "offline_store_upload_bucket_name": {
+          "type": "string"
+        },
+        "service_account_name": {
+          "type": "string",
+          "required": true
+        },
+        "writers": {
+          "type": "list(object)",
+          "required": true
+        },
+        "writers.additional_env_vars": {
+          "type": "map(string)"
+        },
+        "writers.bus_subscriber_type": {
+          "type": "string",
+          "required": true
+        },
+        "writers.default_replica_count": {
+          "type": "number"
+        },
+        "writers.gke_spot": {
+          "type": "bool"
+        },
+        "writers.hpa_specs": {
+          "type": "object"
+        },
+        "writers.hpa_specs.hpa_max_replicas": {
+          "type": "number"
+        },
+        "writers.hpa_specs.hpa_min_replicas": {
+          "type": "number"
+        },
+        "writers.hpa_specs.hpa_pubsub_subscription_id": {
+          "type": "string",
+          "required": true
+        },
+        "writers.hpa_specs.hpa_target_average_value": {
+          "type": "number"
+        },
+        "writers.image_override": {
+          "type": "string"
+        },
+        "writers.kafka_consumer_group_override": {
+          "type": "string"
+        },
+        "writers.limit": {
+          "type": "object"
+        },
+        "writers.limit.cpu": {
+          "type": "string"
+        },
+        "writers.limit.ephemeral_storage": {
+          "type": "string"
+        },
+        "writers.limit.memory": {
+          "type": "string"
+        },
+        "writers.limit.storage": {
+          "type": "string"
+        },
+        "writers.load_writer_configmap": {
+          "type": "bool"
+        },
+        "writers.max_batch_size": {
+          "type": "number"
+        },
+        "writers.message_processing_concurrency": {
+          "type": "number"
+        },
+        "writers.metadata_sql_ssl_ca_cert_secret": {
+          "type": "string"
+        },
+        "writers.metadata_sql_ssl_client_cert_secret": {
+          "type": "string"
+        },
+        "writers.metadata_sql_ssl_client_key_secret": {
+          "type": "string"
+        },
+        "writers.metadata_sql_uri_secret": {
+          "type": "string"
+        },
+        "writers.name": {
+          "type": "string"
+        },
+        "writers.nodepool": {
+          "type": "string"
+        },
+        "writers.offline_store_inserter_db_type": {
+          "type": "string"
+        },
+        "writers.query_table_write_drop_ratio": {
+          "type": "string"
+        },
+        "writers.request": {
+          "type": "object"
+        },
+        "writers.request.cpu": {
+          "type": "string"
+        },
+        "writers.request.ephemeral_storage": {
+          "type": "string"
+        },
+        "writers.request.memory": {
+          "type": "string"
+        },
+        "writers.request.storage": {
+          "type": "string"
+        },
+        "writers.results_writer_skip_producing_feature_metrics": {
+          "type": "bool"
+        },
+        "writers.storage_cache_prefix": {
+          "type": "string"
+        },
+        "writers.version": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
+    },
+    "chalk_unmanaged_container_registry": {
+      "attributes": {
+        "cloud_credential_id": {
+          "type": "string",
+          "required": true
+        },
+        "designator": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+    },
+    "chalk_unmanaged_environment": {
+      "attributes": {
+        "additional_env_vars": {
+          "type": "map(string)"
+        },
+        "customer_metadata": {
+          "type": "string"
+        },
+        "dataplane_db_secret": {
+          "type": "string"
+        },
+        "default_build_profile": {
+          "type": "string"
+        },
+        "engine_docker_registry_path": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kube_cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "kube_cluster_mode": {
+          "type": "string"
+        },
+        "kube_job_namespace": {
+          "type": "string",
+          "required": true
+        },
+        "kube_service_account_name": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "online_store_kind": {
+          "type": "string"
+        },
+        "online_store_secret": {
+          "type": "string"
+        },
+        "pinned_base_image": {
+          "type": "string"
+        },
+        "private_pip_repositories": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string",
+          "required": true
+        },
+        "service_url": {
+          "type": "string"
+        },
+        "specs_config_json": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `environment.create` *(team-scoped)*"
+    }
+  },
+  "data_sources": {
+    "chalk_environment": {
+      "attributes": {
+        "active_deployment_id": {
+          "type": "string"
+        },
+        "additional_cron_env_vars": {
+          "type": "map(string)"
+        },
+        "additional_env_vars": {
+          "type": "map(string)"
+        },
+        "archived_at": {
+          "type": "string"
+        },
+        "background_persistence_deployment_id": {
+          "type": "string"
+        },
+        "bigtable_instance_name": {
+          "type": "string"
+        },
+        "bigtable_table_name": {
+          "type": "string"
+        },
+        "branch_kube_cluster_name": {
+          "type": "string"
+        },
+        "branch_url": {
+          "type": "string"
+        },
+        "cloud_account_locator": {
+          "type": "string"
+        },
+        "cloud_config": {
+          "type": "object({aws = object({account_id = string, external_id = string, management_role_arn = string, region = string}), gcp = object({management_service_account = string, project_id = string, region = string})})"
+        },
+        "cloud_provider": {
+          "type": "string"
+        },
+        "cloud_region": {
+          "type": "string"
+        },
+        "cloud_tenancy_id": {
+          "type": "string"
+        },
+        "cluster_gateway_id": {
+          "type": "string"
+        },
+        "cluster_timescaledb_id": {
+          "type": "string"
+        },
+        "cluster_timescaledb_secret": {
+          "type": "string"
+        },
+        "dashboard_url": {
+          "type": "string"
+        },
+        "default_planner": {
+          "type": "string"
+        },
+        "emq_uri": {
+          "type": "string"
+        },
+        "engine_docker_registry_path": {
+          "type": "string"
+        },
+        "engine_kube_cluster_name": {
+          "type": "string"
+        },
+        "environment_buckets": {
+          "type": "object({dataset_bucket = string, model_registry_bucket = string, plan_stages_bucket = string, source_bundle_bucket = string})"
+        },
+        "feature_store_secret": {
+          "type": "string"
+        },
+        "grpc_engine_url": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "required": true
+        },
+        "is_sandbox": {
+          "type": "bool"
+        },
+        "kube_cluster_mode": {
+          "type": "string"
+        },
+        "kube_cluster_name": {
+          "type": "string"
+        },
+        "kube_job_namespace": {
+          "type": "string"
+        },
+        "kube_preview_namespace": {
+          "type": "string"
+        },
+        "kube_service_account_name": {
+          "type": "string"
+        },
+        "metadata_server_metrics_store_secret": {
+          "type": "string"
+        },
+        "metrics_bus_topic": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "offline_store_secret": {
+          "type": "string"
+        },
+        "online_persistence_mode": {
+          "type": "string"
+        },
+        "online_store_kind": {
+          "type": "string"
+        },
+        "online_store_secret": {
+          "type": "string"
+        },
+        "pinned_base_image": {
+          "type": "string"
+        },
+        "postgres_secret": {
+          "type": "string"
+        },
+        "private_pip_repositories": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "query_server_metrics_store_secret": {
+          "type": "string"
+        },
+        "result_bus_topic": {
+          "type": "string"
+        },
+        "service_url": {
+          "type": "string"
+        },
+        "shadow_engine_kube_cluster_name": {
+          "type": "string"
+        },
+        "skip_offline_writes_for_online_cached_features": {
+          "type": "bool"
+        },
+        "source_bundle_bucket": {
+          "type": "string"
+        },
+        "spec_config_json": {
+          "type": "map(string)"
+        },
+        "streaming_query_service_uri": {
+          "type": "string"
+        },
+        "team_id": {
+          "type": "string"
+        },
+        "vpc_connector_name": {
+          "type": "string"
+        },
+        "worker_url": {
+          "type": "string"
+        }
+      },
+      "permissions": "**Required permissions:** `deploy.read`"
+    },
+    "chalk_offline_store_connection_test": {
+      "attributes": {
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "error_message": {
+          "type": "string"
+        },
+        "offline_store_connection_id": {
+          "type": "string",
+          "required": true
+        },
+        "success": {
+          "type": "bool"
+        }
+      }
+    }
+  }
+}
