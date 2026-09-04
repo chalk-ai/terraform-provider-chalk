@@ -80,6 +80,16 @@ func assertBreaking(t *testing.T, old, new *ProviderSchemaOutput, wantRules ...s
 	}
 }
 
+func assertBreakingAt(t *testing.T, old, new *ProviderSchemaOutput, rule, path string) {
+	t.Helper()
+	for _, change := range Diff(old, new) {
+		if change.Rule == rule && change.Path == path {
+			return
+		}
+	}
+	t.Errorf("expected %s breaking change at %s, got changes: %v", rule, path, Diff(old, new))
+}
+
 func assertNotBreaking(t *testing.T, old, new *ProviderSchemaOutput, rule string) {
 	t.Helper()
 	changes := Diff(old, new)
@@ -377,6 +387,103 @@ func TestDiff_NestedRequiredAttributeAdded(t *testing.T) {
 		"chalk_foo": makeEntry(nil, map[string]*BlockType{"config": &newBlock}),
 	}, nil)
 	assertBreaking(t, old, new, "R008")
+}
+
+// --- nested attribute changes ---
+
+func TestDiff_NestedTypeAttributeDeletedFromJSON(t *testing.T) {
+	t.Parallel()
+
+	decode := func(raw string) *ProviderSchemaOutput {
+		t.Helper()
+		var schema ProviderSchemaOutput
+		if err := json.Unmarshal([]byte(raw), &schema); err != nil {
+			t.Fatal(err)
+		}
+		return &schema
+	}
+
+	old := decode(`{
+  "provider_schemas": {
+    "registry.terraform.io/chalk-ai/chalk": {
+      "resource_schemas": {
+        "chalk_example": {
+          "block": {
+            "attributes": {
+              "config": {
+                "nested_type": {
+                  "attributes": {
+                    "removed": {"type": "string", "optional": true}
+                  },
+                  "nesting_mode": "single"
+                },
+                "optional": true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`)
+	cur := decode(`{
+  "provider_schemas": {
+    "registry.terraform.io/chalk-ai/chalk": {
+      "resource_schemas": {
+        "chalk_example": {
+          "block": {
+            "attributes": {
+              "config": {
+                "nested_type": {
+                  "attributes": {},
+                  "nesting_mode": "single"
+                },
+                "optional": true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`)
+
+	assertBreakingAt(t, old, cur, "R003", "resource chalk_example.config.removed")
+}
+
+func TestDiff_NestedTypeRequiredAttributeAdded(t *testing.T) {
+	t.Parallel()
+	old := singleProvider(map[string]*SchemaEntry{
+		"chalk_foo": makeEntry(map[string]*Attribute{
+			"config": {NestedType: &NestedType{NestingMode: "single"}},
+		}, nil),
+	}, nil)
+	cur := singleProvider(map[string]*SchemaEntry{
+		"chalk_foo": makeEntry(map[string]*Attribute{
+			"config": {NestedType: &NestedType{
+				NestingMode: "single",
+				Attributes: map[string]*Attribute{
+					"region": {Type: jsonStr("string"), Required: true},
+				},
+			}},
+		}, nil),
+	}, nil)
+	assertBreakingAt(t, old, cur, "R008", "resource chalk_foo.config.region")
+}
+
+func TestDiff_NestedTypeNestingModeChanged(t *testing.T) {
+	t.Parallel()
+	old := singleProvider(map[string]*SchemaEntry{
+		"chalk_foo": makeEntry(map[string]*Attribute{
+			"config": {NestedType: &NestedType{NestingMode: "list"}},
+		}, nil),
+	}, nil)
+	cur := singleProvider(map[string]*SchemaEntry{
+		"chalk_foo": makeEntry(map[string]*Attribute{
+			"config": {NestedType: &NestedType{NestingMode: "set"}},
+		}, nil),
+	}, nil)
+	assertBreakingAt(t, old, cur, "R005", "resource chalk_foo.config")
 }
 
 // --- safe changes ---
