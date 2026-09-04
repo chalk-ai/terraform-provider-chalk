@@ -26,7 +26,7 @@ Chalk telemetry resource
 
 - `aggregator_spec` (Attributes) Aggregator specification (see [below for nested schema](#nestedatt--aggregator_spec))
 - `clickhouse_deployment_spec` (Attributes) Clickhouse deployment specification (see [below for nested schema](#nestedatt--clickhouse_deployment_spec))
-- `exporters` (Attributes) Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Exporters configured outside Terraform are ignored until declared here. Requires the Vector telemetry runtime; deployments on the OTel runtime store this configuration without deploying an exporter. (see [below for nested schema](#nestedatt--exporters))
+- `exporters` (Attributes) Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Exporters configured outside Terraform are ignored until declared here. Exporters require the Vector telemetry runtime, which this resource sets for you; a deployment previously on the OTel runtime is switched to Vector on its next apply. (see [below for nested schema](#nestedatt--exporters))
 - `id` (String) Telemetry deployment identifier
 - `namespace` (String) Kubernetes namespace for the telemetry deployment
 - `otel_collector_spec` (Attributes) Otel collector specification (see [below for nested schema](#nestedatt--otel_collector_spec))

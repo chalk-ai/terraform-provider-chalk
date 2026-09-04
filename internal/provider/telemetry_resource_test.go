@@ -191,8 +191,8 @@ resource "chalk_telemetry" "test" {
 
 						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
 						assert.NotNil(t, req.UpdateMask, "Expected UpdateMask to be set")
-						assert.Equal(t, []string{"click_house"}, req.UpdateMask.Paths,
-							"Expected only 'click_house' in field mask")
+						assert.Equal(t, []string{"telemetry_runtime", "click_house"}, req.UpdateMask.Paths,
+							"Expected pinned runtime plus only 'click_house' in field mask")
 						require.NotNil(t, req.Spec.ClickHouse)
 						assert.Equal(t, "24.1", req.Spec.ClickHouse.ClickHouseVersion)
 
@@ -244,8 +244,8 @@ resource "chalk_telemetry" "test" {
 
 						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
 						assert.NotNil(t, req.UpdateMask, "Expected UpdateMask to be set")
-						assert.Equal(t, []string{"otel"}, req.UpdateMask.Paths,
-							"Expected only 'otel' in field mask")
+						assert.Equal(t, []string{"telemetry_runtime", "otel"}, req.UpdateMask.Paths,
+							"Expected pinned runtime plus only 'otel' in field mask")
 						require.NotNil(t, req.Spec.Otel)
 						assert.Equal(t, "0.89.0", req.Spec.Otel.OtelCollectorVersion)
 
@@ -297,8 +297,8 @@ resource "chalk_telemetry" "test" {
 
 						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
 						assert.NotNil(t, req.UpdateMask, "Expected UpdateMask to be set")
-						assert.Equal(t, []string{"aggregator"}, req.UpdateMask.Paths,
-							"Expected only 'aggregator' in field mask")
+						assert.Equal(t, []string{"telemetry_runtime", "aggregator"}, req.UpdateMask.Paths,
+							"Expected pinned runtime plus only 'aggregator' in field mask")
 						require.NotNil(t, req.Spec.Aggregator)
 						assert.Equal(t, "1.1.0", req.Spec.Aggregator.ImageVersion)
 
@@ -597,6 +597,7 @@ resource "chalk_telemetry" "test" {
 						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
 						require.NotNil(t, req.UpdateMask)
 						assert.Equal(t, []string{
+							"telemetry_runtime",
 							"customer_vector_aggregator.datadog_export.api_key_secret_arn",
 							"customer_vector_aggregator.datadog_export.api_host",
 							"customer_vector_aggregator.datadog_export.logs.enabled",
@@ -717,6 +718,89 @@ resource "chalk_telemetry" "test" {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_telemetry.test", "exporters.otlp.url", "https://otlp.example.com/v1/metrics"),
 					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "exporters.datadog"),
+				),
+			},
+		},
+	})
+}
+
+// TestTelemetryResourceRuntimePinnedToVectorOnCreate verifies the provider pins the
+// telemetry runtime to Vector, which is the only runtime that renders customer exporters.
+func TestTelemetryResourceRuntimePinnedToVectorOnCreate(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerTelemetry(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateTelemetryDeployment")
+						require.Len(t, captured, 1, "Expected exactly one CreateTelemetryDeployment call")
+
+						req := captured[0].(*serverv1.CreateTelemetryDeploymentRequest)
+						require.NotNil(t, req.Spec)
+						assert.Equal(t, serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR, req.Spec.TelemetryRuntime,
+							"Expected the created spec to pin the Vector telemetry runtime")
+
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// TestTelemetryResourceRuntimePinnedToVectorOnUpdate verifies that a deployment already on
+// the OTel runtime is converged to Vector by the next update, so an `exporters` block added
+// to an existing OTel deployment actually renders a sink instead of being silently stored.
+func TestTelemetryResourceRuntimePinnedToVectorOnUpdate(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerTelemetry(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+  clickhouse_deployment_spec = {
+    version = "23.8"
+  }
+}
+`,
+			},
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_telemetry" "test" {
+  kube_cluster_id = "test-cluster-id"
+  clickhouse_deployment_spec = {
+    version = "24.1"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
+						require.NotEmpty(t, captured, "Expected at least one UpdateTelemetryDeployment call")
+
+						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
+						require.NotNil(t, req.UpdateMask)
+						assert.Contains(t, req.UpdateMask.Paths, "telemetry_runtime",
+							"Expected telemetry_runtime in the field mask so the server applies it")
+						require.NotNil(t, req.Spec)
+						assert.Equal(t, serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR, req.Spec.TelemetryRuntime,
+							"Expected the updated spec to pin the Vector telemetry runtime")
+
+						return nil
+					},
 				),
 			},
 		},

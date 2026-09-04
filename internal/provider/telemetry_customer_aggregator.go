@@ -54,7 +54,7 @@ func datadogSignalExportSchema(signal string) schema.SingleNestedAttribute {
 
 func customerVectorAggregatorSchema() schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
-		MarkdownDescription: "Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Exporters configured outside Terraform are ignored until declared here. Requires the Vector telemetry runtime; deployments on the OTel runtime store this configuration without deploying an exporter.",
+		MarkdownDescription: "Forwards this deployment's telemetry to systems you own. Each destination is configured only when its block is present. Exporters configured outside Terraform are ignored until declared here. Exporters require the Vector telemetry runtime, which this resource sets for you; a deployment previously on the OTel runtime is switched to Vector on its next apply.",
 		Optional:            true,
 		Attributes: map[string]schema.Attribute{
 			"datadog": schema.SingleNestedAttribute{

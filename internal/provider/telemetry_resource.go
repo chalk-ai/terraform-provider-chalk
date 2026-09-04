@@ -275,6 +275,8 @@ func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceMo
 	spec := &serverv1.TelemetryDeploymentSpec{
 		Namespace:                data.Namespace.ValueStringPointer(),
 		CustomerVectorAggregator: data.Exporters.toProto(),
+		// Pinned to Vector
+		TelemetryRuntime: serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR,
 	}
 
 	if !data.ClickhouseDeploymentSpec.IsNull() && !data.ClickhouseDeploymentSpec.IsUnknown() {
@@ -415,7 +417,11 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 
 // buildTelemetryUpdateMask compares plan and state to determine which top-level spec fields changed.
 func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
-	var paths []string
+	// Always masked: the runtime is pinned to Vector by buildTelemetryDeploymentSpec and is
+	// not tracked in state, so there is no plan-vs-state comparison to drive it. Terraform
+	// only calls Update when some other attribute already changed, so this converges a
+	// deployment to Vector on its next real update rather than on every plan.
+	paths := []string{"telemetry_runtime"}
 	// Skip Unknown plan values — Terraform hasn't determined them yet (Computed field with no prior state).
 	if !data.ClickhouseDeploymentSpec.IsUnknown() && !data.ClickhouseDeploymentSpec.Equal(state.ClickhouseDeploymentSpec) {
 		paths = append(paths, "click_house")

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.5
+
+NOTES:
+
+* `resource/chalk_telemetry`: the telemetry runtime is now pinned to `VECTOR`. It is set on create and included in the field mask on every update, and is deliberately not exposed as an argument. Customer exporters (the `exporters` block) are only rendered on the Vector runtime — on the OTel runtime the server accepts and stores the configuration but never deploys a sink, so an `exporters` block could previously apply cleanly and silently export nothing.
+
+  Three consequences for existing deployments on the OTel runtime:
+
+  * The switch happens on the next apply that changes something else in the resource, since Terraform only calls Update when a tracked attribute differs. Upgrading the provider alone does not move a deployment.
+  * Vector's default resource requests are higher than OTel's — the aggregator defaults to 6 CPU / 4Gi rather than 1 CPU / 2Gi. Deployments that do not declare `aggregator_spec` will pick up the larger request; deployments that do declare it keep their configured values, which may be undersized for Vector. The collector default is unchanged at 100m CPU / 128Mi.
+  * A deployment whose stored spec sets `otel_collector_image` will fail validation with `otel_collector_image is only supported when telemetry_runtime is OTEL`. Clear that field before upgrading. Declaring `otel_collector_spec` in Terraform also clears it, because the mask replaces the whole message.
+
 ## 1.0.4
 
 NOTES:
