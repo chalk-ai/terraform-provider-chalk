@@ -32,10 +32,18 @@ type Block struct {
 
 // Attribute represents a single attribute in a block.
 type Attribute struct {
-	Type     json.RawMessage `json:"type"`
-	Optional bool            `json:"optional"`
-	Required bool            `json:"required"`
-	Computed bool            `json:"computed"`
+	Type       json.RawMessage `json:"type"`
+	NestedType *NestedType     `json:"nested_type"`
+	Optional   bool            `json:"optional"`
+	Required   bool            `json:"required"`
+	Computed   bool            `json:"computed"`
+}
+
+// NestedType represents the object schema of a Plugin Framework nested
+// attribute. Terraform encodes these separately from legacy block_types.
+type NestedType struct {
+	Attributes  map[string]*Attribute `json:"attributes"`
+	NestingMode string                `json:"nesting_mode"`
 }
 
 // BlockType represents a nested block definition.
@@ -105,32 +113,7 @@ func diffProvider(old, cur *ProviderSchema) []BreakingChange {
 }
 
 func diffBlock(path string, old, cur *Block) []BreakingChange {
-	var changes []BreakingChange
-
-	// R003: attribute deleted; R005/R006: attribute modified
-	for name, oldAttr := range old.Attributes {
-		curAttr, ok := cur.Attributes[name]
-		if !ok {
-			changes = append(changes, BreakingChange{
-				Rule:    "R003",
-				Path:    path + "." + name,
-				Message: "attribute was deleted",
-			})
-			continue
-		}
-		changes = append(changes, diffAttribute(path+"."+name, oldAttr, curAttr)...)
-	}
-
-	// R008: new required attribute added
-	for name, curAttr := range cur.Attributes {
-		if _, ok := old.Attributes[name]; !ok && curAttr.Required {
-			changes = append(changes, BreakingChange{
-				Rule:    "R008",
-				Path:    path + "." + name,
-				Message: "new required attribute was added",
-			})
-		}
-	}
+	changes := diffAttributes(path, old.Attributes, cur.Attributes)
 
 	// R004: block deleted; recurse into surviving blocks
 	for name, oldBlock := range old.BlockTypes {
@@ -160,16 +143,57 @@ func diffBlock(path string, old, cur *Block) []BreakingChange {
 	return changes
 }
 
+func diffAttributes(path string, old, cur map[string]*Attribute) []BreakingChange {
+	var changes []BreakingChange
+
+	// R003: attribute deleted; R005/R006: attribute modified
+	for name, oldAttr := range old {
+		curAttr, ok := cur[name]
+		if !ok {
+			changes = append(changes, BreakingChange{
+				Rule:    "R003",
+				Path:    path + "." + name,
+				Message: "attribute was deleted",
+			})
+			continue
+		}
+		changes = append(changes, diffAttribute(path+"."+name, oldAttr, curAttr)...)
+	}
+
+	// R008: new required attribute added
+	for name, curAttr := range cur {
+		if _, ok := old[name]; !ok && curAttr.Required {
+			changes = append(changes, BreakingChange{
+				Rule:    "R008",
+				Path:    path + "." + name,
+				Message: "new required attribute was added",
+			})
+		}
+	}
+
+	return changes
+}
+
 func diffAttribute(path string, old, cur *Attribute) []BreakingChange {
 	var changes []BreakingChange
 
 	// R005: attribute type changed
-	if !jsonEqual(old.Type, cur.Type) {
+	if !jsonEqual(old.Type, cur.Type) || (old.NestedType == nil) != (cur.NestedType == nil) {
 		changes = append(changes, BreakingChange{
 			Rule:    "R005",
 			Path:    path,
-			Message: fmt.Sprintf("attribute type changed from %s to %s", old.Type, cur.Type),
+			Message: fmt.Sprintf("attribute type changed from %s to %s", attributeType(old), attributeType(cur)),
 		})
+	}
+	if old.NestedType != nil && cur.NestedType != nil {
+		if old.NestedType.NestingMode != cur.NestedType.NestingMode {
+			changes = append(changes, BreakingChange{
+				Rule:    "R005",
+				Path:    path,
+				Message: fmt.Sprintf("attribute nesting mode changed from %s to %s", old.NestedType.NestingMode, cur.NestedType.NestingMode),
+			})
+		}
+		changes = append(changes, diffAttributes(path, old.NestedType.Attributes, cur.NestedType.Attributes)...)
 	}
 
 	// R006: optional → required, or computed-only → required
@@ -186,6 +210,16 @@ func diffAttribute(path string, old, cur *Attribute) []BreakingChange {
 	}
 
 	return changes
+}
+
+func attributeType(attribute *Attribute) string {
+	if attribute.NestedType != nil {
+		return attribute.NestedType.NestingMode + " nested attribute"
+	}
+	if attribute.Type == nil {
+		return "unknown"
+	}
+	return string(attribute.Type)
 }
 
 func diffBlockType(path string, old, cur *BlockType) []BreakingChange {
