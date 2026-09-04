@@ -423,12 +423,23 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 		if ch.GatewayId != nil {
 			gatewayId = types.StringPointerValue(ch.GatewayId)
 		}
+		storage := kubePVCObject(ch.Storage)
+		// The server resolves and persists the cluster's default storage class during
+		// updates. Keep an omitted value null so a server-owned default cannot change
+		// the planned value after apply; explicitly configured values still round-trip.
+		if currentStorageClass, ok := telemetryStorageClass(data.ClickhouseDeploymentSpec); ok && currentStorageClass.IsNull() && !storage.IsNull() {
+			storageAttrs := storage.Attributes()
+			storage = types.ObjectValueMust(kubePVCAttrTypes, map[string]attr.Value{
+				"storage":            storageAttrs["storage"],
+				"storage_class_name": types.StringNull(),
+			})
+		}
 		data.ClickhouseDeploymentSpec = types.ObjectValueMust(clickhouseDeploymentSpecAttrTypes, map[string]attr.Value{
 			"version":    types.StringValue(ch.ClickHouseVersion),
 			"gateway_id": gatewayId,
 			"request":    kubeResourceConfigObject(ch.Request),
 			"limit":      kubeResourceConfigObject(ch.Limit),
-			"storage":    kubePVCObject(ch.Storage),
+			"storage":    storage,
 		})
 	} else {
 		data.ClickhouseDeploymentSpec = types.ObjectNull(clickhouseDeploymentSpecAttrTypes)
@@ -454,6 +465,18 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 	} else {
 		data.AggregatorSpec = types.ObjectNull(aggregatorSpecAttrTypes)
 	}
+}
+
+func telemetryStorageClass(clickhouseSpec types.Object) (types.String, bool) {
+	if clickhouseSpec.IsNull() || clickhouseSpec.IsUnknown() {
+		return types.String{}, false
+	}
+	storage, ok := clickhouseSpec.Attributes()["storage"].(types.Object)
+	if !ok || storage.IsNull() || storage.IsUnknown() {
+		return types.String{}, false
+	}
+	storageClass, ok := storage.Attributes()["storage_class_name"].(types.String)
+	return storageClass, ok
 }
 
 // buildTelemetryUpdateMask compares plan and state to determine which top-level spec fields changed.

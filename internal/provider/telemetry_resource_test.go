@@ -110,13 +110,14 @@ resource "chalk_telemetry" "test" {
 
 // TestTelemetryResourceRuntime verifies that an explicitly configured runtime is sent
 // as the proto enum and that removing it returns ownership to the server without drift.
-// The mock mirrors the API's read behavior by hydrating an unspecified runtime to Vector.
+// The mock mirrors the API's runtime hydration and storage-class persistence behavior.
 func TestTelemetryResourceRuntime(t *testing.T) {
 	t.Parallel()
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
 
 	var rawRuntime serverv1.TelemetryRuntime
+	storageClassName := ""
 	const deploymentID = "test-telemetry-id"
 	const clusterID = "test-cluster-id"
 
@@ -125,7 +126,16 @@ func TestTelemetryResourceRuntime(t *testing.T) {
 		if runtime == serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_UNSPECIFIED {
 			runtime = serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR
 		}
-		return &serverv1.TelemetryDeploymentSpec{TelemetryRuntime: runtime}
+		return &serverv1.TelemetryDeploymentSpec{
+			TelemetryRuntime: runtime,
+			ClickHouse: &serverv1.ClickHouseSpec{
+				ClickHouseVersion: "23.8",
+				Storage: &serverv1.KubePersistentVolumeClaim{
+					Storage:          "250Gi",
+					StorageClassName: storageClassName,
+				},
+			},
+		}
 	}
 
 	server.OnCreateTelemetryDeployment().WithBehavior(func(req proto.Message) (proto.Message, error) {
@@ -136,6 +146,8 @@ func TestTelemetryResourceRuntime(t *testing.T) {
 	server.OnUpdateTelemetryDeployment().WithBehavior(func(req proto.Message) (proto.Message, error) {
 		updateReq := req.(*serverv1.UpdateTelemetryDeploymentRequest)
 		rawRuntime = updateReq.Spec.TelemetryRuntime
+		// The server resolves and persists the cluster default as part of an update.
+		storageClassName = "standard-rwo"
 		return &serverv1.UpdateTelemetryDeploymentResponse{
 			Deployment: &serverv1.TelemetryDeployment{
 				Id: deploymentID, ClusterId: clusterID, Spec: effectiveSpec(),
@@ -153,19 +165,31 @@ func TestTelemetryResourceRuntime(t *testing.T) {
 
 	otelConfig := providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
-  kube_cluster_id    = "test-cluster-id"
+  kube_cluster_id = "test-cluster-id"
   runtime         = "otel"
+  clickhouse_deployment_spec = {
+    version = "23.8"
+    storage = { storage = "250Gi" }
+  }
 }
 `
 	vectorConfig := providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
-  kube_cluster_id    = "test-cluster-id"
+  kube_cluster_id = "test-cluster-id"
   runtime         = "vector"
+  clickhouse_deployment_spec = {
+    version = "23.8"
+    storage = { storage = "250Gi" }
+  }
 }
 `
 	defaultConfig := providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id = "test-cluster-id"
+  clickhouse_deployment_spec = {
+    version = "23.8"
+    storage = { storage = "250Gi" }
+  }
 }
 `
 
@@ -194,15 +218,27 @@ resource "chalk_telemetry" "test" {
 				Config: vectorConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_telemetry.test", "runtime", telemetryRuntimeVector),
+					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "clickhouse_deployment_spec.storage.storage_class_name"),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
 						require.NotEmpty(t, captured)
 						req := captured[len(captured)-1].(*serverv1.UpdateTelemetryDeploymentRequest)
 						assert.Equal(t, []string{"telemetry_runtime"}, req.UpdateMask.Paths)
 						assert.Equal(t, serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR, req.Spec.TelemetryRuntime)
+						assert.Empty(t, req.Spec.GetClickHouse().GetStorage().GetStorageClassName())
 						return nil
 					},
 				),
+			},
+			{
+				Config:             vectorConfig,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			{
+				ResourceName:  "chalk_telemetry.test",
+				ImportState:   true,
+				ImportStateId: deploymentID,
 			},
 			{
 				Config:             vectorConfig,
