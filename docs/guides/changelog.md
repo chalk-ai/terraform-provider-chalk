@@ -11,6 +11,10 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 ## Unreleased
 
+No schema or permission changes.
+
+## v1.0.8
+
 ### Resources
 
 - Added `chalk_cluster_host_pool`.
