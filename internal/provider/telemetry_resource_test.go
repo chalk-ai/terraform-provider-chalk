@@ -154,13 +154,13 @@ func TestTelemetryResourceRuntime(t *testing.T) {
 	otelConfig := providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id    = "test-cluster-id"
-  telemetry_runtime = "otel"
+  runtime         = "otel"
 }
 `
 	vectorConfig := providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id    = "test-cluster-id"
-  telemetry_runtime = "vector"
+  runtime         = "vector"
 }
 `
 	defaultConfig := providerConfig(server.URL) + `
@@ -175,7 +175,7 @@ resource "chalk_telemetry" "test" {
 			{
 				Config: otelConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_telemetry.test", "telemetry_runtime", telemetryRuntimeOtel),
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "runtime", telemetryRuntimeOtel),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("CreateTelemetryDeployment")
 						require.Len(t, captured, 1)
@@ -193,7 +193,7 @@ resource "chalk_telemetry" "test" {
 			{
 				Config: vectorConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_telemetry.test", "telemetry_runtime", telemetryRuntimeVector),
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "runtime", telemetryRuntimeVector),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
 						require.NotEmpty(t, captured)
@@ -212,7 +212,7 @@ resource "chalk_telemetry" "test" {
 			{
 				Config: otelConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_telemetry.test", "telemetry_runtime", telemetryRuntimeOtel),
+					resource.TestCheckResourceAttr("chalk_telemetry.test", "runtime", telemetryRuntimeOtel),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
 						require.NotEmpty(t, captured)
@@ -231,7 +231,7 @@ resource "chalk_telemetry" "test" {
 			{
 				Config: defaultConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "telemetry_runtime"),
+					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "runtime"),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("UpdateTelemetryDeployment")
 						require.NotEmpty(t, captured)
@@ -262,10 +262,10 @@ func TestTelemetryResourceRuntimeRejectsInvalidValue(t *testing.T) {
 				Config: providerConfig(server.URL) + `
 resource "chalk_telemetry" "test" {
   kube_cluster_id  = "test-cluster-id"
-  telemetry_runtime = "invalid"
+  runtime         = "invalid"
 }
 `,
-				ExpectError: regexp.MustCompile(`Attribute telemetry_runtime value must be one of`),
+				ExpectError: regexp.MustCompile(`Attribute runtime value must be one of`),
 			},
 		},
 	})
@@ -563,7 +563,7 @@ resource "chalk_telemetry" "test" {
 			{
 				Config: config,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "telemetry_runtime"),
+					resource.TestCheckNoResourceAttr("chalk_telemetry.test", "runtime"),
 					func(s *terraform.State) error {
 						captured := server.GetCapturedRequests("CreateTelemetryDeployment")
 						require.Len(t, captured, 1)

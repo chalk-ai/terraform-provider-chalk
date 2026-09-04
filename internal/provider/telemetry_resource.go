@@ -94,7 +94,7 @@ type TelemetryResourceModel struct {
 	Id                       types.String                   `tfsdk:"id"`
 	Namespace                types.String                   `tfsdk:"namespace"`
 	KubeClusterId            types.String                   `tfsdk:"kube_cluster_id"`
-	TelemetryRuntime         types.String                   `tfsdk:"telemetry_runtime"`
+	Runtime                  types.String                   `tfsdk:"runtime"`
 	OtelCollectorSpec        types.Object                   `tfsdk:"otel_collector_spec"`
 	ClickhouseDeploymentSpec types.Object                   `tfsdk:"clickhouse_deployment_spec"`
 	AggregatorSpec           types.Object                   `tfsdk:"aggregator_spec"`
@@ -227,7 +227,7 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"telemetry_runtime": schema.StringAttribute{
+			"runtime": schema.StringAttribute{
 				MarkdownDescription: "Telemetry runtime. One of `vector` or `otel`. This generally should not be set unless Chalk requests it. If setting, use `vector`; `otel` is deprecated.",
 				Optional:            true,
 				Validators: []validator.String{
@@ -291,8 +291,8 @@ func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceMo
 		Namespace:                data.Namespace.ValueStringPointer(),
 		CustomerVectorAggregator: data.Exporters.toProto(),
 	}
-	if !data.TelemetryRuntime.IsNull() && !data.TelemetryRuntime.IsUnknown() {
-		switch data.TelemetryRuntime.ValueString() {
+	if !data.Runtime.IsNull() && !data.Runtime.IsUnknown() {
+		switch data.Runtime.ValueString() {
 		case telemetryRuntimeOtel:
 			spec.TelemetryRuntime = serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_OTEL
 		case telemetryRuntimeVector:
@@ -300,7 +300,7 @@ func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceMo
 		default:
 			diags.AddError(
 				"Invalid telemetry runtime",
-				fmt.Sprintf("Unsupported telemetry runtime %q", data.TelemetryRuntime.ValueString()),
+				fmt.Sprintf("Unsupported telemetry runtime %q", data.Runtime.ValueString()),
 			)
 			return nil
 		}
@@ -402,18 +402,18 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 
 	data.Namespace = types.StringPointerValue(spec.Namespace)
 	data.Exporters = customerVectorAggregatorFromProto(spec.CustomerVectorAggregator, data.Exporters)
-	// telemetry_runtime is configuration-owned. The server hydrates an omitted runtime
+	// runtime is configuration-owned. The server hydrates an omitted runtime
 	// to its effective default on reads, so keep null state null to avoid claiming that
 	// default and causing a perpetual plan. Explicitly configured values still round-trip
 	// and detect out-of-band changes.
-	if !data.TelemetryRuntime.IsNull() {
+	if !data.Runtime.IsNull() {
 		switch spec.TelemetryRuntime {
 		case serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_OTEL:
-			data.TelemetryRuntime = types.StringValue(telemetryRuntimeOtel)
+			data.Runtime = types.StringValue(telemetryRuntimeOtel)
 		case serverv1.TelemetryRuntime_TELEMETRY_RUNTIME_VECTOR:
-			data.TelemetryRuntime = types.StringValue(telemetryRuntimeVector)
+			data.Runtime = types.StringValue(telemetryRuntimeVector)
 		default:
-			data.TelemetryRuntime = types.StringNull()
+			data.Runtime = types.StringNull()
 		}
 	}
 
@@ -460,7 +460,7 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
 	var paths []string
 	// Skip Unknown plan values — Terraform hasn't determined them yet (Computed field with no prior state).
-	if !data.TelemetryRuntime.IsUnknown() && !data.TelemetryRuntime.Equal(state.TelemetryRuntime) {
+	if !data.Runtime.IsUnknown() && !data.Runtime.Equal(state.Runtime) {
 		paths = append(paths, "telemetry_runtime")
 	}
 	if !data.ClickhouseDeploymentSpec.IsUnknown() && !data.ClickhouseDeploymentSpec.Equal(state.ClickhouseDeploymentSpec) {
