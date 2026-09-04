@@ -81,5 +81,5 @@ Required:
 
 Optional:
 
-- `shutdown_delay_seconds` (Number) Graceful termination period in seconds (default: 30).
+- `shutdown_delay` (String) Graceful termination period, e.g. `30s` or `2m` (default: `30s`). Must be positive and resolve to a whole number of seconds.
 - `target_cpu_utilization_percentage` (Number) Target CPU utilization percentage for autoscaling.

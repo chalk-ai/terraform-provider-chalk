@@ -115,3 +115,9 @@ func NewSandboxClient(ctx context.Context, options *GrpcClientOptions) sandboxv1
 	return sandboxv1connect.NewSandboxServiceClient(
 		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
+
+// NewHostPoolClient creates a new HostPoolServiceClient
+func NewHostPoolClient(ctx context.Context, options *GrpcClientOptions) serverv1connect.HostPoolServiceClient {
+	return serverv1connect.NewHostPoolServiceClient(
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
+}
