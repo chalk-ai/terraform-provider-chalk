@@ -257,54 +257,122 @@ func joinPath(prefix, name string) string {
 	return prefix + "." + name
 }
 
-func writeSnapshot(directory string, snapshot Snapshot) error {
+func captureRelease(directory string, snapshot Snapshot) error {
 	if _, err := versionParts(snapshot.Version); err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(snapshot, "", "  ")
+	current, err := loadCurrentSnapshot(directory)
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(directory, 0o755); err != nil {
+	releasesDir := filepath.Join(directory, "releases")
+	releases, err := loadReleases(releasesDir)
+	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(directory, snapshot.Version+".json"), append(data, '\n'), 0o644)
+	if len(releases) == 0 {
+		return fmt.Errorf("no releases found in %s", releasesDir)
+	}
+	if releases[len(releases)-1].Version != current.Version {
+		return fmt.Errorf("current snapshot version %s does not match latest release %s", current.Version, releases[len(releases)-1].Version)
+	}
+
+	comparison := compareVersions(snapshot.Version, current.Version)
+	if comparison < 0 {
+		return fmt.Errorf("release version %s must be newer than current version %s", snapshot.Version, current.Version)
+	}
+	if comparison == 0 {
+		if len(diffSnapshots(current, snapshot)) == 0 {
+			return nil
+		}
+		return fmt.Errorf("release %s was already captured with a different schema", snapshot.Version)
+	}
+
+	release := Release{
+		Version: snapshot.Version,
+		Changes: diffSnapshots(current, snapshot),
+	}
+	if err := writeJSON(filepath.Join(releasesDir, release.Version+".json"), release); err != nil {
+		return err
+	}
+	return writeCurrentSnapshot(directory, snapshot)
 }
 
-func loadSnapshots(directory string) ([]Snapshot, error) {
+func writeCurrentSnapshot(directory string, snapshot Snapshot) error {
+	if _, err := versionParts(snapshot.Version); err != nil {
+		return err
+	}
+	return writeJSON(filepath.Join(directory, "current.json"), snapshot)
+}
+
+func loadCurrentSnapshot(directory string) (Snapshot, error) {
+	path := filepath.Join(directory, "current.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	var snapshot Snapshot
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		return Snapshot{}, fmt.Errorf("%s: %w", path, err)
+	}
+	if _, err := versionParts(snapshot.Version); err != nil {
+		return Snapshot{}, fmt.Errorf("%s: %w", path, err)
+	}
+	return snapshot, nil
+}
+
+func loadReleases(directory string) ([]Release, error) {
 	paths, err := filepath.Glob(filepath.Join(directory, "v*.json"))
 	if err != nil {
 		return nil, err
 	}
-	snapshots := make([]Snapshot, 0, len(paths))
+	releases := make([]Release, 0, len(paths))
 	for _, path := range paths {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}
-		var snapshot Snapshot
-		if err := json.Unmarshal(data, &snapshot); err != nil {
+		var release Release
+		if err := json.Unmarshal(data, &release); err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
-		if _, err := versionParts(snapshot.Version); err != nil {
+		if _, err := versionParts(release.Version); err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
-		if strings.TrimSuffix(filepath.Base(path), ".json") != snapshot.Version {
+		if strings.TrimSuffix(filepath.Base(path), ".json") != release.Version {
 			return nil, fmt.Errorf("%s: filename and version do not match", path)
 		}
-		snapshots = append(snapshots, snapshot)
+		releases = append(releases, release)
 	}
-	sort.Slice(snapshots, func(i, j int) bool {
-		left, _ := versionParts(snapshots[i].Version)
-		right, _ := versionParts(snapshots[j].Version)
-		for index := range left {
-			if left[index] != right[index] {
-				return left[index] < right[index]
-			}
-		}
-		return false
+	sort.Slice(releases, func(i, j int) bool {
+		return compareVersions(releases[i].Version, releases[j].Version) < 0
 	})
-	return snapshots, nil
+	return releases, nil
+}
+
+func writeJSON(path string, value any) error {
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(data, '\n'), 0o644)
+}
+
+func compareVersions(leftVersion, rightVersion string) int {
+	left, _ := versionParts(leftVersion)
+	right, _ := versionParts(rightVersion)
+	for index := range left {
+		if left[index] < right[index] {
+			return -1
+		}
+		if left[index] > right[index] {
+			return 1
+		}
+	}
+	return 0
 }
 
 func versionParts(version string) ([3]int, error) {

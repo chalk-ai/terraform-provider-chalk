@@ -1,0 +1,113 @@
+{
+  "version": "v1.0.8",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_cluster_host_pool",
+      "kind": "entity_added"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_environment_host_pool",
+      "kind": "entity_added"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_kubernetes_cluster",
+      "attribute": "data_plane_controller.host_pools",
+      "kind": "attribute_removed",
+      "before": "list(object)"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_kubernetes_cluster",
+      "attribute": "data_plane_controller.host_pools.count",
+      "kind": "attribute_removed",
+      "before": "number"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_kubernetes_cluster",
+      "attribute": "data_plane_controller.host_pools.cpu",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_kubernetes_cluster",
+      "attribute": "data_plane_controller.host_pools.machine_family",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_kubernetes_cluster",
+      "attribute": "data_plane_controller.host_pools.memory",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_kubernetes_cluster",
+      "attribute": "data_plane_controller.host_pools.name",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_cluster",
+      "attribute": "data_plane_controller.host_pools",
+      "kind": "attribute_removed",
+      "before": "list(object)"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_cluster",
+      "attribute": "data_plane_controller.host_pools.count",
+      "kind": "attribute_removed",
+      "before": "number"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_cluster",
+      "attribute": "data_plane_controller.host_pools.cpu",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_cluster",
+      "attribute": "data_plane_controller.host_pools.machine_family",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_cluster",
+      "attribute": "data_plane_controller.host_pools.memory",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_cluster",
+      "attribute": "data_plane_controller.host_pools.name",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_scaling_group",
+      "attribute": "scaling_spec.shutdown_delay",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_scaling_group",
+      "attribute": "scaling_spec.shutdown_delay_seconds",
+      "kind": "attribute_removed",
+      "before": "number"
+    }
+  ]
+}

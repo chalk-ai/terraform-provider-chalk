@@ -108,7 +108,7 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 - ` + "`chalk_example`" + ` permissions changed from ` + "`old.read`" + ` to ` + "`new.read`" + `.
 `
-	got := string(renderChangelog(live, []Snapshot{baseline}))
+	got := string(renderChangelog(live, baseline, nil))
 	if got != want {
 		t.Fatalf("rendered changelog:\n%s\nwant:\n%s", got, want)
 	}

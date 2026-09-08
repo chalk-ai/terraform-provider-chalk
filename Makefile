@@ -31,7 +31,7 @@ test:  ## Run unit tests
 docs:  ## Generate documentation
 	go generate ./tools/...
 
-snapshot:  ## Capture a release schema snapshot. VERSION=vX.Y.Z
+snapshot:  ## Capture a release schema diff and advance the current snapshot. VERSION=vX.Y.Z
 	@test -n "$(VERSION)" || (echo "VERSION is required (for example: make snapshot VERSION=v1.0.3)" >&2; exit 2)
 	go run ./tools/genchangelog --provider-dir . --snapshot "$(VERSION)"
 
