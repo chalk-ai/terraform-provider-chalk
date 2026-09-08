@@ -18,11 +18,12 @@ description: |-
 # Chalk provider changelog
 
 For migration guidance and non-schema changes, see the [project changelog](https://github.com/chalk-ai/terraform-provider-chalk/blob/main/CHANGELOG.md).
-
-## Unreleased
-
 `)
-	writeChanges(&output, diffSnapshots(current, live))
+
+	if changes := diffSnapshots(current, live); len(changes) > 0 {
+		output.WriteString("\n## Unreleased\n\n")
+		writeChanges(&output, changes)
+	}
 
 	for index := len(releases) - 1; index >= 0; index-- {
 		fmt.Fprintf(&output, "\n## %s\n\n", releases[index].Version)
