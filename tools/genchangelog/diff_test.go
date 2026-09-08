@@ -135,11 +135,7 @@ func TestRenderChangelogRendersReleaseDiffsNewestFirst(t *testing.T) {
 		{Version: "v1.0.8"},
 	}
 
-	wantSuffix := `## Unreleased
-
-No schema or permission changes.
-
-## v1.0.8
+	wantSuffix := `## v1.0.8
 
 No schema or permission changes.
 
@@ -150,6 +146,9 @@ No schema or permission changes.
 - Added attribute ` + "`chalk_example.enabled`" + ` (` + "`bool`" + `).
 `
 	got := string(renderChangelog(current, current, releases))
+	if strings.Contains(got, "## Unreleased") {
+		t.Fatalf("rendered changelog contains empty Unreleased section:\n%s", got)
+	}
 	if !strings.HasSuffix(got, wantSuffix) {
 		t.Fatalf("rendered changelog:\n%s\nwant suffix:\n%s", got, wantSuffix)
 	}
