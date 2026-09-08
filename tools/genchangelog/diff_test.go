@@ -2,6 +2,7 @@ package main
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -111,5 +112,45 @@ For migration guidance and non-schema changes, see the [project changelog](https
 	got := string(renderChangelog(live, baseline, nil))
 	if got != want {
 		t.Fatalf("rendered changelog:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestRenderChangelogRendersReleaseDiffsNewestFirst(t *testing.T) {
+	current := Snapshot{
+		Version:     "v1.0.8",
+		Resources:   map[string]Entity{},
+		DataSources: map[string]Entity{},
+	}
+	releases := []Release{
+		{
+			Version: "v1.0.7",
+			Changes: []Change{{
+				EntityKind: "resource",
+				Entity:     "chalk_example",
+				Attribute:  "enabled",
+				Kind:       changeAttributeAdded,
+				After:      "bool",
+			}},
+		},
+		{Version: "v1.0.8"},
+	}
+
+	wantSuffix := `## Unreleased
+
+No schema or permission changes.
+
+## v1.0.8
+
+No schema or permission changes.
+
+## v1.0.7
+
+### Resources
+
+- Added attribute ` + "`chalk_example.enabled`" + ` (` + "`bool`" + `).
+`
+	got := string(renderChangelog(current, current, releases))
+	if !strings.HasSuffix(got, wantSuffix) {
+		t.Fatalf("rendered changelog:\n%s\nwant suffix:\n%s", got, wantSuffix)
 	}
 }
