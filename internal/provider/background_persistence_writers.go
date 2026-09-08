@@ -7,8 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"golang.org/x/exp/maps"
 )
@@ -198,9 +196,6 @@ var bgpUnmanagedWritersSchemaAttribute = schema.ListNestedAttribute{
 			attrs["name"] = schema.StringAttribute{
 				MarkdownDescription: "Writer name (derived from bus_subscriber_type)",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			}
 			return attrs
 		}(),
