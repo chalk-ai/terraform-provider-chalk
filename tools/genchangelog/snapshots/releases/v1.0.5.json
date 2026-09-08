@@ -1,0 +1,10 @@
+{
+  "version": "v1.0.5",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_sandbox",
+      "kind": "entity_added"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "version": "v1.0.6",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_cluster_gateway",
+      "attribute": "certificate_issuer_ref",
+      "kind": "attribute_added",
+      "after": "object"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_cluster_gateway",
+      "attribute": "certificate_issuer_ref.group",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_cluster_gateway",
+      "attribute": "certificate_issuer_ref.kind",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_cluster_gateway",
+      "attribute": "certificate_issuer_ref.name",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_unmanaged_environment",
+      "attribute": "dataplane_db_secret",
+      "kind": "attribute_added",
+      "after": "string"
+    }
+  ]
+}

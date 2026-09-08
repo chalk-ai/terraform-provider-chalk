@@ -1,0 +1,152 @@
+{
+  "version": "v1.0.4",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_aws_vpc",
+      "attribute": "designator",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_cloud_storage",
+      "attribute": "designator",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_cluster",
+      "attribute": "designator",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_container_registry",
+      "attribute": "designator",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_gcp_vpc",
+      "attribute": "designator",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters",
+      "kind": "attribute_added",
+      "after": "object"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.datadog",
+      "kind": "attribute_added",
+      "after": "object"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.datadog.api_host",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.datadog.api_key_secret_reference",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.datadog.logs",
+      "kind": "attribute_added",
+      "after": "object"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.datadog.logs.enabled",
+      "kind": "attribute_added",
+      "after": "bool"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.datadog.metrics",
+      "kind": "attribute_added",
+      "after": "object"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.datadog.metrics.enabled",
+      "kind": "attribute_added",
+      "after": "bool"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.datadog.traces",
+      "kind": "attribute_added",
+      "after": "object"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.datadog.traces.enabled",
+      "kind": "attribute_added",
+      "after": "bool"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.otlp",
+      "kind": "attribute_added",
+      "after": "object"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.otlp.authorization_header_secret_reference",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.otlp.enabled",
+      "kind": "attribute_added",
+      "after": "bool"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "exporters.otlp.url",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_unmanaged_cloud_storage",
+      "attribute": "designator",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_unmanaged_container_registry",
+      "attribute": "designator",
+      "kind": "attribute_added",
+      "after": "string"
+    }
+  ]
+}

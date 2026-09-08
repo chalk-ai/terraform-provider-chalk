@@ -1,0 +1,12 @@
+{
+  "version": "v1.0.7",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "runtime",
+      "kind": "attribute_added",
+      "after": "string"
+    }
+  ]
+}

@@ -13,12 +13,17 @@ const (
 )
 
 type Change struct {
-	EntityKind string
-	Entity     string
-	Attribute  string
-	Kind       string
-	Before     string
-	After      string
+	EntityKind string `json:"entity_kind"`
+	Entity     string `json:"entity"`
+	Attribute  string `json:"attribute,omitempty"`
+	Kind       string `json:"kind"`
+	Before     string `json:"before,omitempty"`
+	After      string `json:"after,omitempty"`
+}
+
+type Release struct {
+	Version string   `json:"version"`
+	Changes []Change `json:"changes,omitempty"`
 }
 
 func diffSnapshots(old, current Snapshot) []Change {

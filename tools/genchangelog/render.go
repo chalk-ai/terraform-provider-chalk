@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func renderChangelog(live Snapshot, snapshots []Snapshot) []byte {
+func renderChangelog(live, current Snapshot, releases []Release) []byte {
 	var output bytes.Buffer
 	output.WriteString(`---
 subcategory: ""
@@ -22,11 +22,11 @@ For migration guidance and non-schema changes, see the [project changelog](https
 ## Unreleased
 
 `)
-	writeChanges(&output, diffSnapshots(snapshots[len(snapshots)-1], live))
+	writeChanges(&output, diffSnapshots(current, live))
 
-	for index := len(snapshots) - 1; index >= 1; index-- {
-		fmt.Fprintf(&output, "\n## %s\n\n", snapshots[index].Version)
-		writeChanges(&output, diffSnapshots(snapshots[index-1], snapshots[index]))
+	for index := len(releases) - 1; index >= 0; index-- {
+		fmt.Fprintf(&output, "\n## %s\n\n", releases[index].Version)
+		writeChanges(&output, releases[index].Changes)
 	}
 	return output.Bytes()
 }
