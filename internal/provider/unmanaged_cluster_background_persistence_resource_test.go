@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -34,6 +35,27 @@ const testBGPWritersHCL = `
   ]
 `
 
+const testBGPWritersReorderedHCL = `
+  writers = [
+    {
+      bus_subscriber_type   = "CLUSTER_MANAGER"
+      default_replica_count = 1
+      request = {
+        cpu    = "500m"
+        memory = "1Gi"
+      }
+    },
+    {
+      bus_subscriber_type   = "GO_METRICS_BUS_WRITER"
+      default_replica_count = 1
+      request = {
+        cpu    = "500m"
+        memory = "1Gi"
+      }
+    }
+  ]
+`
+
 func setupMockBuilderServerBGP(t *testing.T) *testserver.MockServer {
 	server := testserver.NewMockBuilderServer(t)
 	t.Cleanup(func() { server.Close() })
@@ -43,9 +65,15 @@ func setupMockBuilderServerBGP(t *testing.T) *testserver.MockServer {
 	server.OnCreateClusterBackgroundPersistence().WithBehavior(func(req proto.Message) (proto.Message, error) {
 		createReq := req.(*serverv1.CreateClusterBackgroundPersistenceRequest)
 		kubeClusterID := createReq.GetKubeClusterId()
+		specs := proto.Clone(createReq.Specs).(*serverv1.BackgroundPersistenceDeploymentSpecs)
+		for _, writer := range specs.Writers {
+			if writer.Name == "" {
+				writer.Name = strings.ToLower(strings.ReplaceAll(writer.BusSubscriberType, "_", "-"))
+			}
+		}
 		currentBGP = &serverv1.BackgroundPersistence{
 			Id:            "test-bgp-id",
-			Specs:         createReq.Specs,
+			Specs:         specs,
 			KubeClusterId: &kubeClusterID,
 		}
 		return &serverv1.CreateClusterBackgroundPersistenceResponse{Id: "test-bgp-id"}, nil
@@ -239,6 +267,70 @@ resource "chalk_unmanaged_cluster_background_persistence" "test" {
 						return nil
 					},
 				),
+			},
+		},
+	})
+}
+
+func TestUnmanagedClusterBGPReorderWriters(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerBGP(t)
+
+	config := func(writers string) string {
+		return providerConfig(server.URL) + `
+resource "chalk_unmanaged_cluster_background_persistence" "test" {
+  kube_cluster_id      = "test-kube-cluster"
+  service_account_name = "test-sa"
+  namespace            = "default"
+` + writers + `
+  kafka = {
+    sasl_secret       = "my-sasl-secret"
+    bootstrap_servers = "kafka:9092"
+    dlq_topic         = "my-dlq-topic"
+    offline_store_bus_upload_topic_id          = "upload-topic"
+    offline_store_bus_streaming_write_topic_id = "streaming-topic"
+    metrics_bus_topic_id = "metrics-topic"
+    result_bus_topic_id  = "result-topic"
+  }
+}
+`
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config(testBGPWritersHCL),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.0.name", "go-metrics-bus-writer"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.1.name", "cluster-manager"),
+				),
+			},
+			{
+				Config: config(testBGPWritersReorderedHCL),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.0.bus_subscriber_type", "CLUSTER_MANAGER"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.0.name", "cluster-manager"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.1.bus_subscriber_type", "GO_METRICS_BUS_WRITER"),
+					resource.TestCheckResourceAttr("chalk_unmanaged_cluster_background_persistence.test", "writers.1.name", "go-metrics-bus-writer"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateClusterBackgroundPersistence")
+						require.Len(t, captured, 2, "Expected create and reorder update requests")
+
+						req := captured[1].(*serverv1.CreateClusterBackgroundPersistenceRequest)
+						require.Len(t, req.Specs.Writers, 2)
+						assert.Equal(t, "CLUSTER_MANAGER", req.Specs.Writers[0].BusSubscriberType)
+						assert.Empty(t, req.Specs.Writers[0].Name)
+						assert.Equal(t, "GO_METRICS_BUS_WRITER", req.Specs.Writers[1].BusSubscriberType)
+						assert.Empty(t, req.Specs.Writers[1].Name)
+						return nil
+					},
+				),
+			},
+			{
+				Config:             config(testBGPWritersReorderedHCL),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
