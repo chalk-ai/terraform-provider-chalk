@@ -9,6 +9,12 @@ description: |-
 
 For migration guidance and non-schema changes, see the [project changelog](https://github.com/chalk-ai/terraform-provider-chalk/blob/main/CHANGELOG.md).
 
+## Unreleased
+
+### Resources
+
+- Added `chalk_services_gateway_binding`.
+
 ## v1.0.9
 
 No schema or permission changes.

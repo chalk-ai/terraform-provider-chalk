@@ -42,6 +42,7 @@ var resourcePermissionsMarkdown = map[string]string{
 	"chalk_private_gateway_binding":                               "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_project":                                               "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_service_token":                                         "**Required permissions:** `tokens.write`, `tokens.list`",
+	"chalk_services_gateway_binding":                              "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_telemetry":                                             "**Required permissions:** `team.admin`, `deploy.read`",
 	"chalk_telemetry_binding":                                     "**Required permissions:** `project.create` *(team-scoped)*",
 	"chalk_unmanaged_cloud_storage":                               "**Required permissions:** `project.create` *(team-scoped)*",
