@@ -211,6 +211,7 @@ var allResourceCtors = []func() resource.Resource{
 	NewGCPCloudCredentialsResource,
 	NewAzureCloudCredentialsResource,
 	NewClusterGatewayBindingResource,
+	NewServicesGatewayBindingResource,
 	NewClusterContainerRegistryBindingResource,
 	NewPrivateGatewayBindingResource,
 	NewClusterBackgroundPersistenceDeploymentBindingResource,
