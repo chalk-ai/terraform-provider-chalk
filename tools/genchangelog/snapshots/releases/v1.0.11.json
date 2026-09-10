@@ -1,0 +1,24 @@
+{
+  "version": "v1.0.11",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_cluster_host_pool",
+      "attribute": "machine_family",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_environment_host_pool",
+      "attribute": "machine_family",
+      "kind": "attribute_removed",
+      "before": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_services_gateway_binding",
+      "kind": "entity_added"
+    }
+  ]
+}
