@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.9",
+  "version": "v1.0.11",
   "resources": {
     "chalk_aws_cloud_credentials": {
       "attributes": {
@@ -289,9 +289,6 @@
           "type": "string"
         },
         "idle_timeout": {
-          "type": "string"
-        },
-        "machine_family": {
           "type": "string"
         },
         "max_hosts": {
@@ -1002,9 +999,6 @@
           "type": "string"
         },
         "idle_timeout": {
-          "type": "string"
-        },
-        "machine_family": {
           "type": "string"
         },
         "max_hosts": {
@@ -1831,6 +1825,19 @@
         }
       },
       "permissions": "**Required permissions:** `tokens.write`, `tokens.list`"
+    },
+    "chalk_services_gateway_binding": {
+      "attributes": {
+        "cluster_id": {
+          "type": "string",
+          "required": true
+        },
+        "services_gateway_id": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
     },
     "chalk_telemetry": {
       "attributes": {
