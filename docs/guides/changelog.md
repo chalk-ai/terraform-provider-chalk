@@ -13,6 +13,8 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 ### Resources
 
+- Removed attribute `chalk_cluster_host_pool.machine_family` (`string`).
+- Removed attribute `chalk_environment_host_pool.machine_family` (`string`).
 - Added `chalk_services_gateway_binding`.
 
 ## v1.0.9

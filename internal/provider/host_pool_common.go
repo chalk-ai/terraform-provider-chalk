@@ -42,20 +42,18 @@ var hostPoolSpecUpdateMaskPaths = []string{
 	"max_hosts",
 	"cpu",
 	"memory",
-	"machine_family",
 	"idle_timeout",
 }
 
 // hostPoolSpecModel is embedded by value into each host pool resource model, so
 // its fields are promoted and map to top-level attributes.
 type hostPoolSpecModel struct {
-	Name          types.String         `tfsdk:"name"`
-	MinHosts      types.Int64          `tfsdk:"min_hosts"`
-	MaxHosts      types.Int64          `tfsdk:"max_hosts"`
-	IdleTimeout   timetypes.GoDuration `tfsdk:"idle_timeout"`
-	Cpu           types.String         `tfsdk:"cpu"`
-	Memory        types.String         `tfsdk:"memory"`
-	MachineFamily types.String         `tfsdk:"machine_family"`
+	Name        types.String         `tfsdk:"name"`
+	MinHosts    types.Int64          `tfsdk:"min_hosts"`
+	MaxHosts    types.Int64          `tfsdk:"max_hosts"`
+	IdleTimeout timetypes.GoDuration `tfsdk:"idle_timeout"`
+	Cpu         types.String         `tfsdk:"cpu"`
+	Memory      types.String         `tfsdk:"memory"`
 }
 
 // hostPoolSchemaAttributes returns the id and spec attributes common to both
@@ -101,10 +99,6 @@ func hostPoolSchemaAttributes() map[string]schema.Attribute {
 		"memory": schema.StringAttribute{
 			MarkdownDescription: "Memory resources for each host, e.g. `8Gi`.",
 			Required:            true,
-		},
-		"machine_family": schema.StringAttribute{
-			MarkdownDescription: "Machine family for this pool's hosts to run on. Defaults to an internally chosen family when unset.",
-			Optional:            true,
 		},
 	}
 }
@@ -188,12 +182,11 @@ func (m hostPoolSpecModel) toProto() (*serverv1.HostPoolSpec, diag.Diagnostics) 
 	}
 
 	spec := &serverv1.HostPoolSpec{
-		Name:          m.Name.ValueString(),
-		MinHosts:      int32(m.MinHosts.ValueInt64()),
-		MaxHosts:      int32(m.MaxHosts.ValueInt64()),
-		Cpu:           m.Cpu.ValueString(),
-		Memory:        m.Memory.ValueString(),
-		MachineFamily: m.MachineFamily.ValueStringPointer(),
+		Name:     m.Name.ValueString(),
+		MinHosts: int32(m.MinHosts.ValueInt64()),
+		MaxHosts: int32(m.MaxHosts.ValueInt64()),
+		Cpu:      m.Cpu.ValueString(),
+		Memory:   m.Memory.ValueString(),
 	}
 
 	if !m.IdleTimeout.IsNull() && !m.IdleTimeout.IsUnknown() {
@@ -210,13 +203,12 @@ func (m hostPoolSpecModel) toProto() (*serverv1.HostPoolSpec, diag.Diagnostics) 
 
 func hostPoolSpecFromProto(p *serverv1.HostPoolSpec) hostPoolSpecModel {
 	m := hostPoolSpecModel{
-		Name:          types.StringValue(p.GetName()),
-		MinHosts:      types.Int64Value(int64(p.GetMinHosts())),
-		MaxHosts:      types.Int64Value(int64(p.GetMaxHosts())),
-		Cpu:           types.StringValue(p.GetCpu()),
-		Memory:        types.StringValue(p.GetMemory()),
-		MachineFamily: stringPointerValue(p.MachineFamily),
-		IdleTimeout:   timetypes.NewGoDurationNull(),
+		Name:        types.StringValue(p.GetName()),
+		MinHosts:    types.Int64Value(int64(p.GetMinHosts())),
+		MaxHosts:    types.Int64Value(int64(p.GetMaxHosts())),
+		Cpu:         types.StringValue(p.GetCpu()),
+		Memory:      types.StringValue(p.GetMemory()),
+		IdleTimeout: timetypes.NewGoDurationNull(),
 	}
 	if p.GetIdleTimeout() != nil {
 		m.IdleTimeout = timetypes.NewGoDurationValue(p.GetIdleTimeout().AsDuration())

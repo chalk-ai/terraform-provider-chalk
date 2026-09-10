@@ -15,15 +15,3 @@ resource "chalk_environment_host_pool" "workers" {
   cpu          = "4"
   memory       = "8Gi"
 }
-
-# A fixed-size pool pinned to a machine family.
-resource "chalk_environment_host_pool" "gpu" {
-  environment_id = chalk_managed_environment.example.id
-
-  name           = "gpu"
-  min_hosts      = 2
-  max_hosts      = 2
-  cpu            = "8"
-  memory         = "32Gi"
-  machine_family = "n2"
-}

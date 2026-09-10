@@ -76,7 +76,6 @@ resource "chalk_environment_host_pool" "test" {
 					resource.TestCheckResourceAttr("chalk_environment_host_pool.test", "environment_id", "env-1"),
 					resource.TestCheckResourceAttr("chalk_environment_host_pool.test", "name", "workers"),
 					resource.TestCheckResourceAttr("chalk_environment_host_pool.test", "idle_timeout", "5m"),
-					resource.TestCheckNoResourceAttr("chalk_environment_host_pool.test", "machine_family"),
 					func(s *terraform.State) error {
 						reqs := server.GetCapturedRequests("CreateEnvironmentHostPool")
 						require.Len(t, reqs, 1)
@@ -126,7 +125,7 @@ resource "chalk_environment_host_pool" "test" {
 }
 
 // TestClusterHostPoolCreateRead verifies the cluster-scoped resource sends
-// cluster_id on create.
+// cluster_id on create and ignores machine_family returned by older servers.
 func TestClusterHostPoolCreateRead(t *testing.T) {
 	t.Parallel()
 
@@ -134,7 +133,7 @@ func TestClusterHostPoolCreateRead(t *testing.T) {
 	t.Cleanup(func() { server.Close() })
 
 	spec := &serverv1.HostPoolSpec{
-		Name:          "gpu",
+		Name:          "workers",
 		MinHosts:      2,
 		MaxHosts:      2,
 		Cpu:           "8",
@@ -155,19 +154,17 @@ func TestClusterHostPoolCreateRead(t *testing.T) {
 			{
 				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_host_pool" "test" {
-  cluster_id     = "cluster-1"
-  name           = "gpu"
-  min_hosts      = 2
-  max_hosts      = 2
-  cpu            = "8"
-  memory         = "32Gi"
-  machine_family = "n2"
+  cluster_id = "cluster-1"
+  name       = "workers"
+  min_hosts  = 2
+  max_hosts  = 2
+  cpu        = "8"
+  memory     = "32Gi"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_cluster_host_pool.test", "id", "hp-cluster-1"),
 					resource.TestCheckResourceAttr("chalk_cluster_host_pool.test", "cluster_id", "cluster-1"),
-					resource.TestCheckResourceAttr("chalk_cluster_host_pool.test", "machine_family", "n2"),
 					resource.TestCheckNoResourceAttr("chalk_cluster_host_pool.test", "idle_timeout"),
 					func(s *terraform.State) error {
 						reqs := server.GetCapturedRequests("CreateClusterHostPool")
@@ -175,6 +172,7 @@ resource "chalk_cluster_host_pool" "test" {
 						req := reqs[0].(*serverv1.CreateClusterHostPoolRequest)
 						assert.Equal(t, "cluster-1", req.GetClusterId())
 						assert.Nil(t, req.GetSpec().IdleTimeout)
+						assert.Nil(t, req.GetSpec().MachineFamily)
 						return nil
 					},
 				),
@@ -182,13 +180,12 @@ resource "chalk_cluster_host_pool" "test" {
 			{
 				Config: providerConfig(server.URL) + `
 resource "chalk_cluster_host_pool" "test" {
-  cluster_id     = "cluster-1"
-  name           = "gpu"
-  min_hosts      = 2
-  max_hosts      = 2
-  cpu            = "8"
-  memory         = "32Gi"
-  machine_family = "n2"
+  cluster_id = "cluster-1"
+  name       = "workers"
+  min_hosts  = 2
+  max_hosts  = 2
+  cpu        = "8"
+  memory     = "32Gi"
 }
 `,
 				PlanOnly: true,
