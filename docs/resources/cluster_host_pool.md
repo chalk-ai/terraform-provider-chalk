@@ -49,7 +49,6 @@ resource "chalk_cluster_host_pool" "workers" {
 ### Optional
 
 - `idle_timeout` (String) How long an idle host is kept before being scaled down, e.g. `5m` or `1h30m`. Required when `min_hosts` is less than `max_hosts`, and must not be set when they are equal. Must be at least `1m` and resolve to a whole number of seconds.
-- `machine_family` (String) Machine family for this pool's hosts to run on. Defaults to an internally chosen family when unset.
 
 ### Read-Only
 
