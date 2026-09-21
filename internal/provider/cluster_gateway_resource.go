@@ -72,6 +72,7 @@ type ClusterGatewayResourceModel struct {
 	AdditionalDNSNames                 types.List                 `tfsdk:"additional_dns_names"`
 	Nodepool                           types.String               `tfsdk:"nodepool"`
 	AllowCollocationWithChalkWorkloads types.Bool                 `tfsdk:"allow_collocation_with_chalk_workloads"`
+	TrafficZonalAffinity               types.String               `tfsdk:"traffic_zonal_affinity"`
 
 	// Optional fields
 	IPAllowlist        types.List                 `tfsdk:"ip_allowlist"`
@@ -244,6 +245,14 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 			"allow_collocation_with_chalk_workloads": schema.BoolAttribute{
 				MarkdownDescription: "Allow collocation with Chalk workloads",
 				Optional:            true,
+			},
+			"traffic_zonal_affinity": schema.StringAttribute{
+				MarkdownDescription: "Controls whether traffic may cross availability zones (`CROSS_ZONE`) or prefers endpoints in the client's availability zone (`LOCAL`).",
+				Optional:            true,
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("CROSS_ZONE", "LOCAL"),
+				},
 			},
 			"ip_allowlist": schema.ListAttribute{
 				MarkdownDescription: "IP allowlist for the gateway",
@@ -429,6 +438,15 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 		} else {
 			data.AllowCollocationWithChalkWorkloads = types.BoolNull()
 		}
+
+		switch envoyConfig.TrafficZonalAffinity {
+		case serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_CROSS_ZONE:
+			data.TrafficZonalAffinity = types.StringValue("CROSS_ZONE")
+		case serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_LOCAL:
+			data.TrafficZonalAffinity = types.StringValue("LOCAL")
+		default:
+			data.TrafficZonalAffinity = types.StringNull()
+		}
 	}
 
 	// Update TLS certificate
@@ -530,6 +548,11 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 	// Only set if explicitly true, leave unset (default false) otherwise
 	if !data.AllowCollocationWithChalkWorkloads.IsNull() && data.AllowCollocationWithChalkWorkloads.ValueBool() {
 		envoyConfig.AllowColocationWithChalkWorkloads = true
+	}
+	if !data.TrafficZonalAffinity.IsNull() {
+		envoyConfig.TrafficZonalAffinity = serverv1.TrafficZonalAffinity(
+			serverv1.TrafficZonalAffinity_value["TRAFFIC_ZONAL_AFFINITY_"+data.TrafficZonalAffinity.ValueString()],
+		)
 	}
 	createReq.Specs.Config = &serverv1.GatewayProviderConfig{
 		Config: &serverv1.GatewayProviderConfig_Envoy{
@@ -722,6 +745,11 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 	// Only set if explicitly true, leave unset (default false) otherwise
 	if !data.AllowCollocationWithChalkWorkloads.IsNull() && data.AllowCollocationWithChalkWorkloads.ValueBool() {
 		envoyConfig.AllowColocationWithChalkWorkloads = true
+	}
+	if !data.TrafficZonalAffinity.IsNull() {
+		envoyConfig.TrafficZonalAffinity = serverv1.TrafficZonalAffinity(
+			serverv1.TrafficZonalAffinity_value["TRAFFIC_ZONAL_AFFINITY_"+data.TrafficZonalAffinity.ValueString()],
+		)
 	}
 	createReq.Specs.Config = &serverv1.GatewayProviderConfig{
 		Config: &serverv1.GatewayProviderConfig_Envoy{

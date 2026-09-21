@@ -153,6 +153,73 @@ resource "chalk_cluster_gateway" "test" {
 		},
 	})
 }
+
+func TestClusterGatewayTrafficZonalAffinity(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerGateway(t)
+
+	config := func(affinity string) string {
+		return providerConfig(server.URL) + `
+resource "chalk_cluster_gateway" "test" {
+  kube_cluster_id         = "test-kube-cluster"
+  traffic_zonal_affinity = "` + affinity + `"
+}
+`
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config("LOCAL"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "traffic_zonal_affinity", "LOCAL"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateClusterGateway")
+						require.Len(t, captured, 1)
+						req := captured[0].(*serverv1.CreateClusterGatewayRequest)
+						assert.Equal(t, serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_LOCAL, req.Specs.GetConfig().GetEnvoy().GetTrafficZonalAffinity())
+						return nil
+					},
+				),
+			},
+			{
+				Config: config("CROSS_ZONE"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "traffic_zonal_affinity", "CROSS_ZONE"),
+					func(s *terraform.State) error {
+						captured := server.GetCapturedRequests("CreateClusterGateway")
+						require.Len(t, captured, 2)
+						req := captured[1].(*serverv1.CreateClusterGatewayRequest)
+						assert.Equal(t, serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_CROSS_ZONE, req.Specs.GetConfig().GetEnvoy().GetTrafficZonalAffinity())
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+func TestClusterGatewayTrafficZonalAffinityValidation(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerGateway(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: providerConfig(server.URL) + `
+resource "chalk_cluster_gateway" "test" {
+  kube_cluster_id        = "test-kube-cluster"
+  traffic_zonal_affinity = "INVALID"
+}
+`,
+				ExpectError: regexp.MustCompile(`Attribute traffic_zonal_affinity value must be one of`),
+			},
+		},
+	})
+}
+
 func TestClusterGatewayDelete(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerGateway(t)

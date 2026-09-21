@@ -4,8 +4,8 @@ go 1.26.1
 
 require (
 	connectrpc.com/connect v1.19.1
-	github.com/chalk-ai/chalk-go v1.2.303
-	github.com/chalk-ai/chalk-go/gen v1.2.303
+	github.com/chalk-ai/chalk-go v1.3.19
+	github.com/chalk-ai/chalk-go/gen v1.3.19
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/terraform-plugin-docs v0.24.0
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.12.0
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
+	golang.org/x/exp v0.0.0-20260112195511-716be5621a96
 	golang.org/x/tools v0.48.0
 	google.golang.org/protobuf v1.36.11
 	gotest.tools/gotestsum v1.13.0
