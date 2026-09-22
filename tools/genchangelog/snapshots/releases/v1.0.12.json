@@ -1,0 +1,12 @@
+{
+  "version": "v1.0.12",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_cluster_gateway",
+      "attribute": "traffic_zonal_affinity",
+      "kind": "attribute_added",
+      "after": "string"
+    }
+  ]
+}
