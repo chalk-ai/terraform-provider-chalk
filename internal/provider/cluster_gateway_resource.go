@@ -399,7 +399,9 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 			data.MinAvailable = types.Int64Null()
 		}
 
+		//lint:ignore SA1019 Retain support for the existing letsencrypt_cluster_issuer Terraform attribute.
 		if envoyConfig.LetsencryptClusterIssuer != nil {
+			//lint:ignore SA1019 Retain support for the existing letsencrypt_cluster_issuer Terraform attribute.
 			data.LetsencryptClusterIssuer = types.StringValue(*envoyConfig.LetsencryptClusterIssuer)
 		} else {
 			data.LetsencryptClusterIssuer = types.StringNull()
@@ -534,6 +536,7 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 		val := int32(data.MinAvailable.ValueInt64())
 		envoyConfig.MinAvailable = &val
 	}
+	//lint:ignore SA1019 Retain support for the existing letsencrypt_cluster_issuer Terraform attribute.
 	envoyConfig.LetsencryptClusterIssuer = data.LetsencryptClusterIssuer.ValueStringPointer()
 	setCertificateIssuerRefOnProto(envoyConfig, data.CertificateIssuerRef)
 	if !data.AdditionalDNSNames.IsNull() {
@@ -731,6 +734,7 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 		val := int32(data.MinAvailable.ValueInt64())
 		envoyConfig.MinAvailable = &val
 	}
+	//lint:ignore SA1019 Retain support for the existing letsencrypt_cluster_issuer Terraform attribute.
 	envoyConfig.LetsencryptClusterIssuer = data.LetsencryptClusterIssuer.ValueStringPointer()
 	setCertificateIssuerRefOnProto(envoyConfig, data.CertificateIssuerRef)
 	if !data.AdditionalDNSNames.IsNull() {

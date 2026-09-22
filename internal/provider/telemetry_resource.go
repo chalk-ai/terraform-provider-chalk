@@ -325,6 +325,7 @@ func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceMo
 			}
 		}
 		if chModel.Request != nil {
+			//lint:ignore SA1019 Retain the existing Terraform resource-sizing attributes for clusters without machine types.
 			ch.Request = &serverv1.KubeResourceConfig{
 				Cpu:              chModel.Request.CPU.ValueString(),
 				Memory:           chModel.Request.Memory.ValueString(),
@@ -333,6 +334,7 @@ func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceMo
 			}
 		}
 		if chModel.Limit != nil {
+			//lint:ignore SA1019 Retain the existing Terraform resource-sizing attributes for clusters without machine types.
 			ch.Limit = &serverv1.KubeResourceConfig{
 				Cpu:              chModel.Limit.CPU.ValueString(),
 				Memory:           chModel.Limit.Memory.ValueString(),
@@ -437,9 +439,11 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 		data.ClickhouseDeploymentSpec = types.ObjectValueMust(clickhouseDeploymentSpecAttrTypes, map[string]attr.Value{
 			"version":    types.StringValue(ch.ClickHouseVersion),
 			"gateway_id": gatewayId,
-			"request":    kubeResourceConfigObject(ch.Request),
-			"limit":      kubeResourceConfigObject(ch.Limit),
-			"storage":    storage,
+			//lint:ignore SA1019 Retain the existing Terraform resource-sizing attributes for clusters without machine types.
+			"request": kubeResourceConfigObject(ch.Request),
+			//lint:ignore SA1019 Retain the existing Terraform resource-sizing attributes for clusters without machine types.
+			"limit":   kubeResourceConfigObject(ch.Limit),
+			"storage": storage,
 		})
 	} else {
 		data.ClickhouseDeploymentSpec = types.ObjectNull(clickhouseDeploymentSpecAttrTypes)
