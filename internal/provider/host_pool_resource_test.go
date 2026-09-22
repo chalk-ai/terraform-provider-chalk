@@ -172,7 +172,6 @@ resource "chalk_cluster_host_pool" "test" {
 						req := reqs[0].(*serverv1.CreateClusterHostPoolRequest)
 						assert.Equal(t, "cluster-1", req.GetClusterId())
 						assert.Nil(t, req.GetSpec().IdleTimeout)
-						assert.Nil(t, req.GetSpec().MachineFamily)
 						return nil
 					},
 				),

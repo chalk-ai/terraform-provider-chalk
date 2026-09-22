@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.11",
+  "version": "v1.0.12",
   "resources": {
     "chalk_aws_cloud_credentials": {
       "attributes": {
@@ -258,6 +258,9 @@
         "tls_certificate.secret_namespace": {
           "type": "string",
           "required": true
+        },
+        "traffic_zonal_affinity": {
+          "type": "string"
         }
       },
       "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
