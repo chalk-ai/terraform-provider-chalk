@@ -249,7 +249,6 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 			"traffic_zonal_affinity": schema.StringAttribute{
 				MarkdownDescription: "Controls whether traffic may cross availability zones (`CROSS_ZONE`) or prefers endpoints in the client's availability zone (`LOCAL`).",
 				Optional:            true,
-				Computed:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("CROSS_ZONE", "LOCAL"),
 				},
