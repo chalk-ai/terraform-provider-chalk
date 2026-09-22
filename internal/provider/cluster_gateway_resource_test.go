@@ -25,8 +25,14 @@ func setupMockBuilderServerGateway(t *testing.T) *testserver.MockServer {
 
 	server.OnCreateClusterGateway().WithBehavior(func(req proto.Message) (proto.Message, error) {
 		createReq := req.(*serverv1.CreateClusterGatewayRequest)
-		// Echo the request specs back so computed fields stay consistent.
-		storedSpecs = createReq.Specs
+		// The API hydrates affinity only when creating a new gateway. Clone the
+		// specs so captured requests still reflect what the provider sent.
+		storedSpecs = proto.Clone(createReq.Specs).(*serverv1.EnvoyGatewaySpecs)
+		if envoy := storedSpecs.GetConfig().GetEnvoy(); createReq.GetId() == "" && envoy != nil {
+			if envoy.TrafficZonalAffinity == serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_UNSPECIFIED {
+				envoy.TrafficZonalAffinity = serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_CROSS_ZONE
+			}
+		}
 		storedKube = createReq.GetKubeClusterId()
 		return &serverv1.CreateClusterGatewayResponse{Id: "test-gateway-id", Specs: storedSpecs}, nil
 	})
@@ -154,47 +160,107 @@ resource "chalk_cluster_gateway" "test" {
 	})
 }
 
+func clusterGatewayAffinityConfig(serverURL, affinity string) string {
+	attribute := ""
+	if affinity != "" {
+		attribute = `traffic_zonal_affinity = "` + affinity + `"`
+	}
+	return providerConfig(serverURL) + `
+resource "chalk_cluster_gateway" "test" {
+  kube_cluster_id = "test-kube-cluster"
+  ` + attribute + `
+}
+`
+}
+
 func TestClusterGatewayTrafficZonalAffinity(t *testing.T) {
 	t.Parallel()
 	server := setupMockBuilderServerGateway(t)
 
-	config := func(affinity string) string {
-		return providerConfig(server.URL) + `
-resource "chalk_cluster_gateway" "test" {
-  kube_cluster_id         = "test-kube-cluster"
-  traffic_zonal_affinity = "` + affinity + `"
-}
-`
+	check := func(affinity string, expected serverv1.TrafficZonalAffinity, requests int) resource.TestCheckFunc {
+		stateCheck := resource.TestCheckNoResourceAttr("chalk_cluster_gateway.test", "traffic_zonal_affinity")
+		if affinity != "" {
+			stateCheck = resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "traffic_zonal_affinity", affinity)
+		}
+		return resource.ComposeAggregateTestCheckFunc(stateCheck, func(s *terraform.State) error {
+			captured := server.GetCapturedRequests("CreateClusterGateway")
+			require.Len(t, captured, requests)
+			req := captured[requests-1].(*serverv1.CreateClusterGatewayRequest)
+			assert.Equal(t, expected, req.Specs.GetConfig().GetEnvoy().GetTrafficZonalAffinity())
+			if requests > 1 {
+				assert.Equal(t, "test-gateway-id", req.GetId())
+			}
+			return nil
+		})
 	}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: config("LOCAL"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "traffic_zonal_affinity", "LOCAL"),
-					func(s *terraform.State) error {
-						captured := server.GetCapturedRequests("CreateClusterGateway")
-						require.Len(t, captured, 1)
-						req := captured[0].(*serverv1.CreateClusterGatewayRequest)
-						assert.Equal(t, serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_LOCAL, req.Specs.GetConfig().GetEnvoy().GetTrafficZonalAffinity())
-						return nil
-					},
-				),
+				// The API returns CROSS_ZONE, but omitted configuration must stay null.
+				Config: clusterGatewayAffinityConfig(server.URL, ""),
+				Check:  check("", serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_UNSPECIFIED, 1),
 			},
 			{
-				Config: config("CROSS_ZONE"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "traffic_zonal_affinity", "CROSS_ZONE"),
-					func(s *terraform.State) error {
-						captured := server.GetCapturedRequests("CreateClusterGateway")
-						require.Len(t, captured, 2)
-						req := captured[1].(*serverv1.CreateClusterGatewayRequest)
-						assert.Equal(t, serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_CROSS_ZONE, req.Specs.GetConfig().GetEnvoy().GetTrafficZonalAffinity())
-						return nil
-					},
-				),
+				Config:   clusterGatewayAffinityConfig(server.URL, ""),
+				PlanOnly: true,
+			},
+			{
+				ResourceName:      "chalk_cluster_gateway.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: clusterGatewayAffinityConfig(server.URL, "LOCAL"),
+				Check:  check("LOCAL", serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_LOCAL, 2),
+			},
+			{
+				Config: clusterGatewayAffinityConfig(server.URL, "CROSS_ZONE"),
+				Check:  check("CROSS_ZONE", serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_CROSS_ZONE, 3),
+			},
+			{
+				// Removing the setting must send UNSPECIFIED and clear Terraform state.
+				Config: clusterGatewayAffinityConfig(server.URL, ""),
+				Check:  check("", serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_UNSPECIFIED, 4),
+			},
+			{
+				Config:   clusterGatewayAffinityConfig(server.URL, ""),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestClusterGatewayTrafficZonalAffinityDrift(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerGateway(t)
+	config := clusterGatewayAffinityConfig(server.URL, "LOCAL")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "traffic_zonal_affinity", "LOCAL"),
+			},
+			{
+				PreConfig: func() {
+					captured := server.GetCapturedRequests("CreateClusterGateway")
+					require.Len(t, captured, 1)
+					specs := proto.Clone(captured[0].(*serverv1.CreateClusterGatewayRequest).Specs).(*serverv1.EnvoyGatewaySpecs)
+					specs.GetConfig().GetEnvoy().TrafficZonalAffinity = serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_CROSS_ZONE
+					server.OnGetClusterGateway().WithBehavior(func(req proto.Message) (proto.Message, error) {
+						return &serverv1.GetClusterGatewayResponse{
+							Id:            "test-gateway-id",
+							Specs:         specs,
+							KubeClusterId: new("test-kube-cluster"),
+						}, nil
+					})
+				},
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})

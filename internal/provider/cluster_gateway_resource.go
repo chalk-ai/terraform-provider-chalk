@@ -438,13 +438,17 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 			data.AllowCollocationWithChalkWorkloads = types.BoolNull()
 		}
 
-		switch envoyConfig.TrafficZonalAffinity {
-		case serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_CROSS_ZONE:
-			data.TrafficZonalAffinity = types.StringValue("CROSS_ZONE")
-		case serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_LOCAL:
-			data.TrafficZonalAffinity = types.StringValue("LOCAL")
-		default:
-			data.TrafficZonalAffinity = types.StringNull()
+		// The API defaults omitted affinity to CROSS_ZONE on creation. Keep null
+		// configuration/state null; explicitly configured values still detect drift.
+		if !data.TrafficZonalAffinity.IsNull() {
+			switch envoyConfig.TrafficZonalAffinity {
+			case serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_CROSS_ZONE:
+				data.TrafficZonalAffinity = types.StringValue("CROSS_ZONE")
+			case serverv1.TrafficZonalAffinity_TRAFFIC_ZONAL_AFFINITY_LOCAL:
+				data.TrafficZonalAffinity = types.StringValue("LOCAL")
+			default:
+				data.TrafficZonalAffinity = types.StringNull()
+			}
 		}
 	}
 
