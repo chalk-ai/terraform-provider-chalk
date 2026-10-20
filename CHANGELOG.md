@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+* Update managed AWS and GCP VPC configurations in place using field masks, including GCP subnet secondary IP ranges. Wait for asynchronous updates to finish and preserve the applied configuration when an update fails.
+* Update `chalk-go` and its generated protobuf module to `v1.3.29`. VPC updates require a Chalk API server supporting `UpdateCloudComponentVpc`.
+
 ## 1.1.0
 
 * Add optional `machine_size` (`micro`, `small`, `medium`, or `large`) to `chalk_cluster_gateway`, including inferred Envoy resource requests and generation-constrained AWS/GCP placement. Conflicts with `nodepool`; omitted values retain default placement.
