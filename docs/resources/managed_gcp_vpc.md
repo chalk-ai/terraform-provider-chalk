@@ -3,13 +3,13 @@
 page_title: "chalk_managed_gcp_vpc Resource - chalk"
 subcategory: ""
 description: |-
-  Chalk managed GCP VPC resource. Creates a fully managed VPC using the provided cloud credentials.
+  Chalk managed GCP VPC resource. Creates a fully managed VPC using the provided cloud credentials. Subnet and secondary IP range changes update the existing managed VPC through the VPC update API. The provider waits for deployment to finish and retains the last applied configuration if an update fails. Requires an API server supporting UpdateCloudComponentVpc.
   Required permissions: team.admin (team-scoped), project.create (team-scoped)
 ---
 
 # chalk_managed_gcp_vpc (Resource)
 
-Chalk managed GCP VPC resource. Creates a fully managed VPC using the provided cloud credentials.
+Chalk managed GCP VPC resource. Creates a fully managed VPC using the provided cloud credentials. Subnet and secondary IP range changes update the existing managed VPC through the VPC update API. The provider waits for deployment to finish and retains the last applied configuration if an update fails. Requires an API server supporting `UpdateCloudComponentVpc`.
 
 **Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*
 

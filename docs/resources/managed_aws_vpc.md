@@ -3,13 +3,13 @@
 page_title: "chalk_managed_aws_vpc Resource - chalk"
 subcategory: ""
 description: |-
-  Chalk managed AWS VPC resource. Creates a fully managed VPC using the provided cloud credentials.
+  Chalk managed AWS VPC resource. Creates a fully managed VPC using the provided cloud credentials. Additional CIDR blocks, subnets, and route changes update the existing managed VPC through the VPC update API. The provider waits for deployment to finish and retains the last applied configuration if an update fails. Requires an API server supporting UpdateCloudComponentVpc.
   Required permissions: team.admin (team-scoped), project.create (team-scoped)
 ---
 
 # chalk_managed_aws_vpc (Resource)
 
-Chalk managed AWS VPC resource. Creates a fully managed VPC using the provided cloud credentials.
+Chalk managed AWS VPC resource. Creates a fully managed VPC using the provided cloud credentials. Additional CIDR blocks, subnets, and route changes update the existing managed VPC through the VPC update API. The provider waits for deployment to finish and retains the last applied configuration if an update fails. Requires an API server supporting `UpdateCloudComponentVpc`.
 
 **Required permissions:** `team.admin` *(team-scoped)*, `project.create` *(team-scoped)*
 

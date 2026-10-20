@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"connectrpc.com/connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
@@ -12,11 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 var _ resource.Resource = &ManagedGCPVPCResource{}
@@ -78,9 +80,6 @@ func (r *ManagedGCPVPCResource) Schema(ctx context.Context, req resource.SchemaR
 	secondaryIpRanges := schema.ListNestedAttribute{
 		MarkdownDescription: "Secondary IP ranges (alias ranges) for the subnet, e.g. for GKE pods/services.",
 		Optional:            true,
-		PlanModifiers: []planmodifier.List{
-			listplanmodifier.RequiresReplace(),
-		},
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"range_name": schema.StringAttribute{
@@ -121,7 +120,7 @@ func (r *ManagedGCPVPCResource) Schema(ctx context.Context, req resource.SchemaR
 	}
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Chalk managed GCP VPC resource. Creates a fully managed VPC using the provided cloud credentials.",
+		MarkdownDescription: "Chalk managed GCP VPC resource. Creates a fully managed VPC using the provided cloud credentials. Subnet and secondary IP range changes update the existing managed VPC through the VPC update API. The provider waits for deployment to finish and retains the last applied configuration if an update fails. Requires an API server supporting `UpdateCloudComponentVpc`.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -155,18 +154,12 @@ func (r *ManagedGCPVPCResource) Schema(ctx context.Context, req resource.SchemaR
 			"subnets": schema.ListNestedAttribute{
 				MarkdownDescription: "Primary subnets provisioned in the VPC.",
 				Required:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
-				},
-				NestedObject: subnetObject("Subnet role for `REGIONAL_MANAGED_PROXY` subnets: `ACTIVE` or `BACKUP`. Leave unset for `PRIVATE` subnets."),
+				NestedObject:        subnetObject("Subnet role for `REGIONAL_MANAGED_PROXY` subnets: `ACTIVE` or `BACKUP`. Leave unset for `PRIVATE` subnets."),
 			},
 			"backup_subnets": schema.ListNestedAttribute{
 				MarkdownDescription: "Backup subnets, created after the primary subnets. A `REGIONAL_MANAGED_PROXY` subnet's BACKUP peer must be created after its ACTIVE peer.",
 				Optional:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
-				},
-				NestedObject: subnetObject("Subnet role. Defaults to `BACKUP` when unset."),
+				NestedObject:        subnetObject("Subnet role. Defaults to `BACKUP` when unset."),
 			},
 		},
 	}
@@ -280,31 +273,46 @@ func (r *ManagedGCPVPCResource) Read(ctx context.Context, req resource.ReadReque
 }
 
 func (r *ManagedGCPVPCResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddWarning(
-		"VPC update not supported",
-		"Updating a managed VPC is not supported by the underlying API. The provider will refresh the state from the server, which may overwrite your changes.",
-	)
-
-	var data ManagedGCPVPCResourceModel
+	var data, state ManagedGCPVPCResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	cc := r.client.NewCloudComponentsClient(ctx)
-	vpc, err := cc.GetCloudComponentVpc(ctx, connect.NewRequest(&serverv1.GetCloudComponentVpcRequest{
-		Id: data.Id.ValueString(),
-	}))
-	if err != nil {
-		resp.Diagnostics.AddError("Error Reading Managed VPC", fmt.Sprintf("Could not read managed GCP VPC %s: %v", data.Id.ValueString(), err))
-		return
-	}
-	diags := r.updateModelFromProto(ctx, &data, vpc.Msg.Vpc)
+	config, diags := r.buildGcpVpcConfig(ctx, data)
+	resp.Diagnostics.Append(diags...)
+	previous, diags := r.buildGcpVpcConfig(ctx, state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Trace(ctx, "updated chalk_managed_gcp_vpc resource")
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	paths := buildGCPVPCUpdateMask(config, previous)
+	if len(paths) == 0 {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+		return
+	}
+	cc := r.client.NewCloudComponentsClient(ctx)
+	_, err := cc.UpdateCloudComponentVpc(ctx, connect.NewRequest(&serverv1.UpdateCloudComponentVpcRequest{
+		Id: state.Id.ValueString(),
+		Vpc: &serverv1.CloudComponentVpcRequest{Spec: &serverv1.CloudComponentVpc{
+			Config: &serverv1.CloudVpcConfig{Config: &serverv1.CloudVpcConfig_Gcp{Gcp: config}},
+		}},
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: paths},
+	}))
+	if err != nil {
+		resp.Diagnostics.AddError("Error Updating Managed VPC", fmt.Sprintf("Could not update managed GCP VPC %s: %v", state.Id.ValueString(), err))
+		return
+	}
+	// The update response contains the last applied spec while deployment is in progress.
+	// Only a fresh terminal read can confirm which configuration is applied.
+	vpc, waitErr := waitForCloudVpcActive(ctx, cc, state.Id.ValueString())
+	if vpc != nil {
+		resp.Diagnostics.Append(r.updateModelFromProto(ctx, &state, vpc)...)
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if waitErr != nil {
+		resp.Diagnostics.AddError("Error Waiting for Managed VPC Update", fmt.Sprintf("Managed GCP VPC %s update did not become active: %v", state.Id.ValueString(), waitErr))
+	}
 }
 
 func (r *ManagedGCPVPCResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -497,4 +505,17 @@ func gcpSubnetsToList(ctx context.Context, protoSubnets []*serverv1.GCPSubnetCon
 	}
 
 	return types.ListValueFrom(ctx, subnetObjectType, models)
+}
+
+// Compare normalized configs so computed subnet roles do not select unchanged lists.
+func buildGCPVPCUpdateMask(plan, state *serverv1.GCPVpcConfig) []string {
+	var paths []string
+	equal := func(a, b *serverv1.GCPSubnetConfig) bool { return proto.Equal(a, b) }
+	if !slices.EqualFunc(plan.Subnets, state.Subnets, equal) {
+		paths = append(paths, "spec.config.gcp.subnets")
+	}
+	if !slices.EqualFunc(plan.BackupSubnets, state.BackupSubnets, equal) {
+		paths = append(paths, "spec.config.gcp.backup_subnets")
+	}
+	return paths
 }
