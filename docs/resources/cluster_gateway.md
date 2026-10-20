@@ -4,14 +4,14 @@ page_title: "chalk_cluster_gateway Resource - chalk"
 subcategory: ""
 description: |-
   Chalk cluster gateway resource
-  Required permissions: team.admin, deploy.read
+  Required permissions: team.admin (team-scoped), deploy.read
 ---
 
 # chalk_cluster_gateway (Resource)
 
 Chalk cluster gateway resource
 
-**Required permissions:** `team.admin`, `deploy.read`
+**Required permissions:** `team.admin` *(team-scoped)*, `deploy.read`
 
 
 
@@ -34,6 +34,7 @@ Chalk cluster gateway resource
 - `letsencrypt_cluster_issuer` (String) Let's Encrypt cluster issuer for Envoy gateway
 - `listeners` (Attributes List) Gateway listeners configuration (see [below for nested schema](#nestedatt--listeners))
 - `load_balancer_class` (String) Load balancer class for the gateway service (e.g., 'service.k8s.aws/nlb')
+- `machine_size` (String) Fixed gateway node size on AWS or GCP: `micro` (2 vCPUs, 4 GiB), `small` (4 vCPUs, 16 GiB), `medium` (8 vCPUs, 32 GiB), or `large` (16 vCPUs, 64 GiB). Uses generation 7/8 AWS machines or generation 3/4 GCP machines, independently of Chalk machine-type overrides. CPU and memory requests are inferred by the API. Conflicts with `nodepool`; omit to retain default placement.
 - `min_available` (Number) Minimum available replicas for Envoy gateway
 - `namespace` (String) Kubernetes namespace for the gateway
 - `nodepool` (String) Nodepool for the gateway

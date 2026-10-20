@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.12",
+  "version": "v1.1.0",
   "resources": {
     "chalk_aws_cloud_credentials": {
       "attributes": {
@@ -227,6 +227,9 @@
         "load_balancer_class": {
           "type": "string"
         },
+        "machine_size": {
+          "type": "string"
+        },
         "min_available": {
           "type": "number"
         },
@@ -263,7 +266,7 @@
           "type": "string"
         }
       },
-      "permissions": "**Required permissions:** `team.admin`, `deploy.read`"
+      "permissions": "**Required permissions:** `team.admin` *(team-scoped)*, `deploy.read`"
     },
     "chalk_cluster_gateway_binding": {
       "attributes": {
@@ -1186,7 +1189,7 @@
           "required": true
         }
       },
-      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*, `deploy.read` *(team-scoped)*"
     },
     "chalk_managed_aws_vpc": {
       "attributes": {
@@ -1345,7 +1348,7 @@
           "required": true
         }
       },
-      "permissions": "**Required permissions:** `project.create` *(team-scoped)*"
+      "permissions": "**Required permissions:** `project.create` *(team-scoped)*, `deploy.read` *(team-scoped)*"
     },
     "chalk_managed_container_registry": {
       "attributes": {
