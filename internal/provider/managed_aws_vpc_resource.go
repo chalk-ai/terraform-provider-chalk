@@ -14,11 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 // vpcPollInterval is how often we poll the server while waiting for a managed
@@ -76,7 +76,7 @@ func (r *ManagedAWSVPCResource) Metadata(ctx context.Context, req resource.Metad
 
 func (r *ManagedAWSVPCResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Chalk managed AWS VPC resource. Creates a fully managed VPC using the provided cloud credentials.",
+		MarkdownDescription: "Chalk managed AWS VPC resource. Creates a fully managed VPC using the provided cloud credentials. Additional CIDR blocks, subnets, and route changes update the existing managed VPC through the VPC update API. The provider waits for deployment to finish and retains the last applied configuration if an update fails. Requires an API server supporting `UpdateCloudComponentVpc`.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -111,16 +111,10 @@ func (r *ManagedAWSVPCResource) Schema(ctx context.Context, req resource.SchemaR
 				MarkdownDescription: "A list of additional IPv4 CIDR blocks for the VPC.",
 				ElementType:         types.StringType,
 				Optional:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
-				},
 			},
 			"subnets": schema.ListNestedAttribute{
 				MarkdownDescription: "A list of subnets for the VPC.",
 				Required:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
-				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
@@ -288,31 +282,44 @@ func (r *ManagedAWSVPCResource) Read(ctx context.Context, req resource.ReadReque
 }
 
 func (r *ManagedAWSVPCResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddWarning(
-		"VPC update not supported",
-		"Updating a managed VPC is not supported by the underlying API. The provider will refresh the state from the server, which may overwrite your changes.",
-	)
-
-	var data ManagedAWSVPCResourceModel
+	var data, state ManagedAWSVPCResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	cc := r.client.NewCloudComponentsClient(ctx)
-	vpc, err := cc.GetCloudComponentVpc(ctx, connect.NewRequest(&serverv1.GetCloudComponentVpcRequest{
-		Id: data.Id.ValueString(),
-	}))
-	if err != nil {
-		resp.Diagnostics.AddError("Error Reading Managed VPC", fmt.Sprintf("Could not read managed VPC %s: %v", data.Id.ValueString(), err))
+	paths := buildAWSVPCUpdateMask(data, state)
+	if len(paths) == 0 {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 		return
 	}
-	diags := r.updateModelFromProto(ctx, &data, vpc.Msg.Vpc)
+	config, diags := r.buildAwsVpcConfig(ctx, data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Trace(ctx, "updated chalk_managed_aws_vpc resource")
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	cc := r.client.NewCloudComponentsClient(ctx)
+	_, err := cc.UpdateCloudComponentVpc(ctx, connect.NewRequest(&serverv1.UpdateCloudComponentVpcRequest{
+		Id: state.Id.ValueString(),
+		Vpc: &serverv1.CloudComponentVpcRequest{Spec: &serverv1.CloudComponentVpc{
+			Config: &serverv1.CloudVpcConfig{Config: &serverv1.CloudVpcConfig_Aws{Aws: config}},
+		}},
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: paths},
+	}))
+	if err != nil {
+		resp.Diagnostics.AddError("Error Updating Managed VPC", fmt.Sprintf("Could not update managed AWS VPC %s: %v", state.Id.ValueString(), err))
+		return
+	}
+	// The update response contains the last applied spec while deployment is in progress.
+	// Only a fresh terminal read can confirm which configuration is applied.
+	vpc, waitErr := waitForCloudVpcActive(ctx, cc, state.Id.ValueString())
+	if vpc != nil {
+		resp.Diagnostics.Append(r.updateModelFromProto(ctx, &state, vpc)...)
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if waitErr != nil {
+		resp.Diagnostics.AddError("Error Waiting for Managed VPC Update", fmt.Sprintf("Managed AWS VPC %s update did not become active: %v", state.Id.ValueString(), waitErr))
+	}
 }
 
 func (r *ManagedAWSVPCResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -612,4 +619,21 @@ func (r *ManagedAWSVPCResource) updateModelFromProto(ctx context.Context, model 
 	}
 
 	return diags
+}
+
+func buildAWSVPCUpdateMask(plan, state ManagedAWSVPCResourceModel) []string {
+	var paths []string
+	if !plan.AdditionalCidrBlocks.IsUnknown() && !plan.AdditionalCidrBlocks.Equal(state.AdditionalCidrBlocks) {
+		paths = append(paths, "spec.config.aws.additional_cidr_blocks")
+	}
+	if !plan.Subnets.IsUnknown() && !plan.Subnets.Equal(state.Subnets) {
+		paths = append(paths, "spec.config.aws.subnets")
+	}
+	if !plan.AdditionalPublicRoutes.IsUnknown() && !plan.AdditionalPublicRoutes.Equal(state.AdditionalPublicRoutes) {
+		paths = append(paths, "spec.config.aws.additional_public_routes")
+	}
+	if !plan.AdditionalPrivateRoutes.IsUnknown() && !plan.AdditionalPrivateRoutes.Equal(state.AdditionalPrivateRoutes) {
+		paths = append(paths, "spec.config.aws.additional_private_routes")
+	}
+	return paths
 }
