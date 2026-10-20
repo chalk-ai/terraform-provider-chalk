@@ -2,6 +2,7 @@ package provider
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -315,4 +316,74 @@ resource "chalk_cluster_gateway" "test" {
 			},
 		},
 	})
+}
+
+func clusterGatewayMachineSizeConfig(serverURL, size string) string {
+	attribute := ""
+	if size != "" {
+		attribute = `machine_size = "` + size + `"`
+	}
+	return providerConfig(serverURL) + `
+resource "chalk_cluster_gateway" "test" {
+ kube_cluster_id = "test-kube-cluster"
+ ` + attribute + `
+}
+`
+}
+
+func TestClusterGatewayMachineSize(t *testing.T) {
+	t.Parallel()
+	server := setupMockBuilderServerGateway(t)
+	check := func(size string, requests int) resource.TestCheckFunc {
+		stateCheck := resource.TestCheckNoResourceAttr("chalk_cluster_gateway.test", "machine_size")
+		if size != "" {
+			stateCheck = resource.TestCheckResourceAttr("chalk_cluster_gateway.test", "machine_size", size)
+		}
+		return resource.ComposeAggregateTestCheckFunc(stateCheck, func(s *terraform.State) error {
+			captured := server.GetCapturedRequests("CreateClusterGateway")
+			require.Len(t, captured, requests)
+			req := captured[requests-1].(*serverv1.CreateClusterGatewayRequest)
+			actual := req.Specs.GetConfig().GetEnvoy().MachineSize
+			if size == "" {
+				assert.Nil(t, actual)
+			} else {
+				require.NotNil(t, actual)
+				assert.Equal(t, "ENVOY_GATEWAY_MACHINE_SIZE_"+strings.ToUpper(size), actual.String())
+			}
+			if requests > 1 {
+				assert.Equal(t, "test-gateway-id", req.GetId())
+			}
+			return nil
+		})
+	}
+	steps := []resource.TestStep{{Config: clusterGatewayMachineSizeConfig(server.URL, ""), Check: check("", 1)}}
+	for i, size := range []string{"micro", "small", "medium", "large"} {
+		steps = append(steps,
+			resource.TestStep{Config: clusterGatewayMachineSizeConfig(server.URL, size), Check: check(size, i+2)},
+			resource.TestStep{Config: clusterGatewayMachineSizeConfig(server.URL, size), PlanOnly: true},
+			resource.TestStep{ResourceName: "chalk_cluster_gateway.test", ImportState: true, ImportStateVerify: true},
+		)
+	}
+	steps = append(steps,
+		resource.TestStep{Config: clusterGatewayMachineSizeConfig(server.URL, ""), Check: check("", 6)},
+		resource.TestStep{Config: clusterGatewayMachineSizeConfig(server.URL, ""), PlanOnly: true},
+	)
+	resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testProtoV6ProviderFactories(), Steps: steps})
+}
+
+func TestClusterGatewayMachineSizeValidation(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ name, attributes, message string }{
+		{"invalid", `machine_size = "INVALID"`, "Attribute machine_size value must be one of"},
+		{"nodepool_conflict", "machine_size = \"small\"\nnodepool = \"custom-pool\"", "cannot be configured together"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			server := setupMockBuilderServerGateway(t)
+			resource.Test(t, resource.TestCase{ProtoV6ProviderFactories: testProtoV6ProviderFactories(), Steps: []resource.TestStep{{
+				Config:      providerConfig(server.URL) + "\nresource \"chalk_cluster_gateway\" \"test\" {\n kube_cluster_id = \"test-kube-cluster\"\n" + tc.attributes + "\n}\n",
+				ExpectError: regexp.MustCompile(tc.message),
+			}}})
+		})
+	}
 }

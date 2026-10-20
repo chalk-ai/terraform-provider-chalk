@@ -9,6 +9,18 @@ description: |-
 
 For migration guidance and non-schema changes, see the [project changelog](https://github.com/chalk-ai/terraform-provider-chalk/blob/main/CHANGELOG.md).
 
+## v1.1.0
+
+### Resources
+
+- Added attribute `chalk_cluster_gateway.machine_size` (`string`).
+
+### Required permissions
+
+- `chalk_cluster_gateway` permissions changed from `team.admin`, `deploy.read` to `team.admin` *(team-scoped)*, `deploy.read`.
+- `chalk_kubernetes_cluster` permissions changed from `project.create` *(team-scoped)* to `project.create` *(team-scoped)*, `deploy.read` *(team-scoped)*.
+- `chalk_managed_cluster` permissions changed from `project.create` *(team-scoped)* to `project.create` *(team-scoped)*, `deploy.read` *(team-scoped)*.
+
 ## v1.0.12
 
 ### Resources

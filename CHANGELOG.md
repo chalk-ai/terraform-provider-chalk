@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0
+
+* Add optional `machine_size` (`micro`, `small`, `medium`, or `large`) to `chalk_cluster_gateway`, including inferred Envoy resource requests and generation-constrained AWS/GCP placement. Conflicts with `nodepool`; omitted values retain default placement.
+* Update `chalk-go` and its generated protobuf module to `v1.3.28`.
+
 ## 1.0.4
 
 NOTES:

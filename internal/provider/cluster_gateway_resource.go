@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/chalk-ai/terraform-provider-chalk/client"
 
@@ -70,6 +71,7 @@ type ClusterGatewayResourceModel struct {
 	LetsencryptClusterIssuer           types.String               `tfsdk:"letsencrypt_cluster_issuer"`
 	CertificateIssuerRef               *CertificateIssuerRefModel `tfsdk:"certificate_issuer_ref"`
 	AdditionalDNSNames                 types.List                 `tfsdk:"additional_dns_names"`
+	MachineSize                        types.String               `tfsdk:"machine_size"`
 	Nodepool                           types.String               `tfsdk:"nodepool"`
 	AllowCollocationWithChalkWorkloads types.Bool                 `tfsdk:"allow_collocation_with_chalk_workloads"`
 	TrafficZonalAffinity               types.String               `tfsdk:"traffic_zonal_affinity"`
@@ -92,7 +94,16 @@ func (r *ClusterGatewayResource) ConfigValidators(_ context.Context) []resource.
 			path.MatchRoot("letsencrypt_cluster_issuer"),
 			path.MatchRoot("certificate_issuer_ref"),
 		),
+		resourcevalidator.Conflicting(path.MatchRoot("machine_size"), path.MatchRoot("nodepool")),
 	}
+}
+
+func gatewayMachineSizeToProto(size types.String) *serverv1.EnvoyGatewayMachineSize {
+	if size.IsNull() || size.IsUnknown() {
+		return nil
+	}
+	value := serverv1.EnvoyGatewayMachineSize_value["ENVOY_GATEWAY_MACHINE_SIZE_"+strings.ToUpper(size.ValueString())]
+	return new(serverv1.EnvoyGatewayMachineSize(value))
 }
 
 func (r *ClusterGatewayResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -237,6 +248,11 @@ func (r *ClusterGatewayResource) Schema(ctx context.Context, req resource.Schema
 				MarkdownDescription: "Additional DNS names for Envoy gateway",
 				Optional:            true,
 				ElementType:         types.StringType,
+			},
+			"machine_size": schema.StringAttribute{
+				MarkdownDescription: "Fixed gateway node size on AWS or GCP: `micro` (2 vCPUs, 4 GiB), `small` (4 vCPUs, 16 GiB), `medium` (8 vCPUs, 32 GiB), or `large` (16 vCPUs, 64 GiB). Uses generation 7/8 AWS machines or generation 3/4 GCP machines, independently of Chalk machine-type overrides. CPU and memory requests are inferred by the API. Conflicts with `nodepool`; omit to retain default placement.",
+				Optional:            true,
+				Validators:          []validator.String{stringvalidator.OneOf("micro", "small", "medium", "large")},
 			},
 			"nodepool": schema.StringAttribute{
 				MarkdownDescription: "Nodepool for the gateway",
@@ -427,6 +443,15 @@ func (r *ClusterGatewayResource) updateModelFromSpecs(ctx context.Context, data 
 			data.AdditionalDNSNames = types.ListNull(types.StringType)
 		}
 
+		switch envoyConfig.GetMachineSize() {
+		case serverv1.EnvoyGatewayMachineSize_ENVOY_GATEWAY_MACHINE_SIZE_MICRO,
+			serverv1.EnvoyGatewayMachineSize_ENVOY_GATEWAY_MACHINE_SIZE_SMALL,
+			serverv1.EnvoyGatewayMachineSize_ENVOY_GATEWAY_MACHINE_SIZE_MEDIUM,
+			serverv1.EnvoyGatewayMachineSize_ENVOY_GATEWAY_MACHINE_SIZE_LARGE:
+			data.MachineSize = types.StringValue(strings.ToLower(strings.TrimPrefix(envoyConfig.GetMachineSize().String(), "ENVOY_GATEWAY_MACHINE_SIZE_")))
+		default:
+			data.MachineSize = types.StringNull()
+		}
 		if envoyConfig.Nodepool != "" {
 			data.Nodepool = types.StringValue(envoyConfig.Nodepool)
 		} else {
@@ -548,6 +573,7 @@ func (r *ClusterGatewayResource) Create(ctx context.Context, req resource.Create
 		}
 		envoyConfig.AdditionalDnsNames = dnsNames
 	}
+	envoyConfig.MachineSize = gatewayMachineSizeToProto(data.MachineSize)
 	if !data.Nodepool.IsNull() {
 		envoyConfig.Nodepool = data.Nodepool.ValueString()
 	}
@@ -746,6 +772,7 @@ func (r *ClusterGatewayResource) Update(ctx context.Context, req resource.Update
 		}
 		envoyConfig.AdditionalDnsNames = dnsNames
 	}
+	envoyConfig.MachineSize = gatewayMachineSizeToProto(data.MachineSize)
 	if !data.Nodepool.IsNull() {
 		envoyConfig.Nodepool = data.Nodepool.ValueString()
 	}

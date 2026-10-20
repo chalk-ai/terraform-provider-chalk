@@ -1,0 +1,33 @@
+{
+  "version": "v1.1.0",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_cluster_gateway",
+      "kind": "permissions",
+      "before": "**Required permissions:** `team.admin`, `deploy.read`",
+      "after": "**Required permissions:** `team.admin` *(team-scoped)*, `deploy.read`"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_cluster_gateway",
+      "attribute": "machine_size",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_kubernetes_cluster",
+      "kind": "permissions",
+      "before": "**Required permissions:** `project.create` *(team-scoped)*",
+      "after": "**Required permissions:** `project.create` *(team-scoped)*, `deploy.read` *(team-scoped)*"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_managed_cluster",
+      "kind": "permissions",
+      "before": "**Required permissions:** `project.create` *(team-scoped)*",
+      "after": "**Required permissions:** `project.create` *(team-scoped)*, `deploy.read` *(team-scoped)*"
+    }
+  ]
+}
