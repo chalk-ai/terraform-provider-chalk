@@ -31,6 +31,7 @@ Chalk telemetry resource
 - `namespace` (String) Kubernetes namespace for the telemetry deployment
 - `otel_collector_spec` (Attributes) Otel collector specification (see [below for nested schema](#nestedatt--otel_collector_spec))
 - `runtime` (String) Telemetry runtime. One of `vector` or `otel`. This generally should not be set unless Chalk requests it. If setting, use `vector`; `otel` is deprecated.
+- `victoria_metrics` (Attributes) VictoriaMetrics sizing. Only explicitly configured fields are managed. Omitting a field or removing this object leaves the server's existing settings unchanged. At least one field must be set. (see [below for nested schema](#nestedatt--victoria_metrics))
 
 <a id="nestedatt--aggregator_spec"></a>
 ### Nested Schema for `aggregator_spec`
@@ -194,3 +195,15 @@ Optional:
 - `ephemeral_storage` (String) Ephemeral storage resource specification
 - `memory` (String) Memory resource specification
 - `storage` (String) Storage resource specification
+
+
+
+<a id="nestedatt--victoria_metrics"></a>
+### Nested Schema for `victoria_metrics`
+
+Optional:
+
+- `auth_replicas` (Number) Number of vmauth replicas.
+- `insert_replicas` (Number) Number of vminsert replicas.
+- `storage_replicas` (Number) Number of vmstorage replicas. Increasing this shards new data across the replicas without rebalancing historical data. Decreasing the count is not supported.
+- `storage_size` (String) Persistent volume size per vmstorage replica, for example `1Ti`. Existing volumes can only grow.

@@ -99,6 +99,7 @@ type TelemetryResourceModel struct {
 	ClickhouseDeploymentSpec types.Object                   `tfsdk:"clickhouse_deployment_spec"`
 	AggregatorSpec           types.Object                   `tfsdk:"aggregator_spec"`
 	Exporters                *customerVectorAggregatorModel `tfsdk:"exporters"`
+	VictoriaMetrics          types.Object                   `tfsdk:"victoria_metrics"`
 }
 
 func (r *TelemetryResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -261,7 +262,8 @@ func (r *TelemetryResource) Schema(ctx context.Context, req resource.SchemaReque
 					objectplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"exporters": customerVectorAggregatorSchema(),
+			"exporters":        customerVectorAggregatorSchema(),
+			"victoria_metrics": victoriaMetricsSchema(),
 		},
 	}
 }
@@ -290,6 +292,7 @@ func buildTelemetryDeploymentSpec(ctx context.Context, data *TelemetryResourceMo
 	spec := &serverv1.TelemetryDeploymentSpec{
 		Namespace:                data.Namespace.ValueStringPointer(),
 		CustomerVectorAggregator: data.Exporters.toProto(),
+		VictoriaMetrics:          victoriaMetricsToProto(ctx, data.VictoriaMetrics, diags),
 	}
 	if !data.Runtime.IsNull() && !data.Runtime.IsUnknown() {
 		switch data.Runtime.ValueString() {
@@ -403,6 +406,7 @@ func updateStateFromTelemetrySpec(data *TelemetryResourceModel, spec *serverv1.T
 	}
 
 	data.Namespace = types.StringPointerValue(spec.Namespace)
+	data.VictoriaMetrics = victoriaMetricsFromProto(spec.VictoriaMetrics, data.VictoriaMetrics)
 	data.Exporters = customerVectorAggregatorFromProto(spec.CustomerVectorAggregator, data.Exporters)
 	// runtime is configuration-owned. The server hydrates an omitted runtime
 	// to its effective default on reads, so keep null state null to avoid claiming that
@@ -500,6 +504,7 @@ func buildTelemetryUpdateMask(data, state *TelemetryResourceModel) []string {
 		paths = append(paths, "aggregator")
 	}
 	paths = append(paths, customerVectorAggregatorMaskPaths(data.Exporters, state.Exporters)...)
+	paths = append(paths, victoriaMetricsMaskPaths(data.VictoriaMetrics, state.VictoriaMetrics)...)
 	return paths
 }
 
@@ -631,6 +636,18 @@ func (r *TelemetryResource) Update(ctx context.Context, req resource.UpdateReque
 		if updateResp.Msg.Deployment != nil {
 			updateStateFromTelemetrySpec(&data, updateResp.Msg.Deployment.Spec)
 		}
+	}
+
+	// An ownership-only change (for example, removing victoria_metrics) needs no
+	// API call. Preserve prior computed values rather than returning unknowns.
+	if data.OtelCollectorSpec.IsUnknown() {
+		data.OtelCollectorSpec = state.OtelCollectorSpec
+	}
+	if data.ClickhouseDeploymentSpec.IsUnknown() {
+		data.ClickhouseDeploymentSpec = state.ClickhouseDeploymentSpec
+	}
+	if data.AggregatorSpec.IsUnknown() {
+		data.AggregatorSpec = state.AggregatorSpec
 	}
 
 	tflog.Trace(ctx, "updated a chalk_cluster_telemetry resource")
