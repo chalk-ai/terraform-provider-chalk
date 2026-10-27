@@ -1,5 +1,5 @@
 {
-  "version": "v1.1.1",
+  "version": "v1.2.0",
   "resources": {
     "chalk_aws_cloud_credentials": {
       "attributes": {
@@ -2010,6 +2010,21 @@
           "required": true
         },
         "runtime": {
+          "type": "string"
+        },
+        "victoria_metrics": {
+          "type": "object"
+        },
+        "victoria_metrics.auth_replicas": {
+          "type": "number"
+        },
+        "victoria_metrics.insert_replicas": {
+          "type": "number"
+        },
+        "victoria_metrics.storage_replicas": {
+          "type": "number"
+        },
+        "victoria_metrics.storage_size": {
           "type": "string"
         }
       },
