@@ -9,6 +9,16 @@ description: |-
 
 For migration guidance and non-schema changes, see the [project changelog](https://github.com/chalk-ai/terraform-provider-chalk/blob/main/CHANGELOG.md).
 
+## Unreleased
+
+### Resources
+
+- Added attribute `chalk_telemetry.victoria_metrics` (`object`).
+- Added attribute `chalk_telemetry.victoria_metrics.auth_replicas` (`number`).
+- Added attribute `chalk_telemetry.victoria_metrics.insert_replicas` (`number`).
+- Added attribute `chalk_telemetry.victoria_metrics.storage_replicas` (`number`).
+- Added attribute `chalk_telemetry.victoria_metrics.storage_size` (`string`).
+
 ## v1.1.1
 
 No schema or permission changes.
