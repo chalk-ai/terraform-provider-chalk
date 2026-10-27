@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0
+
+* Add optional `victoria_metrics` sizing to `chalk_telemetry`: `storage_size`, `storage_replicas`, `insert_replicas`, and `auth_replicas`. Updates preserve unconfigured VictoriaMetrics settings; removing configuration leaves live sizing unchanged.
+* Preserve computed telemetry state when an update only relinquishes ownership of optional settings.
+
 ## 1.1.1
 
 * Update managed AWS and GCP VPC configurations in place using field masks, including GCP subnet secondary IP ranges. Wait for asynchronous updates to finish and preserve the applied configuration when an update fails.

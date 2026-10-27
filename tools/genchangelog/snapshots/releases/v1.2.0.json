@@ -1,0 +1,40 @@
+{
+  "version": "v1.2.0",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "victoria_metrics",
+      "kind": "attribute_added",
+      "after": "object"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "victoria_metrics.auth_replicas",
+      "kind": "attribute_added",
+      "after": "number"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "victoria_metrics.insert_replicas",
+      "kind": "attribute_added",
+      "after": "number"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "victoria_metrics.storage_replicas",
+      "kind": "attribute_added",
+      "after": "number"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_telemetry",
+      "attribute": "victoria_metrics.storage_size",
+      "kind": "attribute_added",
+      "after": "string"
+    }
+  ]
+}
