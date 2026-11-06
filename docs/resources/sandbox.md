@@ -4,7 +4,7 @@ page_title: "chalk_sandbox Resource - chalk"
 subcategory: ""
 description: |-
   Manages a Chalk sandbox — an ephemeral container running in the environment's cluster, addressable for command execution via chalk sandbox exec.
-  Sandboxes have no update RPC, so every argument forces replacement.
+  Only desired_state can be updated in place; every other argument forces replacement.
   A sandbox has no outbound network access by default: without a network_policy even DNS resolution fails. Grant egress explicitly via network_policy.allowed_routes.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 Manages a Chalk sandbox — an ephemeral container running in the environment's cluster, addressable for command execution via `chalk sandbox exec`.
 
-Sandboxes have no update RPC, so every argument forces replacement.
+Only `desired_state` can be updated in place; every other argument forces replacement.
 
 A sandbox has **no outbound network access by default**: without a `network_policy` even DNS resolution fails. Grant egress explicitly via `network_policy.allowed_routes`.
 
@@ -29,6 +29,10 @@ resource "chalk_sandbox" "workstation" {
   environment_id = "tmnmc9beyujew"
   name           = "debian-workstation"
   image          = "debian:bookworm"
+  # Set desired_state to opt into lifecycle management. When omitted, Terraform
+  # leaves out-of-band suspend and resume changes alone.
+  desired_state = "suspended"
+  # Coder pattern: data.coder_workspace.me.start_count == 1 ? "running" : "suspended"
 
   entrypoint = ["/bin/bash", "-c", "sleep infinity"]
 
@@ -70,22 +74,23 @@ resource "chalk_sandbox" "workstation" {
 
 ### Optional
 
+- `desired_state` (String) Desired lifecycle state: `running` or `suspended`. When set, changing this value suspends or restores the sandbox in place and out-of-band state changes are corrected on the next apply. When omitted, Terraform does not manage whether the sandbox is running or suspended.
 - `entrypoint` (List of String) Overrides the image's entrypoint. When unset, the image's own entrypoint is used. `exec` into the sandbox keeps working either way — it does not go through the entrypoint process.
 - `env` (Map of String, Sensitive) Environment variables to inject into the sandbox.
-- `name` (String) Optional human-readable name for the sandbox.
-- `network_policy` (Attributes) Outbound network policy. **Without this, the sandbox cannot reach anything — not even DNS.** Grant full egress with a single `allowed_routes` entry for `0.0.0.0/0`. (see [below for nested schema](#nestedatt--network_policy))
+- `name` (String) Optional human-readable name for the sandbox. The server generates one when omitted.
+- `network_policy` (Attributes) Outbound network policy. **Without this, the sandbox cannot reach anything — not even DNS.** Grant full egress with a single `allowed_routes` entry for `0.0.0.0/0`. The server rejects network policies when `runtime` is `kube`. (see [below for nested schema](#nestedatt--network_policy))
 - `resource_limits` (Attributes) CPU and memory limits for the sandbox container. (see [below for nested schema](#nestedatt--resource_limits))
 - `restart_policy` (String) Whether to recreate the sandbox after its backing instance terminates: `RESTART_POLICY_NEVER` (default) or `RESTART_POLICY_ALWAYS`.
-- `runtime` (String) Runtime backend for the sandbox container: `kube` (default), `chalk_node`, or `local`.
+- `runtime` (String) Runtime backend for the sandbox container. When unset, the provider sends no runtime and the server default (host compute) is used. `chalk_node` or `local` select host compute; `kube` selects Kubernetes. The server rejects `kube` when `network_policy` is set.
 - `volumes` (Attributes List) Volumes to mount into the sandbox. (see [below for nested schema](#nestedatt--volumes))
 - `wait_for_ready` (Boolean) Whether to block until the sandbox reports a ready state before completing the apply. Defaults to `true`; set to `false` to return as soon as the create call is accepted.
 
 ### Read-Only
 
-- `build_id` (String) Build ID backing this sandbox, when one was needed.
+- `build_id` (String, Deprecated) Deprecated: always null because the v2 sandbox API does not return build IDs.
 - `created_at` (String) When the sandbox was created.
 - `id` (String) The sandbox id.
-- `state` (String) Current sandbox state, e.g. `ready` or `building`.
+- `state` (String) Current sandbox state, e.g. `running`, `pending`, or `suspended`.
 - `status_message` (String) Additional detail about the current state.
 
 <a id="nestedatt--network_policy"></a>
