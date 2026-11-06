@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -152,11 +151,7 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Optional human-readable name for the sandbox. The server generates one when omitted.",
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
-				},
+				PlanModifiers:       requiresReplaceString,
 			},
 			"image": schema.StringAttribute{
 				MarkdownDescription: "Pre-built container image to run, e.g. `debian:bookworm`.",
@@ -283,10 +278,8 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()},
 			},
 			"desired_state": schema.StringAttribute{
-				MarkdownDescription: "Desired lifecycle state: `running` (default) or `suspended`. Changing this value suspends or restores the sandbox in place.",
+				MarkdownDescription: "Desired lifecycle state: `running` or `suspended`. When set, changing this value suspends or restores the sandbox in place and out-of-band state changes are corrected on the next apply. When omitted, Terraform does not manage whether the sandbox is running or suspended.",
 				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString("running"),
 				Validators:          []validator.String{stringvalidator.OneOf("running", "suspended")},
 			},
 			"state": schema.StringAttribute{
@@ -415,6 +408,7 @@ func (r *SandboxResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	updateSandboxState(&data, info)
+	updateSandboxDesiredState(&data, info)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -423,6 +417,11 @@ func (r *SandboxResource) Update(ctx context.Context, req resource.UpdateRequest
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if data.DesiredState.IsNull() {
+		state.DesiredState = types.StringNull()
+		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 		return
 	}
 
@@ -582,25 +581,6 @@ func (r *SandboxResource) ImportState(ctx context.Context, req resource.ImportSt
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("environment_id"), parts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), parts[1])...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	getResp, err := r.client.NewSandboxV2Client(ctx, parts[0]).GetSandbox(ctx, connect.NewRequest(&sandboxv2.GetSandboxRequest{Id: parts[1]}))
-	if err != nil {
-		resp.Diagnostics.AddError("Error importing sandbox", fmt.Sprintf("Could not read sandbox %s: %s", parts[1], err))
-		return
-	}
-	info := getResp.Msg.GetSandbox()
-	if info == nil {
-		resp.Diagnostics.AddError("Error importing sandbox", fmt.Sprintf("Could not read sandbox %s: the server returned no sandbox info", parts[1]))
-		return
-	}
-	desiredState := "running"
-	if sandboxSuspendedStates[sandboxStatusString(info.GetStatus())] {
-		desiredState = "suspended"
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("desired_state"), desiredState)...)
 }
 
 func waitForSandboxState(
@@ -774,14 +754,15 @@ func buildSandboxNetworkPolicy(ctx context.Context, obj types.Object) (*containe
 	return policy, diags
 }
 
-// updateSandboxState copies server-owned fields onto the model. The configured
-// fields are deliberately left alone so a server-normalized spec does not
-// overwrite the practitioner's configuration. Name is the exception: v2 makes
-// it authoritative on SandboxInfo, which also lets imports recover it.
+// updateSandboxState copies server-owned fields onto the model. Optional fields
+// remain null when Terraform does not manage them.
 func updateSandboxState(data *SandboxResourceModel, info *sandboxv2.SandboxInfo) {
 	data.Id = types.StringValue(info.GetId())
-	data.Name = optionalStringValue(info.GetName())
-	data.State = optionalStringValue(sandboxStatusString(info.GetStatus()))
+	if !data.Name.IsNull() && !data.Name.IsUnknown() {
+		data.Name = optionalStringValue(info.GetName())
+	}
+	status := sandboxStatusString(info.GetStatus())
+	data.State = optionalStringValue(status)
 	if info.GetCreatedAt() == nil {
 		data.CreatedAt = types.StringNull()
 	} else {
@@ -789,6 +770,16 @@ func updateSandboxState(data *SandboxResourceModel, info *sandboxv2.SandboxInfo)
 	}
 	data.StatusMessage = optionalStringValue(info.GetStatusMessage())
 	data.BuildId = types.StringNull()
+}
+
+// updateSandboxDesiredState is refresh-only: Create and Update must preserve
+// the planned target while the API transitions toward it.
+func updateSandboxDesiredState(data *SandboxResourceModel, info *sandboxv2.SandboxInfo) {
+	status := sandboxStatusString(info.GetStatus())
+	if !data.DesiredState.IsNull() && !data.DesiredState.IsUnknown() &&
+		(sandboxReadyStates[status] || sandboxSuspendedStates[status]) {
+		data.DesiredState = types.StringValue(status)
+	}
 }
 
 func sandboxStatusString(status sandboxv2.SandboxStatus) string {

@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -253,7 +254,7 @@ resource "chalk_sandbox" "test" {
 `, name)
 }
 
-func TestSandboxResourceNameRoundTrip(t *testing.T) {
+func TestSandboxResourceNameOwnership(t *testing.T) {
 	name := "coder-jeff-sbxmeasure"
 	data := SandboxResourceModel{
 		Name:  types.StringValue(name),
@@ -266,7 +267,7 @@ func TestSandboxResourceNameRoundTrip(t *testing.T) {
 
 	data.Name = types.StringNull()
 	updateSandboxState(&data, &sandboxv2.SandboxInfo{Name: name})
-	assert.Equal(t, name, data.Name.ValueString())
+	assert.True(t, data.Name.IsNull())
 }
 
 func TestSandboxResourceCreate(t *testing.T) {
@@ -288,7 +289,7 @@ func TestSandboxResourceCreate(t *testing.T) {
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "created_at", "2026-08-19T00:00:00Z"),
 					// wait_for_ready has a default rather than being left null.
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "wait_for_ready", "true"),
-					resource.TestCheckResourceAttr("chalk_sandbox.test", "desired_state", "running"),
+					resource.TestCheckNoResourceAttr("chalk_sandbox.test", "desired_state"),
 				),
 			},
 		},
@@ -313,13 +314,50 @@ func TestSandboxResourceAcceptsServerGeneratedName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
-		Steps: []resource.TestStep{{
-			Config: sandboxConfigWithoutName(server.URL),
-			Check:  resource.TestCheckResourceAttr("chalk_sandbox.test", "name", "server-generated-name"),
-		}},
+		Steps: []resource.TestStep{
+			{
+				Config: sandboxConfigWithoutName(server.URL),
+				Check:  resource.TestCheckNoResourceAttr("chalk_sandbox.test", "name"),
+			},
+			{
+				Config:             sandboxConfigWithoutName(server.URL),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
 	})
 
 	assert.Equal(t, 1, st.createCalls)
+}
+
+func TestSandboxResourceDoesNotManageStateWhenDesiredStateUnset(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: sandboxConfigWithoutName(server.URL)},
+			{
+				PreConfig: func() {
+					st.info.Status = sandboxv2.SandboxStatus_SANDBOX_STATUS_SUSPENDED
+					st.info.StatusMessage = new("suspended out of band")
+				},
+				RefreshState:       true,
+				ExpectNonEmptyPlan: false,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_sandbox.test", "desired_state"),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "suspended"),
+					func(*terraform.State) error {
+						if st.suspendCalls != 0 || st.restoreCalls != 0 {
+							return fmt.Errorf("unexpected lifecycle calls: suspend=%d resume=%d", st.suspendCalls, st.restoreCalls)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
 }
 
 func TestSandboxResourceCreateSuspended(t *testing.T) {
@@ -375,6 +413,66 @@ func TestSandboxResourceUpdatesDesiredStateInPlace(t *testing.T) {
 	assert.Equal(t, 1, st.createCalls, "desired_state updates must not replace the sandbox")
 	assert.Equal(t, 1, st.suspendCalls)
 	assert.Equal(t, 1, st.restoreCalls)
+}
+
+func TestSandboxResourceRepairsDesiredStateDrift(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+	name := "test-sandbox-" + uuid.New().String()[:8]
+	config := sandboxDesiredStateConfig(server.URL, name, "running")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: config},
+			{
+				PreConfig: func() {
+					st.info.Status = sandboxv2.SandboxStatus_SANDBOX_STATUS_SUSPENDED
+					st.info.StatusMessage = new("suspended out of band")
+				},
+				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "desired_state", "suspended"),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "suspended"),
+				),
+			},
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "desired_state", "running"),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "running"),
+				),
+			},
+		},
+	})
+
+	assert.Equal(t, 1, st.restoreCalls)
+}
+
+func TestSandboxResourceRemovingDesiredStateDoesNotTransition(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+	name := "test-sandbox-" + uuid.New().String()[:8]
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: sandboxDesiredStateConfig(server.URL, name, "running")},
+			{
+				Config: sandboxMinimalConfig(server.URL, name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_sandbox.test", "desired_state"),
+					func(*terraform.State) error {
+						if st.suspendCalls != 0 || st.restoreCalls != 0 {
+							return fmt.Errorf("unexpected lifecycle calls: suspend=%d resume=%d", st.suspendCalls, st.restoreCalls)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
 }
 
 func TestSandboxResourceSkipsTransitionAlreadyAppliedServerSide(t *testing.T) {
@@ -636,21 +734,23 @@ resource "chalk_sandbox" "test" {
 func TestSandboxResourceImport(t *testing.T) {
 	t.Parallel()
 	server, _ := setupMockSandboxServer(t, 0)
-	name := "test-sandbox-" + uuid.New().String()[:8]
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: sandboxDesiredStateConfig(server.URL, name, "suspended"),
+				Config: sandboxConfigWithoutName(server.URL),
 			},
 			{
 				ResourceName:      "chalk_sandbox.test",
 				ImportState:       true,
 				ImportStateId:     "test-env-id/sandbox-test-id",
 				ImportStateVerify: true,
-				// Only server-owned fields, desired_state, and the v2 sandbox name
-				// are recovered into state.
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("chalk_sandbox.test", "desired_state"),
+					resource.TestCheckNoResourceAttr("chalk_sandbox.test", "name"),
+				),
+				// Create-only arguments and defaults cannot be recovered on import.
 				ImportStateVerifyIgnore: []string{"image", "wait_for_ready"},
 			},
 		},

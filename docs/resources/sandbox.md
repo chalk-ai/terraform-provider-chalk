@@ -29,7 +29,9 @@ resource "chalk_sandbox" "workstation" {
   environment_id = "tmnmc9beyujew"
   name           = "debian-workstation"
   image          = "debian:bookworm"
-  desired_state  = "suspended"
+  # Set desired_state to opt into lifecycle management. When omitted, Terraform
+  # leaves out-of-band suspend and resume changes alone.
+  desired_state = "suspended"
   # Coder pattern: data.coder_workspace.me.start_count == 1 ? "running" : "suspended"
 
   entrypoint = ["/bin/bash", "-c", "sleep infinity"]
@@ -72,7 +74,7 @@ resource "chalk_sandbox" "workstation" {
 
 ### Optional
 
-- `desired_state` (String) Desired lifecycle state: `running` (default) or `suspended`. Changing this value suspends or restores the sandbox in place.
+- `desired_state` (String) Desired lifecycle state: `running` or `suspended`. When set, changing this value suspends or restores the sandbox in place and out-of-band state changes are corrected on the next apply. When omitted, Terraform does not manage whether the sandbox is running or suspended.
 - `entrypoint` (List of String) Overrides the image's entrypoint. When unset, the image's own entrypoint is used. `exec` into the sandbox keeps working either way — it does not go through the entrypoint process.
 - `env` (Map of String, Sensitive) Environment variables to inject into the sandbox.
 - `name` (String) Optional human-readable name for the sandbox. The server generates one when omitted.

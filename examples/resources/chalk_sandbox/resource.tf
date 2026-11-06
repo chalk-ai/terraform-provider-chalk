@@ -8,7 +8,9 @@ resource "chalk_sandbox" "workstation" {
   environment_id = "tmnmc9beyujew"
   name           = "debian-workstation"
   image          = "debian:bookworm"
-  desired_state  = "suspended"
+  # Set desired_state to opt into lifecycle management. When omitted, Terraform
+  # leaves out-of-band suspend and resume changes alone.
+  desired_state = "suspended"
   # Coder pattern: data.coder_workspace.me.start_count == 1 ? "running" : "suspended"
 
   entrypoint = ["/bin/bash", "-c", "sleep infinity"]
