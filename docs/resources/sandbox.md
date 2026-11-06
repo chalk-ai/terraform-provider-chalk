@@ -81,7 +81,7 @@ resource "chalk_sandbox" "workstation" {
 - `network_policy` (Attributes) Outbound network policy. **Without this, the sandbox cannot reach anything — not even DNS.** Grant full egress with a single `allowed_routes` entry for `0.0.0.0/0`. The server rejects network policies when `runtime` is `kube`. (see [below for nested schema](#nestedatt--network_policy))
 - `resource_limits` (Attributes) CPU and memory limits for the sandbox container. (see [below for nested schema](#nestedatt--resource_limits))
 - `restart_policy` (String) Whether to recreate the sandbox after its backing instance terminates: `RESTART_POLICY_NEVER` (default) or `RESTART_POLICY_ALWAYS`.
-- `runtime` (String) Runtime backend for the sandbox container: `chalk_node` or `local` select the host compute class, which v2 uses by default; `kube` selects Kubernetes. The server rejects `kube` when `network_policy` is set.
+- `runtime` (String) Runtime backend for the sandbox container. When unset, the provider sends no runtime and the server default (host compute) is used. `chalk_node` or `local` select host compute; `kube` selects Kubernetes. The server rejects `kube` when `network_policy` is set.
 - `volumes` (Attributes List) Volumes to mount into the sandbox. (see [below for nested schema](#nestedatt--volumes))
 - `wait_for_ready` (Boolean) Whether to block until the sandbox reports a ready state before completing the apply. Defaults to `true`; set to `false` to return as soon as the create call is accepted.
 

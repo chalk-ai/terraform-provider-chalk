@@ -30,8 +30,9 @@ import (
 )
 
 var (
-	_ resource.Resource                = &SandboxResource{}
-	_ resource.ResourceWithImportState = &SandboxResource{}
+	_ resource.Resource                   = &SandboxResource{}
+	_ resource.ResourceWithImportState    = &SandboxResource{}
+	_ resource.ResourceWithValidateConfig = &SandboxResource{}
 )
 
 // sandboxPollInterval is how often Create polls while waiting for a new sandbox
@@ -173,7 +174,7 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				PlanModifiers:       []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"runtime": schema.StringAttribute{
-				MarkdownDescription: "Runtime backend for the sandbox container: `chalk_node` or `local` select the host compute class, which v2 uses by default; `kube` selects Kubernetes. The server rejects `kube` when `network_policy` is set.",
+				MarkdownDescription: "Runtime backend for the sandbox container. When unset, the provider sends no runtime and the server default (host compute) is used. `chalk_node` or `local` select host compute; `kube` selects Kubernetes. The server rejects `kube` when `network_policy` is set.",
 				Optional:            true,
 				PlanModifiers:       requiresReplaceString,
 			},
@@ -301,6 +302,26 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				DeprecationMessage:  "The v2 sandbox API does not return build IDs, so this attribute is always null and will be removed in a future release.",
 			},
 		},
+	}
+}
+
+func (r *SandboxResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data SandboxResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if data.Runtime.IsNull() || data.Runtime.IsUnknown() || data.DesiredState.IsNull() || data.DesiredState.IsUnknown() {
+		return
+	}
+
+	if data.Runtime.ValueString() == "kube" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("desired_state"),
+			"Invalid desired_state for kube runtime",
+			"`desired_state` cannot be set when `runtime` is `kube` because suspend and resume are supported only for host-compute sandboxes.",
+		)
 	}
 }
 

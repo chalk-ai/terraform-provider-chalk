@@ -204,6 +204,17 @@ resource "chalk_sandbox" "test" {
 `, name, desiredState)
 }
 
+func sandboxKubeDesiredStateConfig(serverURL, desiredState string) string {
+	return providerConfig(serverURL) + fmt.Sprintf(`
+resource "chalk_sandbox" "test" {
+  environment_id = "test-env-id"
+  image          = "debian:bookworm"
+  runtime        = "kube"
+  desired_state  = %q
+}
+`, desiredState)
+}
+
 func sandboxConfigWithoutName(serverURL string) string {
 	return providerConfig(serverURL) + `
 resource "chalk_sandbox" "test" {
@@ -306,6 +317,28 @@ func TestSandboxResourceCreate(t *testing.T) {
 	assert.Nil(t, st.created.GetSpec().Resources)
 	assert.Nil(t, st.created.GetSpec().ComputeClass)
 	assert.Empty(t, st.created.GetSpec().Entrypoint)
+}
+
+func TestSandboxResourceRejectsDesiredStateWithKubeRuntime(t *testing.T) {
+	t.Parallel()
+
+	for _, desiredState := range []string{"running", "suspended"} {
+		t.Run(desiredState, func(t *testing.T) {
+			t.Parallel()
+			server, st := setupMockSandboxServer(t, 0)
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+				Steps: []resource.TestStep{{
+					Config:      sandboxKubeDesiredStateConfig(server.URL, desiredState),
+					PlanOnly:    true,
+					ExpectError: regexp.MustCompile(`(?s)desired_state.*cannot be set.*runtime.*kube.*suspend and.*resume.*host-compute`),
+				}},
+			})
+
+			assert.Zero(t, st.createCalls)
+		})
+	}
 }
 
 func TestSandboxResourceAcceptsServerGeneratedName(t *testing.T) {

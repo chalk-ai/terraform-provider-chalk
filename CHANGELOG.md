@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Move `chalk_sandbox` to the v2 sandbox API, add opt-in in-place suspend and restore with `desired_state`, preserve unmanaged lifecycle state and server-generated names as null, and make snapshot cleanup on destroy best-effort. Update `chalk-go` to v1.3.30. This requires a Chalk API server that supports the v2 sandbox and sandbox snapshot services.
+* `runtime` no longer has a provider-side default; an unset runtime uses the server default (host compute). Set `runtime = "kube"` to keep a Kubernetes pod; note `kube` + `network_policy` is rejected by the server.
 
 ## 1.2.0
 
