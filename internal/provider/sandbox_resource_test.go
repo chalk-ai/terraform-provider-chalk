@@ -6,26 +6,27 @@ import (
 	"net/http"
 	"regexp"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	containerv1 "github.com/chalk-ai/chalk-go/gen/chalk/container/v1"
-	sandboxv1 "github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v1"
 	sandboxv2 "github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2"
 	"github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2/sandboxv2connect"
 	"github.com/chalk-ai/chalk-go/testserver"
 	chalkclient "github.com/chalk-ai/terraform-provider-chalk/client"
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // sandboxMockState records what the mock server was asked to create so tests can
 // assert on the request, and drives the state machine GetSandbox reports back.
 type sandboxMockState struct {
-	created             *sandboxv1.CreateSandboxRequest
-	info                *sandboxv1.SandboxInfo
+	created             *sandboxv2.CreateSandboxRequest
+	info                *sandboxv2.SandboxInfo
 	getCalls            int
 	readyAfter          int
 	createCalls         int
@@ -46,6 +47,56 @@ type sandboxV2MockHandler struct {
 	state *sandboxMockState
 }
 
+func (h *sandboxV2MockHandler) CreateSandbox(
+	_ context.Context,
+	req *connect.Request[sandboxv2.CreateSandboxRequest],
+) (*connect.Response[sandboxv2.CreateSandboxResponse], error) {
+	h.state.createCalls++
+	h.state.created = req.Msg
+	h.state.terminated = false
+	status := sandboxv2.SandboxStatus_SANDBOX_STATUS_PENDING
+	if h.state.readyAfter == 0 {
+		status = sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING
+	}
+	h.state.info = &sandboxv2.SandboxInfo{
+		Id:            "sandbox-test-id",
+		Name:          req.Msg.GetSpec().GetName(),
+		Status:        status,
+		CreatedAt:     timestamppb.New(time.Date(2026, 8, 19, 0, 0, 0, 0, time.UTC)),
+		Spec:          req.Msg.GetSpec(),
+		StatusMessage: new("running"),
+	}
+	return connect.NewResponse(&sandboxv2.CreateSandboxResponse{Sandbox: h.state.info}), nil
+}
+
+func (h *sandboxV2MockHandler) GetSandbox(
+	_ context.Context,
+	_ *connect.Request[sandboxv2.GetSandboxRequest],
+) (*connect.Response[sandboxv2.GetSandboxResponse], error) {
+	if h.state.terminated {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("sandbox not found"))
+	}
+	h.state.getCalls++
+	if h.state.info.GetStatus() == sandboxv2.SandboxStatus_SANDBOX_STATUS_PENDING && h.state.getCalls >= h.state.readyAfter {
+		h.state.info.Status = sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING
+		h.state.info.StatusMessage = new("running")
+	}
+	return connect.NewResponse(&sandboxv2.GetSandboxResponse{Sandbox: h.state.info}), nil
+}
+
+func (h *sandboxV2MockHandler) TerminateSandbox(
+	_ context.Context,
+	_ *connect.Request[sandboxv2.TerminateSandboxRequest],
+) (*connect.Response[sandboxv2.TerminateSandboxResponse], error) {
+	h.state.terminateCalls++
+	h.state.events = append(h.state.events, "terminate")
+	if h.state.terminateErr != nil {
+		return nil, h.state.terminateErr
+	}
+	h.state.terminated = true
+	return connect.NewResponse(&sandboxv2.TerminateSandboxResponse{}), nil
+}
+
 func (h *sandboxV2MockHandler) SuspendSandbox(
 	_ context.Context,
 	req *connect.Request[sandboxv2.SuspendSandboxRequest],
@@ -53,7 +104,7 @@ func (h *sandboxV2MockHandler) SuspendSandbox(
 	h.state.suspendCalls++
 	h.state.events = append(h.state.events, "suspend")
 	if h.state.info != nil && req.Msg.GetId() == h.state.info.GetId() {
-		h.state.info.State = "SUSPENDED"
+		h.state.info.Status = sandboxv2.SandboxStatus_SANDBOX_STATUS_SUSPENDED
 		h.state.info.StatusMessage = new("suspended")
 	}
 	return connect.NewResponse(&sandboxv2.SuspendSandboxResponse{}), nil
@@ -66,7 +117,7 @@ func (h *sandboxV2MockHandler) ResumeSandbox(
 	h.state.restoreCalls++
 	h.state.events = append(h.state.events, "restore")
 	if h.state.info != nil && req.Msg.GetId() == h.state.info.GetId() {
-		h.state.info.State = "RUNNING"
+		h.state.info.Status = sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING
 		h.state.info.StatusMessage = new("running")
 	}
 	return connect.NewResponse(&sandboxv2.ResumeSandboxResponse{}), nil
@@ -101,7 +152,7 @@ func (h *sandboxSnapshotMockHandler) DeleteSandboxSnapshot(
 }
 
 // setupMockSandboxServer wires a sandbox lifecycle onto the mock server. The
-// created sandbox reports `connecting` until readyAfter GetSandbox calls have
+// created sandbox reports pending until readyAfter GetSandbox calls have
 // landed, which exercises the Create-time wait loop.
 func setupMockSandboxServer(t *testing.T, readyAfter int) (*testserver.MockServer, *sandboxMockState) {
 	server := testserver.NewMockBuilderServer(t)
@@ -109,49 +160,8 @@ func setupMockSandboxServer(t *testing.T, readyAfter int) (*testserver.MockServe
 
 	st := &sandboxMockState{readyAfter: readyAfter}
 
-	server.OnCreateSandbox().WithBehavior(func(req proto.Message) (proto.Message, error) {
-		createReq := req.(*sandboxv1.CreateSandboxRequest)
-		st.createCalls++
-		st.created = createReq
-		st.terminated = false
-		state := "connecting"
-		if readyAfter == 0 {
-			state = "ready"
-		}
-		st.info = &sandboxv1.SandboxInfo{
-			Id:            "sandbox-test-id",
-			State:         state,
-			CreatedAt:     "2026-08-19T00:00:00Z",
-			Name:          createReq.Name,
-			StatusMessage: new("running"),
-		}
-		return &sandboxv1.CreateSandboxResponse{Sandbox: st.info}, nil
-	})
-
-	server.OnGetSandbox().WithBehavior(func(req proto.Message) (proto.Message, error) {
-		if st.terminated {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("sandbox not found"))
-		}
-		st.getCalls++
-		if st.info.GetState() == "connecting" && st.getCalls >= st.readyAfter {
-			st.info.State = "ready"
-			st.info.StatusMessage = new("running")
-		}
-		return &sandboxv1.GetSandboxResponse{Sandbox: st.info}, nil
-	})
-
-	server.OnTerminateSandbox().WithBehavior(func(req proto.Message) (proto.Message, error) {
-		st.terminateCalls++
-		st.events = append(st.events, "terminate")
-		if st.terminateErr != nil {
-			return nil, st.terminateErr
-		}
-		st.terminated = true
-		return &sandboxv1.TerminateSandboxResponse{}, nil
-	})
-
-	// chalk-go's test server serves sandbox/v1. Mount the v2 lifecycle and
-	// snapshot handlers alongside it for this resource's mixed-version calls.
+	// Mount the v2 sandbox and snapshot handlers alongside the builder mock used
+	// by provider configuration.
 	existingHandler := server.Config.Handler
 	mux := http.NewServeMux()
 	v2Path, v2Handler := sandboxv2connect.NewSandboxServiceHandler(&sandboxV2MockHandler{state: st})
@@ -226,6 +236,22 @@ resource "chalk_sandbox" "test" {
 `, name)
 }
 
+func TestSandboxResourceNameRoundTrip(t *testing.T) {
+	name := "coder-jeff-sbxmeasure"
+	data := SandboxResourceModel{
+		Name:  types.StringValue(name),
+		Image: types.StringValue("debian:bookworm"),
+	}
+
+	createReq, diags := buildCreateSandboxRequest(context.Background(), &data)
+	require.False(t, diags.HasError())
+	assert.Equal(t, name, createReq.GetSpec().GetName())
+
+	data.Name = types.StringNull()
+	updateSandboxState(&data, &sandboxv2.SandboxInfo{Name: name})
+	assert.Equal(t, name, data.Name.ValueString())
+}
+
 func TestSandboxResourceCreate(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 0)
@@ -241,7 +267,7 @@ func TestSandboxResourceCreate(t *testing.T) {
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "environment_id", "test-env-id"),
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "name", name),
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "image", "debian:bookworm"),
-					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "ready"),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "running"),
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "created_at", "2026-08-19T00:00:00Z"),
 					// wait_for_ready has a default rather than being left null.
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "wait_for_ready", "true"),
@@ -252,14 +278,16 @@ func TestSandboxResourceCreate(t *testing.T) {
 	})
 
 	require.NotNil(t, st.created)
-	assert.Equal(t, "debian:bookworm", st.created.GetImage())
-	assert.Equal(t, name, st.created.GetName())
+	require.NotNil(t, st.created.GetSpec())
+	assert.Equal(t, "debian:bookworm", st.created.GetSpec().GetImage())
+	assert.Equal(t, name, st.created.GetSpec().GetName())
+	assert.GreaterOrEqual(t, st.getCalls, 1, "Read must keep the name returned by sandbox v2")
 	// Nothing unset should be sent: an empty network policy is not the same as
 	// no network policy, and the server treats the former as deny-all.
-	assert.Nil(t, st.created.NetworkPolicy)
-	assert.Nil(t, st.created.ResourceLimits)
-	assert.Nil(t, st.created.Runtime)
-	assert.Empty(t, st.created.Entrypoint)
+	assert.Nil(t, st.created.GetSpec().NetworkPolicy)
+	assert.Nil(t, st.created.GetSpec().Resources)
+	assert.Nil(t, st.created.GetSpec().ComputeClass)
+	assert.Empty(t, st.created.GetSpec().Entrypoint)
 }
 
 func TestSandboxResourceCreateSuspended(t *testing.T) {
@@ -274,7 +302,7 @@ func TestSandboxResourceCreateSuspended(t *testing.T) {
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("chalk_sandbox.test", "id", "sandbox-test-id"),
 				resource.TestCheckResourceAttr("chalk_sandbox.test", "desired_state", "suspended"),
-				resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "SUSPENDED"),
+				resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "suspended"),
 			),
 		}},
 	})
@@ -293,20 +321,20 @@ func TestSandboxResourceUpdatesDesiredStateInPlace(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: sandboxDesiredStateConfig(server.URL, name, "running"),
-				Check:  resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "ready"),
+				Check:  resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "running"),
 			},
 			{
 				Config: sandboxDesiredStateConfig(server.URL, name, "suspended"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "id", "sandbox-test-id"),
-					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "SUSPENDED"),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "suspended"),
 				),
 			},
 			{
 				Config: sandboxDesiredStateConfig(server.URL, name, "running"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "id", "sandbox-test-id"),
-					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "RUNNING"),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "running"),
 				),
 			},
 		},
@@ -336,7 +364,7 @@ func TestSandboxResourceOtherUpdatesStillReplace(t *testing.T) {
 func TestSandboxResourceDeleteRunning(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 0)
-	st.info = &sandboxv1.SandboxInfo{Id: "sandbox-test-id", State: "RUNNING"}
+	st.info = &sandboxv2.SandboxInfo{Id: "sandbox-test-id", Status: sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING}
 
 	err := sandboxResourceForTest(server.URL).deleteSandbox(context.Background(), "test-env-id", "sandbox-test-id")
 	require.NoError(t, err)
@@ -348,7 +376,7 @@ func TestSandboxResourceDeleteRunning(t *testing.T) {
 func TestSandboxResourceDeleteSuspendedRestoresAndCleansSnapshots(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 0)
-	st.info = &sandboxv1.SandboxInfo{Id: "sandbox-test-id", State: "SUSPENDED"}
+	st.info = &sandboxv2.SandboxInfo{Id: "sandbox-test-id", Status: sandboxv2.SandboxStatus_SANDBOX_STATUS_SUSPENDED}
 	st.snapshots = []*sandboxv2.SandboxSnapshot{
 		{Id: "snapshot-owned", SandboxId: "sandbox-test-id"},
 		{Id: "snapshot-other", SandboxId: "other-sandbox-id"},
@@ -369,7 +397,7 @@ func TestSandboxResourceDeleteSuspendedRestoresAndCleansSnapshots(t *testing.T) 
 func TestSandboxResourceDeleteFailedTreatsTerminateNotFoundAsGone(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 0)
-	st.info = &sandboxv1.SandboxInfo{Id: "sandbox-test-id", State: "FAILED"}
+	st.info = &sandboxv2.SandboxInfo{Id: "sandbox-test-id", Status: sandboxv2.SandboxStatus_SANDBOX_STATUS_FAILED}
 	st.terminateErr = connect.NewError(connect.CodeNotFound, fmt.Errorf("container not found"))
 
 	err := sandboxResourceForTest(server.URL).deleteSandbox(context.Background(), "test-env-id", "sandbox-test-id")
@@ -380,7 +408,7 @@ func TestSandboxResourceDeleteFailedTreatsTerminateNotFoundAsGone(t *testing.T) 
 func TestSandboxResourceDeleteRunningDoesNotIgnoreTerminateNotFound(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 0)
-	st.info = &sandboxv1.SandboxInfo{Id: "sandbox-test-id", State: "RUNNING"}
+	st.info = &sandboxv2.SandboxInfo{Id: "sandbox-test-id", Status: sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING}
 	st.terminateErr = connect.NewError(connect.CodeNotFound, fmt.Errorf("container not found"))
 
 	err := sandboxResourceForTest(server.URL).deleteSandbox(context.Background(), "test-env-id", "sandbox-test-id")
@@ -403,7 +431,7 @@ func TestSandboxResourceDeleteGoneStillCleansSnapshots(t *testing.T) {
 func TestSandboxResourceSnapshotDeleteFailureStopsDeletion(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 0)
-	st.info = &sandboxv1.SandboxInfo{Id: "sandbox-test-id", State: "RUNNING"}
+	st.info = &sandboxv2.SandboxInfo{Id: "sandbox-test-id", Status: sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING}
 	st.snapshots = []*sandboxv2.SandboxSnapshot{{Id: "snapshot-owned", SandboxId: "sandbox-test-id"}}
 	st.snapshotDeleteErr = connect.NewError(connect.CodeInternal, fmt.Errorf("delete failed"))
 
@@ -434,31 +462,33 @@ func TestSandboxResourceCreateFullSpec(t *testing.T) {
 	})
 
 	require.NotNil(t, st.created)
-	assert.Equal(t, []string{"/bin/bash", "-c", "sleep infinity"}, st.created.GetEntrypoint())
-	assert.Equal(t, map[string]string{"CODER_AGENT_TOKEN": "secret-token"}, st.created.GetEnv())
-	assert.Equal(t, "kube", st.created.GetRuntime())
-	assert.Equal(t, containerv1.RestartPolicy_RESTART_POLICY_ALWAYS, st.created.GetRestartPolicy())
+	spec := st.created.GetSpec()
+	require.NotNil(t, spec)
+	assert.Equal(t, []string{"/bin/bash", "-c", "sleep infinity"}, spec.GetEntrypoint())
+	assert.Equal(t, map[string]string{"CODER_AGENT_TOKEN": "secret-token"}, spec.GetEnvVars())
+	assert.Equal(t, containerv1.ComputeClass_COMPUTE_CLASS_K8S, spec.GetComputeClass())
+	assert.Equal(t, containerv1.RestartPolicy_RESTART_POLICY_ALWAYS, spec.GetRestartPolicy())
 
-	require.NotNil(t, st.created.ResourceLimits)
-	assert.Equal(t, "2", st.created.ResourceLimits.GetCpu())
-	assert.Equal(t, "4Gi", st.created.ResourceLimits.GetMemory())
+	require.NotNil(t, spec.Resources)
+	assert.Equal(t, "2", spec.Resources.GetCpu())
+	assert.Equal(t, "4Gi", spec.Resources.GetMemory())
 
-	require.Len(t, st.created.Volumes, 1)
-	assert.Equal(t, "home", st.created.Volumes[0].GetName())
-	assert.Equal(t, "/home/coder", st.created.Volumes[0].GetMountPath())
-	assert.Equal(t, "empty_dir", st.created.Volumes[0].GetType())
-	assert.Equal(t, "20Gi", st.created.Volumes[0].GetSizeLimit())
+	require.Len(t, spec.Volumes, 1)
+	assert.Equal(t, "home", spec.Volumes[0].GetName())
+	assert.Equal(t, "/home/coder", spec.Volumes[0].GetMountPath())
+	assert.Equal(t, "empty_dir", spec.Volumes[0].GetType())
+	assert.Equal(t, "20Gi", spec.Volumes[0].GetSizeLimit())
 
-	require.NotNil(t, st.created.NetworkPolicy)
-	require.Len(t, st.created.NetworkPolicy.AllowedRoutes, 1)
-	assert.Equal(t, "0.0.0.0/0", st.created.NetworkPolicy.AllowedRoutes[0].GetRoute())
-	require.Len(t, st.created.NetworkPolicy.AllowedRoutes[0].PortRanges, 1)
-	assert.Equal(t, int32(1), st.created.NetworkPolicy.AllowedRoutes[0].PortRanges[0].GetStartPort())
-	assert.Equal(t, int32(65535), st.created.NetworkPolicy.AllowedRoutes[0].PortRanges[0].GetEndPort())
-	assert.Equal(t, []string{"169.254.169.254/32"}, st.created.NetworkPolicy.GetDeniedRoutes())
+	require.NotNil(t, spec.NetworkPolicy)
+	require.Len(t, spec.NetworkPolicy.AllowedRoutes, 1)
+	assert.Equal(t, "0.0.0.0/0", spec.NetworkPolicy.AllowedRoutes[0].GetRoute())
+	require.Len(t, spec.NetworkPolicy.AllowedRoutes[0].PortRanges, 1)
+	assert.Equal(t, int32(1), spec.NetworkPolicy.AllowedRoutes[0].PortRanges[0].GetStartPort())
+	assert.Equal(t, int32(65535), spec.NetworkPolicy.AllowedRoutes[0].PortRanges[0].GetEndPort())
+	assert.Equal(t, []string{"169.254.169.254/32"}, spec.NetworkPolicy.GetDeniedRoutes())
 }
 
-// A freshly created sandbox reports "connecting"; the apply must not return
+// A freshly created sandbox reports pending; the apply must not return
 // until it settles, or downstream resources race a sandbox that cannot yet
 // accept exec.
 func TestSandboxResourceWaitsForReady(t *testing.T) {
@@ -472,7 +502,7 @@ func TestSandboxResourceWaitsForReady(t *testing.T) {
 			{
 				Config: sandboxMinimalConfig(server.URL, name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "ready"),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "running"),
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "status_message", "running"),
 				),
 			},
@@ -502,7 +532,7 @@ resource "chalk_sandbox" "test" {
 			{
 				Config: config,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "connecting"),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "pending"),
 					resource.TestCheckResourceAttr("chalk_sandbox.test", "wait_for_ready", "false"),
 				),
 			},
@@ -526,8 +556,8 @@ func TestSandboxResourceImport(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     "test-env-id/sandbox-test-id",
 				ImportStateVerify: true,
-				// Neither CreateSandbox nor GetSandbox echoes the spec back, so
-				// the configured fields cannot be recovered on import.
+				// Keep the existing import contract: only server-owned fields and
+				// the v2 sandbox name are recovered into state.
 				ImportStateVerifyIgnore: []string{"desired_state", "image", "wait_for_ready"},
 			},
 		},

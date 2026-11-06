@@ -89,7 +89,7 @@ resource "chalk_sandbox" "workstation" {
 - `build_id` (String) Build ID backing this sandbox, when one was needed.
 - `created_at` (String) When the sandbox was created.
 - `id` (String) The sandbox id.
-- `state` (String) Current sandbox state, e.g. `ready` or `building`.
+- `state` (String) Current sandbox state, e.g. `running`, `pending`, or `suspended`.
 - `status_message` (String) Additional detail about the current state.
 
 <a id="nestedatt--network_policy"></a>

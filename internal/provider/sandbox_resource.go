@@ -8,7 +8,6 @@ import (
 
 	"connectrpc.com/connect"
 	containerv1 "github.com/chalk-ai/chalk-go/gen/chalk/container/v1"
-	sandboxv1 "github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v1"
 	sandboxv2 "github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2"
 	"github.com/chalk-ai/terraform-provider-chalk/client"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -42,11 +41,9 @@ var (
 	sandboxReadyTimeout = 15 * time.Minute
 )
 
-// sandboxTerminalStates are the states a sandbox settles into once the backing
-// pod is serving. Compared case-insensitively against SandboxInfo.state, which
-// the API models as a free-form string rather than an enum.
+// sandboxReadyStates are the normalized v2 statuses in which the backing
+// container can accept exec requests.
 var sandboxReadyStates = map[string]bool{
-	"ready":   true,
 	"running": true,
 }
 
@@ -58,6 +55,7 @@ var sandboxSuspendedStates = map[string]bool{
 // ready, so waiting on one only burns the timeout.
 var sandboxFailedStates = map[string]bool{
 	"failed":     true,
+	"succeeded":  true,
 	"terminated": true,
 	"error":      true,
 }
@@ -279,7 +277,7 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Validators:          []validator.String{stringvalidator.OneOf("running", "suspended")},
 			},
 			"state": schema.StringAttribute{
-				MarkdownDescription: "Current sandbox state, e.g. `ready` or `building`.",
+				MarkdownDescription: "Current sandbox state, e.g. `running`, `pending`, or `suspended`.",
 				Computed:            true,
 			},
 			"status_message": schema.StringAttribute{
@@ -327,7 +325,7 @@ func (r *SandboxResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	sbClient := r.client.NewSandboxClient(ctx, data.EnvironmentId.ValueString())
+	sbClient := r.client.NewSandboxV2Client(ctx, data.EnvironmentId.ValueString())
 	createResp, err := sbClient.CreateSandbox(ctx, connect.NewRequest(createReq))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating sandbox", fmt.Sprintf("Could not create sandbox: %s", err))
@@ -348,7 +346,7 @@ func (r *SandboxResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	if (data.WaitForReady.ValueBool() || data.DesiredState.ValueString() == "suspended") && !sandboxReadyStates[strings.ToLower(info.GetState())] {
+	if (data.WaitForReady.ValueBool() || data.DesiredState.ValueString() == "suspended") && !sandboxReadyStates[sandboxStatusString(info.GetStatus())] {
 		ready, err := waitForSandboxReady(ctx, sbClient, info.GetId())
 		if err != nil {
 			resp.Diagnostics.AddError("Error waiting for sandbox", fmt.Sprintf("Sandbox %s did not become ready: %s", info.GetId(), err))
@@ -380,9 +378,9 @@ func (r *SandboxResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	sbClient := r.client.NewSandboxClient(ctx, data.EnvironmentId.ValueString())
-	getResp, err := sbClient.GetSandbox(ctx, connect.NewRequest(&sandboxv1.GetSandboxRequest{
-		SandboxId: data.Id.ValueString(),
+	sbClient := r.client.NewSandboxV2Client(ctx, data.EnvironmentId.ValueString())
+	getResp, err := sbClient.GetSandbox(ctx, connect.NewRequest(&sandboxv2.GetSandboxRequest{
+		Id: data.Id.ValueString(),
 	}))
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeNotFound {
@@ -397,7 +395,7 @@ func (r *SandboxResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// A terminated sandbox is gone for practical purposes: it can no longer be
 	// exec'd into, so treat it the same as a deleted resource and let Terraform
 	// plan a replacement rather than reporting it as healthy.
-	if info == nil || sandboxFailedStates[strings.ToLower(info.GetState())] {
+	if info == nil || sandboxFailedStates[sandboxStatusString(info.GetStatus())] {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -436,7 +434,7 @@ func (r *SandboxResource) Update(ctx context.Context, req resource.UpdateRequest
 	if desired == "suspended" {
 		targetStates = sandboxSuspendedStates
 	}
-	sbClient := r.client.NewSandboxClient(ctx, state.EnvironmentId.ValueString())
+	sbClient := r.client.NewSandboxV2Client(ctx, state.EnvironmentId.ValueString())
 	info, err := waitForSandboxState(ctx, sbClient, id, targetStates, desired)
 	if err != nil {
 		resp.Diagnostics.AddError("Error waiting for sandbox", fmt.Sprintf("Sandbox %s did not become %s: %s", id, desired, err))
@@ -459,8 +457,8 @@ func (r *SandboxResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 func (r *SandboxResource) deleteSandbox(ctx context.Context, environmentID, id string) error {
-	sbClient := r.client.NewSandboxClient(ctx, environmentID)
-	getResp, err := sbClient.GetSandbox(ctx, connect.NewRequest(&sandboxv1.GetSandboxRequest{SandboxId: id}))
+	sbClient := r.client.NewSandboxV2Client(ctx, environmentID)
+	getResp, err := sbClient.GetSandbox(ctx, connect.NewRequest(&sandboxv2.GetSandboxRequest{Id: id}))
 	alreadyGone := false
 	lastState := ""
 	if err != nil {
@@ -474,7 +472,7 @@ func (r *SandboxResource) deleteSandbox(ctx context.Context, environmentID, id s
 		if info == nil {
 			return fmt.Errorf("could not read sandbox %s before deletion: the server returned no sandbox info", id)
 		}
-		lastState = strings.ToLower(info.GetState())
+		lastState = sandboxStatusString(info.GetStatus())
 		if sandboxSuspendedStates[lastState] {
 			if err := r.restoreSandbox(ctx, environmentID, id); err != nil {
 				return fmt.Errorf("could not restore suspended sandbox %s before deletion: %w", id, err)
@@ -492,8 +490,8 @@ func (r *SandboxResource) deleteSandbox(ctx context.Context, environmentID, id s
 		return nil
 	}
 
-	_, err = sbClient.TerminateSandbox(ctx, connect.NewRequest(&sandboxv1.TerminateSandboxRequest{
-		SandboxId: id,
+	_, err = sbClient.TerminateSandbox(ctx, connect.NewRequest(&sandboxv2.TerminateSandboxRequest{
+		Id: id,
 	}))
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeNotFound && lastState == "failed" {
@@ -563,27 +561,27 @@ func (r *SandboxResource) ImportState(ctx context.Context, req resource.ImportSt
 func waitForSandboxReady(
 	ctx context.Context,
 	sbClient interface {
-		GetSandbox(context.Context, *connect.Request[sandboxv1.GetSandboxRequest]) (*connect.Response[sandboxv1.GetSandboxResponse], error)
+		GetSandbox(context.Context, *connect.Request[sandboxv2.GetSandboxRequest]) (*connect.Response[sandboxv2.GetSandboxResponse], error)
 	},
 	id string,
-) (*sandboxv1.SandboxInfo, error) {
+) (*sandboxv2.SandboxInfo, error) {
 	return waitForSandboxState(ctx, sbClient, id, sandboxReadyStates, "ready")
 }
 
 func waitForSandboxState(
 	ctx context.Context,
 	sbClient interface {
-		GetSandbox(context.Context, *connect.Request[sandboxv1.GetSandboxRequest]) (*connect.Response[sandboxv1.GetSandboxResponse], error)
+		GetSandbox(context.Context, *connect.Request[sandboxv2.GetSandboxRequest]) (*connect.Response[sandboxv2.GetSandboxResponse], error)
 	},
 	id string,
 	targetStates map[string]bool,
 	targetDescription string,
-) (*sandboxv1.SandboxInfo, error) {
+) (*sandboxv2.SandboxInfo, error) {
 	deadline := time.Now().Add(sandboxReadyTimeout)
 	ticker := time.NewTicker(sandboxPollInterval)
 	defer ticker.Stop()
 
-	var last *sandboxv1.SandboxInfo
+	var last *sandboxv2.SandboxInfo
 	for {
 		select {
 		case <-ctx.Done():
@@ -591,38 +589,52 @@ func waitForSandboxState(
 		case <-ticker.C:
 		}
 
-		getResp, err := sbClient.GetSandbox(ctx, connect.NewRequest(&sandboxv1.GetSandboxRequest{SandboxId: id}))
+		getResp, err := sbClient.GetSandbox(ctx, connect.NewRequest(&sandboxv2.GetSandboxRequest{Id: id}))
 		if err != nil {
 			return nil, err
 		}
 		last = getResp.Msg.GetSandbox()
-		state := strings.ToLower(last.GetState())
+		state := sandboxStatusString(last.GetStatus())
 		if targetStates[state] {
 			return last, nil
 		}
 		if sandboxFailedStates[state] {
-			return nil, fmt.Errorf("sandbox entered state %q: %s", last.GetState(), last.GetStatusMessage())
+			return nil, fmt.Errorf("sandbox entered state %q: %s", state, last.GetStatusMessage())
 		}
 		if time.Now().After(deadline) {
 			return nil, fmt.Errorf("timed out after %s waiting for sandbox to become %s (last state %q: %s)",
-				sandboxReadyTimeout, targetDescription, last.GetState(), last.GetStatusMessage())
+				sandboxReadyTimeout, targetDescription, state, last.GetStatusMessage())
 		}
 	}
 }
 
-func buildCreateSandboxRequest(ctx context.Context, data *SandboxResourceModel) (*sandboxv1.CreateSandboxRequest, diag.Diagnostics) {
+func buildCreateSandboxRequest(ctx context.Context, data *SandboxResourceModel) (*sandboxv2.CreateSandboxRequest, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	req := &sandboxv1.CreateSandboxRequest{
-		ImageSource: &sandboxv1.CreateSandboxRequest_Image{Image: data.Image.ValueString()},
+	spec := &containerv1.ChalkContainerSpec{Image: data.Image.ValueString()}
+	req := &sandboxv2.CreateSandboxRequest{
+		Source: &sandboxv2.CreateSandboxRequest_Spec{Spec: spec},
 	}
 
 	if !data.Name.IsNull() && !data.Name.IsUnknown() {
-		req.Name = data.Name.ValueStringPointer()
+		spec.Name = data.Name.ValueString()
 	}
 
 	if !data.Runtime.IsNull() && !data.Runtime.IsUnknown() {
-		req.Runtime = data.Runtime.ValueStringPointer()
+		var computeClass containerv1.ComputeClass
+		switch data.Runtime.ValueString() {
+		case "kube":
+			computeClass = containerv1.ComputeClass_COMPUTE_CLASS_K8S
+		case "chalk_node", "local":
+			computeClass = containerv1.ComputeClass_COMPUTE_CLASS_HOST
+		default:
+			diags.AddError(
+				"Invalid runtime",
+				fmt.Sprintf("%q is not a known runtime. Valid values: kube, chalk_node, local.", data.Runtime.ValueString()),
+			)
+			return nil, diags
+		}
+		spec.ComputeClass = &computeClass
 	}
 
 	if !data.RestartPolicy.IsNull() && !data.RestartPolicy.IsUnknown() {
@@ -636,25 +648,25 @@ func buildCreateSandboxRequest(ctx context.Context, data *SandboxResourceModel) 
 			return nil, diags
 		}
 		policy := containerv1.RestartPolicy(v)
-		req.RestartPolicy = &policy
+		spec.RestartPolicy = &policy
 	}
 
 	if !data.Entrypoint.IsNull() && !data.Entrypoint.IsUnknown() {
 		var entrypoint []string
 		diags.Append(data.Entrypoint.ElementsAs(ctx, &entrypoint, false)...)
-		req.Entrypoint = entrypoint
+		spec.Entrypoint = entrypoint
 	}
 
 	if !data.Env.IsNull() && !data.Env.IsUnknown() {
 		var env map[string]string
 		diags.Append(data.Env.ElementsAs(ctx, &env, false)...)
-		req.Env = env
+		spec.EnvVars = env
 	}
 
 	if !data.ResourceLimits.IsNull() && !data.ResourceLimits.IsUnknown() {
 		var rl SandboxResourceLimitsModel
 		diags.Append(data.ResourceLimits.As(ctx, &rl, basetypes.ObjectAsOptions{})...)
-		req.ResourceLimits = &sandboxv1.ResourceLimits{
+		spec.Resources = &containerv1.ResourceLimits{
 			Cpu:    rl.CPU.ValueStringPointer(),
 			Memory: rl.Memory.ValueStringPointer(),
 		}
@@ -664,7 +676,7 @@ func buildCreateSandboxRequest(ctx context.Context, data *SandboxResourceModel) 
 		var vms []SandboxVolumeMountModel
 		diags.Append(data.Volumes.ElementsAs(ctx, &vms, false)...)
 		for _, vm := range vms {
-			v := &sandboxv1.VolumeMount{
+			v := &containerv1.VolumeMount{
 				Name:      vm.Name.ValueString(),
 				MountPath: vm.MountPath.ValueString(),
 				Type:      vm.Type.ValueString(),
@@ -676,14 +688,14 @@ func buildCreateSandboxRequest(ctx context.Context, data *SandboxResourceModel) 
 				version := uint64(vm.VersionId.ValueInt64())
 				v.VersionId = &version
 			}
-			req.Volumes = append(req.Volumes, v)
+			spec.Volumes = append(spec.Volumes, v)
 		}
 	}
 
 	if !data.NetworkPolicy.IsNull() && !data.NetworkPolicy.IsUnknown() {
 		policy, d := buildSandboxNetworkPolicy(ctx, data.NetworkPolicy)
 		diags.Append(d...)
-		req.NetworkPolicy = policy
+		spec.NetworkPolicy = policy
 	}
 
 	return req, diags
@@ -728,16 +740,22 @@ func buildSandboxNetworkPolicy(ctx context.Context, obj types.Object) (*containe
 }
 
 // updateSandboxState copies server-owned fields onto the model. The configured
-// fields are deliberately left alone: CreateSandbox and GetSandbox only echo
-// back SandboxInfo, which carries none of the spec, so re-deriving them from
-// the response would blank out the practitioner's configuration.
-func updateSandboxState(data *SandboxResourceModel, info *sandboxv1.SandboxInfo) {
+// fields are deliberately left alone so a server-normalized spec does not
+// overwrite the practitioner's configuration. Name is the exception: v2 makes
+// it authoritative on SandboxInfo, which also lets imports recover it.
+func updateSandboxState(data *SandboxResourceModel, info *sandboxv2.SandboxInfo) {
 	data.Id = types.StringValue(info.GetId())
-	data.State = optionalStringValue(info.GetState())
-	data.CreatedAt = optionalStringValue(info.GetCreatedAt())
-	data.StatusMessage = optionalStringValue(info.GetStatusMessage())
-	data.BuildId = optionalStringValue(info.GetBuildId())
-	if info.Name != nil {
-		data.Name = optionalStringValue(info.GetName())
+	data.Name = optionalStringValue(info.GetName())
+	data.State = optionalStringValue(sandboxStatusString(info.GetStatus()))
+	if info.GetCreatedAt() == nil {
+		data.CreatedAt = types.StringNull()
+	} else {
+		data.CreatedAt = types.StringValue(info.GetCreatedAt().AsTime().Format(time.RFC3339Nano))
 	}
+	data.StatusMessage = optionalStringValue(info.GetStatusMessage())
+	data.BuildId = optionalStringValue(info.GetSpec().GetTags()["chalk.ai/tag-sandbox-build-id"])
+}
+
+func sandboxStatusString(status sandboxv2.SandboxStatus) string {
+	return strings.ToLower(strings.TrimPrefix(status.String(), "SANDBOX_STATUS_"))
 }
