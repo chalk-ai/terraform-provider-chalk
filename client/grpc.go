@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v1/sandboxv1connect"
+	"github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2/sandboxv2connect"
 	"github.com/chalk-ai/chalk-go/gen/chalk/scalinggroup/v1/scalinggroupv1connect"
 	serverv1 "github.com/chalk-ai/chalk-go/gen/chalk/server/v1"
 	"github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
@@ -113,6 +114,18 @@ func NewScalingGroupManagerClient(ctx context.Context, options *GrpcClientOption
 // NewSandboxClient creates a new SandboxServiceClient
 func NewSandboxClient(ctx context.Context, options *GrpcClientOptions) sandboxv1connect.SandboxServiceClient {
 	return sandboxv1connect.NewSandboxServiceClient(
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
+}
+
+// NewSandboxV2Client creates a new v2 SandboxServiceClient.
+func NewSandboxV2Client(ctx context.Context, options *GrpcClientOptions) sandboxv2connect.SandboxServiceClient {
+	return sandboxv2connect.NewSandboxServiceClient(
+		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
+}
+
+// NewSandboxSnapshotClient creates a new SandboxSnapshotServiceClient.
+func NewSandboxSnapshotClient(ctx context.Context, options *GrpcClientOptions) sandboxv2connect.SandboxSnapshotServiceClient {
+	return sandboxv2connect.NewSandboxSnapshotServiceClient(
 		options.HTTPClient, options.Host, connect.WithInterceptors(options.Interceptors...))
 }
 

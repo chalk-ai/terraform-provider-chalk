@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v1/sandboxv1connect"
+	"github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2/sandboxv2connect"
 	"github.com/chalk-ai/chalk-go/gen/chalk/scalinggroup/v1/scalinggroupv1connect"
 	serverv1connect "github.com/chalk-ai/chalk-go/gen/chalk/server/v1/serverv1connect"
 )
@@ -174,6 +175,32 @@ func (cm *Manager) NewScalingGroupManagerClient(ctx context.Context, envId strin
 // The envId parameter sets the x-chalk-env-id header to scope to a specific environment.
 func (cm *Manager) NewSandboxClient(ctx context.Context, envId string) sandboxv1connect.SandboxServiceClient {
 	return NewSandboxClient(ctx, &GrpcClientOptions{
+		HTTPClient: cm.httpClient,
+		Host:       cm.config.ApiServer,
+		Interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-env-id", envId),
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			cm.makeAuthInterceptor(ctx),
+		},
+	})
+}
+
+// NewSandboxV2Client creates a v2 SandboxServiceClient with standard headers and auth.
+func (cm *Manager) NewSandboxV2Client(ctx context.Context, envId string) sandboxv2connect.SandboxServiceClient {
+	return NewSandboxV2Client(ctx, &GrpcClientOptions{
+		HTTPClient: cm.httpClient,
+		Host:       cm.config.ApiServer,
+		Interceptors: []connect.Interceptor{
+			MakeApiServerHeaderInterceptor("x-chalk-env-id", envId),
+			MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+			cm.makeAuthInterceptor(ctx),
+		},
+	})
+}
+
+// NewSandboxSnapshotClient creates a SandboxSnapshotServiceClient with standard headers and auth.
+func (cm *Manager) NewSandboxSnapshotClient(ctx context.Context, envId string) sandboxv2connect.SandboxSnapshotServiceClient {
+	return NewSandboxSnapshotClient(ctx, &GrpcClientOptions{
 		HTTPClient: cm.httpClient,
 		Host:       cm.config.ApiServer,
 		Interceptors: []connect.Interceptor{

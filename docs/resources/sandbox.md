@@ -4,7 +4,7 @@ page_title: "chalk_sandbox Resource - chalk"
 subcategory: ""
 description: |-
   Manages a Chalk sandbox — an ephemeral container running in the environment's cluster, addressable for command execution via chalk sandbox exec.
-  Sandboxes have no update RPC, so every argument forces replacement.
+  Only desired_state can be updated in place; every other argument forces replacement.
   A sandbox has no outbound network access by default: without a network_policy even DNS resolution fails. Grant egress explicitly via network_policy.allowed_routes.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 Manages a Chalk sandbox — an ephemeral container running in the environment's cluster, addressable for command execution via `chalk sandbox exec`.
 
-Sandboxes have no update RPC, so every argument forces replacement.
+Only `desired_state` can be updated in place; every other argument forces replacement.
 
 A sandbox has **no outbound network access by default**: without a `network_policy` even DNS resolution fails. Grant egress explicitly via `network_policy.allowed_routes`.
 
@@ -25,10 +25,13 @@ A sandbox has **no outbound network access by default**: without a `network_poli
 # A sandbox has no outbound network access by default — without a network_policy
 # even DNS resolution fails — so egress is granted explicitly below.
 
+data "coder_workspace" "me" {}
+
 resource "chalk_sandbox" "workstation" {
   environment_id = "tmnmc9beyujew"
   name           = "debian-workstation"
   image          = "debian:bookworm"
+  desired_state  = data.coder_workspace.me.start_count == 1 ? "running" : "suspended"
 
   entrypoint = ["/bin/bash", "-c", "sleep infinity"]
 
@@ -70,6 +73,7 @@ resource "chalk_sandbox" "workstation" {
 
 ### Optional
 
+- `desired_state` (String) Desired lifecycle state: `running` (default) or `suspended`. Changing this value suspends or restores the sandbox in place.
 - `entrypoint` (List of String) Overrides the image's entrypoint. When unset, the image's own entrypoint is used. `exec` into the sandbox keeps working either way — it does not go through the entrypoint process.
 - `env` (Map of String, Sensitive) Environment variables to inject into the sandbox.
 - `name` (String) Optional human-readable name for the sandbox.

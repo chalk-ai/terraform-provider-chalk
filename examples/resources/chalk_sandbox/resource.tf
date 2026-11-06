@@ -4,10 +4,13 @@
 # A sandbox has no outbound network access by default — without a network_policy
 # even DNS resolution fails — so egress is granted explicitly below.
 
+data "coder_workspace" "me" {}
+
 resource "chalk_sandbox" "workstation" {
   environment_id = "tmnmc9beyujew"
   name           = "debian-workstation"
   image          = "debian:bookworm"
+  desired_state  = data.coder_workspace.me.start_count == 1 ? "running" : "suspended"
 
   entrypoint = ["/bin/bash", "-c", "sleep infinity"]
 

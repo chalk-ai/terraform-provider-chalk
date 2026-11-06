@@ -9,6 +9,12 @@ description: |-
 
 For migration guidance and non-schema changes, see the [project changelog](https://github.com/chalk-ai/terraform-provider-chalk/blob/main/CHANGELOG.md).
 
+## Unreleased
+
+### Resources
+
+- Added attribute `chalk_sandbox.desired_state` (`string`).
+
 ## v1.2.0
 
 ### Resources
