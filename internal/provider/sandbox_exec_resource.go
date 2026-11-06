@@ -1,0 +1,246 @@
+package provider
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"connectrpc.com/connect"
+	sandboxv2 "github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2"
+	"github.com/chalk-ai/terraform-provider-chalk/client"
+	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"google.golang.org/protobuf/types/known/durationpb"
+)
+
+const sandboxExecOutputLimit = 16 * 1024
+
+var _ resource.Resource = &SandboxExecResource{}
+var _ resource.ResourceWithConfigure = &SandboxExecResource{}
+var _ resource.ResourceWithValidateConfig = &SandboxExecResource{}
+
+func NewSandboxExecResource() resource.Resource {
+	return &SandboxExecResource{}
+}
+
+type SandboxExecResource struct {
+	client *client.Manager
+}
+
+type SandboxExecResourceModel struct {
+	Id            types.String         `tfsdk:"id"`
+	EnvironmentId types.String         `tfsdk:"environment_id"`
+	SandboxId     types.String         `tfsdk:"sandbox_id"`
+	Command       types.List           `tfsdk:"command"`
+	Env           types.Map            `tfsdk:"env"`
+	Stdin         types.String         `tfsdk:"stdin"`
+	Triggers      types.Map            `tfsdk:"triggers"`
+	Timeout       timetypes.GoDuration `tfsdk:"timeout"`
+	Output        types.String         `tfsdk:"output"`
+}
+
+func (r *SandboxExecResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_sandbox_exec"
+}
+
+func (r *SandboxExecResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	requiresReplaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
+
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Runs a command once in an existing Chalk sandbox. The sandbox must be running, for example by setting its `desired_state = \"running\"`. Changing `triggers` re-runs the command.",
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: "The ID of the sandbox where the command ran.",
+				Computed:            true,
+			},
+			"environment_id": schema.StringAttribute{
+				MarkdownDescription: "The environment ID used to scope the sandbox request.",
+				Required:            true,
+				PlanModifiers:       requiresReplaceString,
+			},
+			"sandbox_id": schema.StringAttribute{
+				MarkdownDescription: "The ID of the sandbox in which to run the command.",
+				Required:            true,
+				PlanModifiers:       requiresReplaceString,
+			},
+			"command": schema.ListAttribute{
+				MarkdownDescription: "Command to run. The first element is the executable and remaining elements are its arguments.",
+				Required:            true,
+				ElementType:         types.StringType,
+				PlanModifiers:       []planmodifier.List{listplanmodifier.RequiresReplace()},
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+					listvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+				},
+			},
+			"env": schema.MapAttribute{
+				MarkdownDescription: "Environment variables for the command.",
+				Optional:            true,
+				Sensitive:           true,
+				ElementType:         types.StringType,
+				PlanModifiers:       []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+			},
+			"stdin": schema.StringAttribute{
+				MarkdownDescription: "Write-only standard input for the command. Requires Terraform 1.11 or later. Use this instead of command arguments for secrets. Changing stdin alone does not re-run the command; use `triggers` to force a re-run.",
+				Optional:            true,
+				Sensitive:           true,
+				WriteOnly:           true,
+			},
+			"triggers": schema.MapAttribute{
+				MarkdownDescription: "Arbitrary values that force the command to run again when changed.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				PlanModifiers:       []planmodifier.Map{mapplanmodifier.RequiresReplace()},
+			},
+			"timeout": schema.StringAttribute{
+				MarkdownDescription: "Maximum command runtime as a Go duration. Defaults to `5m`.",
+				Optional:            true,
+				Computed:            true,
+				CustomType:          timetypes.GoDurationType{},
+				Default:             stringdefault.StaticString("5m"),
+				PlanModifiers:       requiresReplaceString,
+			},
+			"output": schema.StringAttribute{
+				MarkdownDescription: "The last 16 KiB of combined stdout and stderr.",
+				Computed:            true,
+			},
+		},
+	}
+}
+
+func (r *SandboxExecResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var timeout timetypes.GoDuration
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("timeout"), &timeout)...)
+	if resp.Diagnostics.HasError() || timeout.IsNull() || timeout.IsUnknown() {
+		return
+	}
+
+	duration, diags := timeout.ValueGoDuration()
+	resp.Diagnostics.Append(diags...)
+	if !diags.HasError() && duration <= 0 {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("timeout"),
+			"Invalid Sandbox Command Timeout",
+			"timeout must be greater than zero.",
+		)
+	}
+}
+
+func (r *SandboxExecResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+	manager, ok := req.ProviderData.(*client.Manager)
+	if !ok {
+		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Manager, got: %T", req.ProviderData))
+		return
+	}
+	r.client = manager
+}
+
+func (r *SandboxExecResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data SandboxExecResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	var stdin types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("stdin"), &stdin)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	execReq, diags := buildSandboxExecRequest(ctx, &data, stdin)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	execClient := r.client.NewSandboxProcessClient(ctx, data.EnvironmentId.ValueString())
+	execResp, err := execClient.ExecCommand(ctx, connect.NewRequest(execReq))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeFailedPrecondition {
+			resp.Diagnostics.AddError(
+				"Sandbox not ready for exec",
+				fmt.Sprintf("Sandbox %s must be running to execute a command; set desired_state = \"running\".\nServer message: %s", data.SandboxId.ValueString(), err),
+			)
+			return
+		}
+		resp.Diagnostics.AddError("Error executing sandbox command", fmt.Sprintf("Could not execute command in sandbox %s: %s", data.SandboxId.ValueString(), err))
+		return
+	}
+
+	output := truncateSandboxExecOutput(execResp.Msg.GetStdout(), execResp.Msg.GetStderr())
+	if execResp.Msg.GetExitCode() != 0 {
+		resp.Diagnostics.AddError(
+			"Sandbox command failed",
+			fmt.Sprintf("Command exited with code %d. Output:\n%s", execResp.Msg.GetExitCode(), output),
+		)
+		return
+	}
+
+	data.Id = data.SandboxId
+	data.Output = types.StringValue(output)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *SandboxExecResource) Read(context.Context, resource.ReadRequest, *resource.ReadResponse) {
+}
+
+func (r *SandboxExecResource) Update(context.Context, resource.UpdateRequest, *resource.UpdateResponse) {
+}
+
+func (r *SandboxExecResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {
+}
+
+func buildSandboxExecRequest(ctx context.Context, data *SandboxExecResourceModel, stdinValue types.String) (*sandboxv2.ExecCommandRequest, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	var command []string
+	diags.Append(data.Command.ElementsAs(ctx, &command, false)...)
+
+	env := map[string]string(nil)
+	if !data.Env.IsNull() {
+		diags.Append(data.Env.ElementsAs(ctx, &env, false)...)
+	}
+
+	timeout, timeoutDiags := data.Timeout.ValueGoDuration()
+	diags.Append(timeoutDiags...)
+	if !timeoutDiags.HasError() && timeout <= 0 {
+		diags.AddError("Invalid sandbox command timeout", "Timeout must be greater than zero.")
+	}
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	stdin := []byte(nil)
+	if !stdinValue.IsNull() {
+		stdin = []byte(stdinValue.ValueString())
+	}
+
+	return &sandboxv2.ExecCommandRequest{
+		SandboxId: data.SandboxId.ValueString(),
+		Command:   command[0],
+		Args:      command[1:],
+		EnvVars:   env,
+		Timeout:   durationpb.New(timeout),
+		Stdin:     stdin,
+	}, diags
+}
+
+func truncateSandboxExecOutput(stdout, stderr []byte) string {
+	combined := append(append([]byte(nil), stdout...), stderr...)
+	if len(combined) > sandboxExecOutputLimit {
+		combined = combined[len(combined)-sandboxExecOutputLimit:]
+	}
+	return strings.ToValidUTF8(string(combined), "�")
+}
