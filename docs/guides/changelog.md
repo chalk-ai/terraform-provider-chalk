@@ -13,7 +13,7 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 ### Resources
 
-- Added optional attribute `chalk_sandbox.desired_state` (`string`) for opt-in lifecycle management; when omitted, Terraform does not manage whether the sandbox is running or suspended.
+- Added attribute `chalk_sandbox.desired_state` (`string`).
 
 ## v1.2.0
 
