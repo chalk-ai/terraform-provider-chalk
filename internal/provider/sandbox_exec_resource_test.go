@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,6 +63,10 @@ func setupMockSandboxExecServer(t *testing.T, response *sandboxv2.ExecCommandRes
 }
 
 func sandboxExecConfig(serverURL, trigger string) string {
+	return sandboxExecConfigWithStdin(serverURL, trigger, "secret-input")
+}
+
+func sandboxExecConfigWithStdin(serverURL, trigger, stdin string) string {
 	return providerConfig(serverURL) + fmt.Sprintf(`
 resource "chalk_sandbox_exec" "test" {
   environment_id = "test-env-id"
@@ -70,13 +75,13 @@ resource "chalk_sandbox_exec" "test" {
   env = {
     TEST_ENV = "test-value"
   }
-  stdin   = "secret-input"
+  stdin   = %q
   timeout = "2m"
   triggers = {
     token = %q
   }
 }
-`, trigger)
+`, stdin, trigger)
 }
 
 func TestSandboxExecResourceCreate(t *testing.T) {
@@ -93,8 +98,9 @@ func TestSandboxExecResourceCreate(t *testing.T) {
 			Config: sandboxExecConfig(server.URL, "first"),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("chalk_sandbox_exec.test", "id", "sandbox-test-id"),
-				resource.TestCheckResourceAttr("chalk_sandbox_exec.test", "exit_code", "0"),
 				resource.TestCheckResourceAttr("chalk_sandbox_exec.test", "output", "hello\nwarning\n"),
+				resource.TestCheckNoResourceAttr("chalk_sandbox_exec.test", "stdin"),
+				resource.TestCheckNoResourceAttr("chalk_sandbox_exec.test", "exit_code"),
 			),
 		}},
 	})
@@ -111,7 +117,8 @@ func TestSandboxExecResourceCreate(t *testing.T) {
 func TestSandboxExecResourceNonZeroExitDoesNotSaveState(t *testing.T) {
 	t.Parallel()
 	server, state := setupMockSandboxExecServer(t, &sandboxv2.ExecCommandResponse{
-		Stderr:   []byte("command failed"),
+		Stdout:   []byte(strings.Repeat("x", sandboxExecOutputLimit)),
+		Stderr:   []byte("command failed at the end"),
 		ExitCode: 23,
 	})
 
@@ -120,7 +127,7 @@ func TestSandboxExecResourceNonZeroExitDoesNotSaveState(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      sandboxExecConfig(server.URL, "first"),
-				ExpectError: regexp.MustCompile(`Command exited with code 23(?s:.*)command failed`),
+				ExpectError: regexp.MustCompile(`Command exited with code 23(?s:.*)command(?s:.*)failed at the end`),
 			},
 			{
 				PreConfig: func() {
@@ -157,7 +164,22 @@ func TestSandboxExecResourceTriggerChangeRequiresReplace(t *testing.T) {
 	assert.Equal(t, 2, state.calls)
 }
 
-func TestSandboxExecResourceStdinIsSensitive(t *testing.T) {
+func TestSandboxExecResourceStdinChangeDoesNotRequireReplace(t *testing.T) {
+	t.Parallel()
+	server, state := setupMockSandboxExecServer(t, &sandboxv2.ExecCommandResponse{})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: sandboxExecConfigWithStdin(server.URL, "first", "first-secret")},
+			{Config: sandboxExecConfigWithStdin(server.URL, "first", "second-secret")},
+		},
+	})
+
+	assert.Equal(t, 1, state.calls)
+}
+
+func TestSandboxExecResourceSchema(t *testing.T) {
 	t.Parallel()
 	var response frameworkresource.SchemaResponse
 	NewSandboxExecResource().Schema(context.Background(), frameworkresource.SchemaRequest{}, &response)
@@ -165,9 +187,18 @@ func TestSandboxExecResourceStdinIsSensitive(t *testing.T) {
 	stdin, ok := response.Schema.Attributes["stdin"].(frameworkschema.StringAttribute)
 	require.True(t, ok)
 	assert.True(t, stdin.Sensitive)
+	assert.True(t, stdin.WriteOnly)
+	assert.False(t, stdin.IsComputed())
+
+	environmentID, ok := response.Schema.Attributes["environment_id"].(frameworkschema.StringAttribute)
+	require.True(t, ok)
+	assert.True(t, environmentID.Required)
+
+	_, hasExitCode := response.Schema.Attributes["exit_code"]
+	assert.False(t, hasExitCode)
 }
 
-func TestSandboxExecResourceFailedPreconditionExplainsRunningRequirement(t *testing.T) {
+func TestSandboxExecResourceFailedPreconditionIncludesServerError(t *testing.T) {
 	t.Parallel()
 	server, state := setupMockSandboxExecServer(t, &sandboxv2.ExecCommandResponse{})
 	state.err = connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("sandbox suspended"))
@@ -176,7 +207,35 @@ func TestSandboxExecResourceFailedPreconditionExplainsRunningRequirement(t *test
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{{
 			Config:      sandboxExecConfig(server.URL, "first"),
-			ExpectError: regexp.MustCompile(`sandbox must be running(?s:.*)depends_on`),
+			ExpectError: regexp.MustCompile(`sandbox suspended`),
 		}},
 	})
+}
+
+func TestSandboxExecResourceInvalidTimeoutFailsAtPlan(t *testing.T) {
+	t.Parallel()
+	server, state := setupMockSandboxExecServer(t, &sandboxv2.ExecCommandResponse{})
+	config := strings.Replace(sandboxExecConfig(server.URL, "first"), `timeout = "2m"`, `timeout = "not-a-duration"`, 1)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{{
+			Config:      config,
+			ExpectError: regexp.MustCompile(`Invalid Time Duration String Value`),
+		}},
+	})
+
+	assert.Zero(t, state.calls)
+}
+
+func TestTruncateSandboxExecOutputKeepsTail(t *testing.T) {
+	t.Parallel()
+	stdout := []byte(strings.Repeat("x", sandboxExecOutputLimit))
+	stderr := []byte("stderr tail")
+
+	output := truncateSandboxExecOutput(stdout, stderr)
+
+	assert.Len(t, output, sandboxExecOutputLimit)
+	assert.NotContains(t, output, strings.Repeat("x", sandboxExecOutputLimit))
+	assert.True(t, strings.HasSuffix(output, "stderr tail"))
 }

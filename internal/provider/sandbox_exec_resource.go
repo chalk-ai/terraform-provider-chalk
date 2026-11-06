@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"connectrpc.com/connect"
 	sandboxv2 "github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2"
 	"github.com/chalk-ai/terraform-provider-chalk/client"
+	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -37,16 +38,15 @@ type SandboxExecResource struct {
 }
 
 type SandboxExecResourceModel struct {
-	Id            types.String `tfsdk:"id"`
-	EnvironmentId types.String `tfsdk:"environment_id"`
-	SandboxId     types.String `tfsdk:"sandbox_id"`
-	Command       types.List   `tfsdk:"command"`
-	Env           types.Map    `tfsdk:"env"`
-	Stdin         types.String `tfsdk:"stdin"`
-	Triggers      types.Map    `tfsdk:"triggers"`
-	Timeout       types.String `tfsdk:"timeout"`
-	ExitCode      types.Int64  `tfsdk:"exit_code"`
-	Output        types.String `tfsdk:"output"`
+	Id            types.String         `tfsdk:"id"`
+	EnvironmentId types.String         `tfsdk:"environment_id"`
+	SandboxId     types.String         `tfsdk:"sandbox_id"`
+	Command       types.List           `tfsdk:"command"`
+	Env           types.Map            `tfsdk:"env"`
+	Stdin         types.String         `tfsdk:"stdin"`
+	Triggers      types.Map            `tfsdk:"triggers"`
+	Timeout       timetypes.GoDuration `tfsdk:"timeout"`
+	Output        types.String         `tfsdk:"output"`
 }
 
 func (r *SandboxExecResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -57,15 +57,15 @@ func (r *SandboxExecResource) Schema(_ context.Context, _ resource.SchemaRequest
 	requiresReplaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Runs a command once in an existing running Chalk sandbox. All inputs force replacement, so changing `triggers` re-runs the command. Use `depends_on` to ensure the associated `chalk_sandbox` has `desired_state = \"running\"` before execution.",
+		MarkdownDescription: "Runs a command once in an existing Chalk sandbox. The sandbox must be running, for example by setting its `desired_state = \"running\"`. Changing `triggers` re-runs the command.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the sandbox where the command ran.",
 				Computed:            true,
 			},
 			"environment_id": schema.StringAttribute{
-				MarkdownDescription: "The environment ID used to scope the sandbox request. When omitted, no environment header is sent.",
-				Optional:            true,
+				MarkdownDescription: "The environment ID used to scope the sandbox request.",
+				Required:            true,
 				PlanModifiers:       requiresReplaceString,
 			},
 			"sandbox_id": schema.StringAttribute{
@@ -87,10 +87,10 @@ func (r *SandboxExecResource) Schema(_ context.Context, _ resource.SchemaRequest
 				PlanModifiers:       []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"stdin": schema.StringAttribute{
-				MarkdownDescription: "Standard input for the command. Use this instead of command arguments for secrets.",
+				MarkdownDescription: "Standard input for the command. Use this instead of command arguments for secrets. Changing stdin alone does not re-run the command; use `triggers` to force a re-run.",
 				Optional:            true,
 				Sensitive:           true,
-				PlanModifiers:       requiresReplaceString,
+				WriteOnly:           true,
 			},
 			"triggers": schema.MapAttribute{
 				MarkdownDescription: "Arbitrary values that force the command to run again when changed.",
@@ -102,15 +102,12 @@ func (r *SandboxExecResource) Schema(_ context.Context, _ resource.SchemaRequest
 				MarkdownDescription: "Maximum command runtime as a Go duration.",
 				Optional:            true,
 				Computed:            true,
+				CustomType:          timetypes.GoDurationType{},
 				Default:             stringdefault.StaticString("5m"),
 				PlanModifiers:       requiresReplaceString,
 			},
-			"exit_code": schema.Int64Attribute{
-				MarkdownDescription: "The command's exit code.",
-				Computed:            true,
-			},
 			"output": schema.StringAttribute{
-				MarkdownDescription: "Combined stdout and stderr, truncated to 16 KiB.",
+				MarkdownDescription: "The last 16 KiB of combined stdout and stderr.",
 				Computed:            true,
 			},
 		},
@@ -132,11 +129,13 @@ func (r *SandboxExecResource) Configure(_ context.Context, req resource.Configur
 func (r *SandboxExecResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data SandboxExecResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	var stdin types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("stdin"), &stdin)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	execReq, diags := buildSandboxExecRequest(ctx, &data)
+	execReq, diags := buildSandboxExecRequest(ctx, &data, stdin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -146,7 +145,7 @@ func (r *SandboxExecResource) Create(ctx context.Context, req resource.CreateReq
 	execResp, err := execClient.ExecCommand(ctx, connect.NewRequest(execReq))
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeFailedPrecondition {
-			resp.Diagnostics.AddError("Sandbox is not running", "The sandbox must be running before a command can execute. Set chalk_sandbox.desired_state to \"running\" and add depends_on so the sandbox resumes first.")
+			resp.Diagnostics.AddError("Sandbox command failed", fmt.Sprintf("Could not execute command in sandbox %s: %s", data.SandboxId.ValueString(), err))
 			return
 		}
 		resp.Diagnostics.AddError("Error executing sandbox command", fmt.Sprintf("Could not execute command in sandbox %s: %s", data.SandboxId.ValueString(), err))
@@ -163,7 +162,6 @@ func (r *SandboxExecResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	data.Id = data.SandboxId
-	data.ExitCode = types.Int64Value(int64(execResp.Msg.GetExitCode()))
 	data.Output = types.StringValue(output)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -177,7 +175,7 @@ func (r *SandboxExecResource) Update(context.Context, resource.UpdateRequest, *r
 func (r *SandboxExecResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {
 }
 
-func buildSandboxExecRequest(ctx context.Context, data *SandboxExecResourceModel) (*sandboxv2.ExecCommandRequest, diag.Diagnostics) {
+func buildSandboxExecRequest(ctx context.Context, data *SandboxExecResourceModel, stdinValue types.String) (*sandboxv2.ExecCommandRequest, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	var command []string
@@ -191,10 +189,9 @@ func buildSandboxExecRequest(ctx context.Context, data *SandboxExecResourceModel
 		diags.Append(data.Env.ElementsAs(ctx, &env, false)...)
 	}
 
-	timeout, err := time.ParseDuration(data.Timeout.ValueString())
-	if err != nil {
-		diags.AddError("Invalid sandbox command timeout", fmt.Sprintf("Could not parse timeout as a duration: %s", err))
-	} else if timeout <= 0 {
+	timeout, timeoutDiags := data.Timeout.ValueGoDuration()
+	diags.Append(timeoutDiags...)
+	if !timeoutDiags.HasError() && timeout <= 0 {
 		diags.AddError("Invalid sandbox command timeout", "Timeout must be greater than zero.")
 	}
 	if diags.HasError() {
@@ -202,8 +199,8 @@ func buildSandboxExecRequest(ctx context.Context, data *SandboxExecResourceModel
 	}
 
 	stdin := []byte(nil)
-	if !data.Stdin.IsNull() && !data.Stdin.IsUnknown() {
-		stdin = []byte(data.Stdin.ValueString())
+	if !stdinValue.IsNull() && !stdinValue.IsUnknown() {
+		stdin = []byte(stdinValue.ValueString())
 	}
 
 	return &sandboxv2.ExecCommandRequest{
@@ -219,7 +216,7 @@ func buildSandboxExecRequest(ctx context.Context, data *SandboxExecResourceModel
 func truncateSandboxExecOutput(stdout, stderr []byte) string {
 	combined := append(append([]byte(nil), stdout...), stderr...)
 	if len(combined) > sandboxExecOutputLimit {
-		combined = combined[:sandboxExecOutputLimit]
+		combined = combined[len(combined)-sandboxExecOutputLimit:]
 	}
 	return strings.ToValidUTF8(string(combined), "�")
 }

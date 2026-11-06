@@ -9,6 +9,4 @@ resource "chalk_sandbox_exec" "refresh_coder_token" {
   triggers = {
     token = sha256(coder_agent.main.token)
   }
-
-  depends_on = [chalk_sandbox.dev]
 }

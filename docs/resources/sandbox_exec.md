@@ -3,12 +3,12 @@
 page_title: "chalk_sandbox_exec Resource - chalk"
 subcategory: ""
 description: |-
-  Runs a command once in an existing running Chalk sandbox. All inputs force replacement, so changing triggers re-runs the command. Use depends_on to ensure the associated chalk_sandbox has desired_state = "running" before execution.
+  Runs a command once in an existing Chalk sandbox. The sandbox must be running, for example by setting its desired_state = "running". Changing triggers re-runs the command.
 ---
 
 # chalk_sandbox_exec (Resource)
 
-Runs a command once in an existing running Chalk sandbox. All inputs force replacement, so changing `triggers` re-runs the command. Use `depends_on` to ensure the associated `chalk_sandbox` has `desired_state = "running"` before execution.
+Runs a command once in an existing Chalk sandbox. The sandbox must be running, for example by setting its `desired_state = "running"`. Changing `triggers` re-runs the command.
 
 ## Example Usage
 
@@ -24,8 +24,6 @@ resource "chalk_sandbox_exec" "refresh_coder_token" {
   triggers = {
     token = sha256(coder_agent.main.token)
   }
-
-  depends_on = [chalk_sandbox.dev]
 }
 ```
 
@@ -35,18 +33,19 @@ resource "chalk_sandbox_exec" "refresh_coder_token" {
 ### Required
 
 - `command` (List of String) Command to run. The first element is the executable and remaining elements are its arguments.
+- `environment_id` (String) The environment ID used to scope the sandbox request.
 - `sandbox_id` (String) The ID of the sandbox in which to run the command.
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `env` (Map of String) Environment variables for the command.
-- `environment_id` (String) The environment ID used to scope the sandbox request. When omitted, no environment header is sent.
-- `stdin` (String, Sensitive) Standard input for the command. Use this instead of command arguments for secrets.
+- `stdin` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Standard input for the command. Use this instead of command arguments for secrets. Changing stdin alone does not re-run the command; use `triggers` to force a re-run.
 - `timeout` (String) Maximum command runtime as a Go duration.
 - `triggers` (Map of String) Arbitrary values that force the command to run again when changed.
 
 ### Read-Only
 
-- `exit_code` (Number) The command's exit code.
 - `id` (String) The ID of the sandbox where the command ran.
-- `output` (String) Combined stdout and stderr, truncated to 16 KiB.
+- `output` (String) The last 16 KiB of combined stdout and stderr.
