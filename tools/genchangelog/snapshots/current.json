@@ -1,5 +1,5 @@
 {
-  "version": "v1.2.0",
+  "version": "v1.2.1",
   "resources": {
     "chalk_aws_cloud_credentials": {
       "attributes": {
@@ -1614,6 +1614,9 @@
           "type": "string"
         },
         "created_at": {
+          "type": "string"
+        },
+        "desired_state": {
           "type": "string"
         },
         "entrypoint": {
