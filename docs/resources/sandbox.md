@@ -25,13 +25,12 @@ A sandbox has **no outbound network access by default**: without a `network_poli
 # A sandbox has no outbound network access by default — without a network_policy
 # even DNS resolution fails — so egress is granted explicitly below.
 
-data "coder_workspace" "me" {}
-
 resource "chalk_sandbox" "workstation" {
   environment_id = "tmnmc9beyujew"
   name           = "debian-workstation"
   image          = "debian:bookworm"
-  desired_state  = data.coder_workspace.me.start_count == 1 ? "running" : "suspended"
+  desired_state  = "suspended"
+  # Coder pattern: data.coder_workspace.me.start_count == 1 ? "running" : "suspended"
 
   entrypoint = ["/bin/bash", "-c", "sleep infinity"]
 
@@ -76,17 +75,17 @@ resource "chalk_sandbox" "workstation" {
 - `desired_state` (String) Desired lifecycle state: `running` (default) or `suspended`. Changing this value suspends or restores the sandbox in place.
 - `entrypoint` (List of String) Overrides the image's entrypoint. When unset, the image's own entrypoint is used. `exec` into the sandbox keeps working either way — it does not go through the entrypoint process.
 - `env` (Map of String, Sensitive) Environment variables to inject into the sandbox.
-- `name` (String) Optional human-readable name for the sandbox.
-- `network_policy` (Attributes) Outbound network policy. **Without this, the sandbox cannot reach anything — not even DNS.** Grant full egress with a single `allowed_routes` entry for `0.0.0.0/0`. (see [below for nested schema](#nestedatt--network_policy))
+- `name` (String) Optional human-readable name for the sandbox. The server generates one when omitted.
+- `network_policy` (Attributes) Outbound network policy. **Without this, the sandbox cannot reach anything — not even DNS.** Grant full egress with a single `allowed_routes` entry for `0.0.0.0/0`. The server rejects network policies when `runtime` is `kube`. (see [below for nested schema](#nestedatt--network_policy))
 - `resource_limits` (Attributes) CPU and memory limits for the sandbox container. (see [below for nested schema](#nestedatt--resource_limits))
 - `restart_policy` (String) Whether to recreate the sandbox after its backing instance terminates: `RESTART_POLICY_NEVER` (default) or `RESTART_POLICY_ALWAYS`.
-- `runtime` (String) Runtime backend for the sandbox container: `kube` (default), `chalk_node`, or `local`.
+- `runtime` (String) Runtime backend for the sandbox container: `chalk_node` or `local` select the host compute class, which v2 uses by default; `kube` selects Kubernetes. The server rejects `kube` when `network_policy` is set.
 - `volumes` (Attributes List) Volumes to mount into the sandbox. (see [below for nested schema](#nestedatt--volumes))
 - `wait_for_ready` (Boolean) Whether to block until the sandbox reports a ready state before completing the apply. Defaults to `true`; set to `false` to return as soon as the create call is accepted.
 
 ### Read-Only
 
-- `build_id` (String) Build ID backing this sandbox, when one was needed.
+- `build_id` (String, Deprecated) Deprecated: always null because the v2 sandbox API does not return build IDs.
 - `created_at` (String) When the sandbox was created.
 - `id` (String) The sandbox id.
 - `state` (String) Current sandbox state, e.g. `running`, `pending`, or `suspended`.

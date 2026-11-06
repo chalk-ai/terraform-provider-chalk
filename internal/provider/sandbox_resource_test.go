@@ -38,7 +38,8 @@ type sandboxMockState struct {
 	snapshots           []*sandboxv2.SandboxSnapshot
 	snapshotListFilters [][]string
 	deletedSnapshotIDs  []string
-	snapshotDeleteErr   error
+	snapshotListErr     error
+	snapshotDeleteErrs  map[string]error
 	events              []string
 }
 
@@ -58,9 +59,13 @@ func (h *sandboxV2MockHandler) CreateSandbox(
 	if h.state.readyAfter == 0 {
 		status = sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING
 	}
+	name := req.Msg.GetSpec().GetName()
+	if name == "" {
+		name = "server-generated-name"
+	}
 	h.state.info = &sandboxv2.SandboxInfo{
 		Id:            "sandbox-test-id",
-		Name:          req.Msg.GetSpec().GetName(),
+		Name:          name,
 		Status:        status,
 		CreatedAt:     timestamppb.New(time.Date(2026, 8, 19, 0, 0, 0, 0, time.UTC)),
 		Spec:          req.Msg.GetSpec(),
@@ -134,6 +139,9 @@ func (h *sandboxSnapshotMockHandler) ListSandboxSnapshots(
 ) (*connect.Response[sandboxv2.ListSandboxSnapshotsResponse], error) {
 	h.state.events = append(h.state.events, "list snapshots")
 	h.state.snapshotListFilters = append(h.state.snapshotListFilters, append([]string(nil), req.Msg.GetFilters().GetSandboxIds()...))
+	if h.state.snapshotListErr != nil {
+		return nil, h.state.snapshotListErr
+	}
 	// Return everything so the provider test also verifies its defensive
 	// sandbox-id check instead of relying only on server-side filtering.
 	return connect.NewResponse(&sandboxv2.ListSandboxSnapshotsResponse{Snapshots: h.state.snapshots}), nil
@@ -144,8 +152,8 @@ func (h *sandboxSnapshotMockHandler) DeleteSandboxSnapshot(
 	req *connect.Request[sandboxv2.DeleteSandboxSnapshotRequest],
 ) (*connect.Response[sandboxv2.DeleteSandboxSnapshotResponse], error) {
 	h.state.events = append(h.state.events, "delete snapshot "+req.Msg.GetSnapshotId())
-	if h.state.snapshotDeleteErr != nil {
-		return nil, h.state.snapshotDeleteErr
+	if err := h.state.snapshotDeleteErrs[req.Msg.GetSnapshotId()]; err != nil {
+		return nil, err
 	}
 	h.state.deletedSnapshotIDs = append(h.state.deletedSnapshotIDs, req.Msg.GetSnapshotId())
 	return connect.NewResponse(&sandboxv2.DeleteSandboxSnapshotResponse{}), nil
@@ -193,6 +201,15 @@ resource "chalk_sandbox" "test" {
   desired_state  = %q
 }
 `, name, desiredState)
+}
+
+func sandboxConfigWithoutName(serverURL string) string {
+	return providerConfig(serverURL) + `
+resource "chalk_sandbox" "test" {
+  environment_id = "test-env-id"
+  image          = "debian:bookworm"
+}
+`
 }
 
 func sandboxResourceForTest(serverURL string) *SandboxResource {
@@ -290,6 +307,21 @@ func TestSandboxResourceCreate(t *testing.T) {
 	assert.Empty(t, st.created.GetSpec().Entrypoint)
 }
 
+func TestSandboxResourceAcceptsServerGeneratedName(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{{
+			Config: sandboxConfigWithoutName(server.URL),
+			Check:  resource.TestCheckResourceAttr("chalk_sandbox.test", "name", "server-generated-name"),
+		}},
+	})
+
+	assert.Equal(t, 1, st.createCalls)
+}
+
 func TestSandboxResourceCreateSuspended(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 2)
@@ -345,6 +377,38 @@ func TestSandboxResourceUpdatesDesiredStateInPlace(t *testing.T) {
 	assert.Equal(t, 1, st.restoreCalls)
 }
 
+func TestSandboxResourceSkipsTransitionAlreadyAppliedServerSide(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+	name := "test-sandbox-" + uuid.New().String()[:8]
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: sandboxDesiredStateConfig(server.URL, name, "running")},
+			{
+				PreConfig: func() {
+					st.info.Status = sandboxv2.SandboxStatus_SANDBOX_STATUS_SUSPENDED
+					st.info.StatusMessage = new("suspended")
+				},
+				Config: sandboxDesiredStateConfig(server.URL, name, "suspended"),
+				Check:  resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "suspended"),
+			},
+			{
+				PreConfig: func() {
+					st.info.Status = sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING
+					st.info.StatusMessage = new("running")
+				},
+				Config: sandboxDesiredStateConfig(server.URL, name, "running"),
+				Check:  resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "running"),
+			},
+		},
+	})
+
+	assert.Zero(t, st.suspendCalls)
+	assert.Zero(t, st.restoreCalls)
+}
+
 func TestSandboxResourceOtherUpdatesStillReplace(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 0)
@@ -394,15 +458,23 @@ func TestSandboxResourceDeleteSuspendedRestoresAndCleansSnapshots(t *testing.T) 
 	}, st.events)
 }
 
-func TestSandboxResourceDeleteFailedTreatsTerminateNotFoundAsGone(t *testing.T) {
+func TestSandboxResourceDeleteFinishedTreatsTerminateNotFoundAsGone(t *testing.T) {
 	t.Parallel()
-	server, st := setupMockSandboxServer(t, 0)
-	st.info = &sandboxv2.SandboxInfo{Id: "sandbox-test-id", Status: sandboxv2.SandboxStatus_SANDBOX_STATUS_FAILED}
-	st.terminateErr = connect.NewError(connect.CodeNotFound, fmt.Errorf("container not found"))
+	for _, status := range []sandboxv2.SandboxStatus{
+		sandboxv2.SandboxStatus_SANDBOX_STATUS_FAILED,
+		sandboxv2.SandboxStatus_SANDBOX_STATUS_SUCCEEDED,
+		sandboxv2.SandboxStatus_SANDBOX_STATUS_TERMINATED,
+	} {
+		t.Run(status.String(), func(t *testing.T) {
+			server, st := setupMockSandboxServer(t, 0)
+			st.info = &sandboxv2.SandboxInfo{Id: "sandbox-test-id", Status: status}
+			st.terminateErr = connect.NewError(connect.CodeNotFound, fmt.Errorf("container not found"))
 
-	err := sandboxResourceForTest(server.URL).deleteSandbox(context.Background(), "test-env-id", "sandbox-test-id")
-	require.NoError(t, err)
-	assert.Equal(t, []string{"list snapshots", "terminate"}, st.events)
+			err := sandboxResourceForTest(server.URL).deleteSandbox(context.Background(), "test-env-id", "sandbox-test-id")
+			require.NoError(t, err)
+			assert.Equal(t, []string{"list snapshots", "terminate"}, st.events)
+		})
+	}
 }
 
 func TestSandboxResourceDeleteRunningDoesNotIgnoreTerminateNotFound(t *testing.T) {
@@ -428,16 +500,37 @@ func TestSandboxResourceDeleteGoneStillCleansSnapshots(t *testing.T) {
 	assert.Zero(t, st.terminateCalls)
 }
 
-func TestSandboxResourceSnapshotDeleteFailureStopsDeletion(t *testing.T) {
+func TestSandboxResourceSnapshotDeleteFailuresDoNotStopDeletion(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 0)
 	st.info = &sandboxv2.SandboxInfo{Id: "sandbox-test-id", Status: sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING}
-	st.snapshots = []*sandboxv2.SandboxSnapshot{{Id: "snapshot-owned", SandboxId: "sandbox-test-id"}}
-	st.snapshotDeleteErr = connect.NewError(connect.CodeInternal, fmt.Errorf("delete failed"))
+	st.snapshots = []*sandboxv2.SandboxSnapshot{
+		{Id: "snapshot-in-use", SandboxId: "sandbox-test-id"},
+		{Id: "snapshot-gone", SandboxId: "sandbox-test-id"},
+		{Id: "snapshot-error", SandboxId: "sandbox-test-id"},
+		{Id: "snapshot-deleted", SandboxId: "sandbox-test-id"},
+	}
+	st.snapshotDeleteErrs = map[string]error{
+		"snapshot-in-use": connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("snapshot is in use")),
+		"snapshot-gone":   connect.NewError(connect.CodeNotFound, fmt.Errorf("snapshot not found")),
+		"snapshot-error":  connect.NewError(connect.CodeInternal, fmt.Errorf("delete failed")),
+	}
 
 	err := sandboxResourceForTest(server.URL).deleteSandbox(context.Background(), "test-env-id", "sandbox-test-id")
-	require.ErrorContains(t, err, "delete snapshot snapshot-owned")
-	assert.Zero(t, st.terminateCalls, "the sandbox must not terminate while its snapshots are leaked")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"snapshot-deleted"}, st.deletedSnapshotIDs)
+	assert.Equal(t, 1, st.terminateCalls)
+}
+
+func TestSandboxResourceSnapshotListFailureDoesNotStopDeletion(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+	st.info = &sandboxv2.SandboxInfo{Id: "sandbox-test-id", Status: sandboxv2.SandboxStatus_SANDBOX_STATUS_RUNNING}
+	st.snapshotListErr = connect.NewError(connect.CodeInternal, fmt.Errorf("list failed"))
+
+	err := sandboxResourceForTest(server.URL).deleteSandbox(context.Background(), "test-env-id", "sandbox-test-id")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"list snapshots", "terminate"}, st.events)
 }
 
 func TestSandboxResourceCreateFullSpec(t *testing.T) {
@@ -549,16 +642,16 @@ func TestSandboxResourceImport(t *testing.T) {
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: sandboxMinimalConfig(server.URL, name),
+				Config: sandboxDesiredStateConfig(server.URL, name, "suspended"),
 			},
 			{
 				ResourceName:      "chalk_sandbox.test",
 				ImportState:       true,
 				ImportStateId:     "test-env-id/sandbox-test-id",
 				ImportStateVerify: true,
-				// Keep the existing import contract: only server-owned fields and
-				// the v2 sandbox name are recovered into state.
-				ImportStateVerifyIgnore: []string{"desired_state", "image", "wait_for_ready"},
+				// Only server-owned fields, desired_state, and the v2 sandbox name
+				// are recovered into state.
+				ImportStateVerifyIgnore: []string{"image", "wait_for_ready"},
 			},
 		},
 	})

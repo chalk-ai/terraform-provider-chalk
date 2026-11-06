@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	containerv1 "github.com/chalk-ai/chalk-go/gen/chalk/container/v1"
 	sandboxv2 "github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2"
+	"github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2/sandboxv2connect"
 	"github.com/chalk-ai/terraform-provider-chalk/client"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -26,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
@@ -58,6 +60,12 @@ var sandboxFailedStates = map[string]bool{
 	"succeeded":  true,
 	"terminated": true,
 	"error":      true,
+}
+
+var sandboxFinishedStates = map[string]bool{
+	"failed":     true,
+	"succeeded":  true,
+	"terminated": true,
 }
 
 func NewSandboxResource() resource.Resource {
@@ -142,9 +150,13 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				PlanModifiers:       requiresReplaceString,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Optional human-readable name for the sandbox.",
+				MarkdownDescription: "Optional human-readable name for the sandbox. The server generates one when omitted.",
 				Optional:            true,
-				PlanModifiers:       requiresReplaceString,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"image": schema.StringAttribute{
 				MarkdownDescription: "Pre-built container image to run, e.g. `debian:bookworm`.",
@@ -166,7 +178,7 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				PlanModifiers:       []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"runtime": schema.StringAttribute{
-				MarkdownDescription: "Runtime backend for the sandbox container: `kube` (default), `chalk_node`, or `local`.",
+				MarkdownDescription: "Runtime backend for the sandbox container: `chalk_node` or `local` select the host compute class, which v2 uses by default; `kube` selects Kubernetes. The server rejects `kube` when `network_policy` is set.",
 				Optional:            true,
 				PlanModifiers:       requiresReplaceString,
 			},
@@ -222,7 +234,8 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			"network_policy": schema.SingleNestedAttribute{
 				MarkdownDescription: "Outbound network policy. **Without this, the sandbox cannot reach anything — " +
-					"not even DNS.** Grant full egress with a single `allowed_routes` entry for `0.0.0.0/0`.",
+					"not even DNS.** Grant full egress with a single `allowed_routes` entry for `0.0.0.0/0`. " +
+					"The server rejects network policies when `runtime` is `kube`.",
 				Optional:      true,
 				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
@@ -290,8 +303,9 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"build_id": schema.StringAttribute{
-				MarkdownDescription: "Build ID backing this sandbox, when one was needed.",
+				MarkdownDescription: "Deprecated: always null because the v2 sandbox API does not return build IDs.",
 				Computed:            true,
+				DeprecationMessage:  "The v2 sandbox API does not return build IDs, so this attribute is always null and will be removed in a future release.",
 			},
 		},
 	}
@@ -347,7 +361,7 @@ func (r *SandboxResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	if (data.WaitForReady.ValueBool() || data.DesiredState.ValueString() == "suspended") && !sandboxReadyStates[sandboxStatusString(info.GetStatus())] {
-		ready, err := waitForSandboxReady(ctx, sbClient, info.GetId())
+		ready, err := waitForSandboxState(ctx, sbClient, info.GetId(), sandboxReadyStates, "ready")
 		if err != nil {
 			resp.Diagnostics.AddError("Error waiting for sandbox", fmt.Sprintf("Sandbox %s did not become ready: %s", info.GetId(), err))
 			return
@@ -356,7 +370,7 @@ func (r *SandboxResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	if data.DesiredState.ValueString() == "suspended" {
-		if err := r.suspendSandbox(ctx, data.EnvironmentId.ValueString(), info.GetId()); err != nil {
+		if err := r.suspendSandbox(ctx, sbClient, info.GetId()); err != nil {
 			resp.Diagnostics.AddError("Error suspending sandbox", fmt.Sprintf("Could not suspend sandbox %s: %s", info.GetId(), err))
 			return
 		}
@@ -414,19 +428,15 @@ func (r *SandboxResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	id := state.Id.ValueString()
 	desired := data.DesiredState.ValueString()
-	if desired == state.DesiredState.ValueString() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	sbClient := r.client.NewSandboxV2Client(ctx, state.EnvironmentId.ValueString())
+	getResp, err := sbClient.GetSandbox(ctx, connect.NewRequest(&sandboxv2.GetSandboxRequest{Id: id}))
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading sandbox state", fmt.Sprintf("Could not read sandbox %s before setting it to %s: %s", id, desired, err))
 		return
 	}
-
-	var err error
-	if desired == "suspended" {
-		err = r.suspendSandbox(ctx, state.EnvironmentId.ValueString(), id)
-	} else {
-		err = r.restoreSandbox(ctx, state.EnvironmentId.ValueString(), id)
-	}
-	if err != nil {
-		resp.Diagnostics.AddError("Error updating sandbox state", fmt.Sprintf("Could not set sandbox %s to %s: %s", id, desired, err))
+	info := getResp.Msg.GetSandbox()
+	if info == nil {
+		resp.Diagnostics.AddError("Error reading sandbox state", fmt.Sprintf("Could not read sandbox %s before setting it to %s: the server returned no sandbox info", id, desired))
 		return
 	}
 
@@ -434,8 +444,23 @@ func (r *SandboxResource) Update(ctx context.Context, req resource.UpdateRequest
 	if desired == "suspended" {
 		targetStates = sandboxSuspendedStates
 	}
-	sbClient := r.client.NewSandboxV2Client(ctx, state.EnvironmentId.ValueString())
-	info, err := waitForSandboxState(ctx, sbClient, id, targetStates, desired)
+	if targetStates[sandboxStatusString(info.GetStatus())] {
+		updateSandboxState(&data, info)
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		return
+	}
+
+	if desired == "suspended" {
+		err = r.suspendSandbox(ctx, sbClient, id)
+	} else {
+		err = r.restoreSandbox(ctx, sbClient, id)
+	}
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating sandbox state", fmt.Sprintf("Could not set sandbox %s to %s: %s", id, desired, err))
+		return
+	}
+
+	info, err = waitForSandboxState(ctx, sbClient, id, targetStates, desired)
 	if err != nil {
 		resp.Diagnostics.AddError("Error waiting for sandbox", fmt.Sprintf("Sandbox %s did not become %s: %s", id, desired, err))
 		return
@@ -474,7 +499,7 @@ func (r *SandboxResource) deleteSandbox(ctx context.Context, environmentID, id s
 		}
 		lastState = sandboxStatusString(info.GetStatus())
 		if sandboxSuspendedStates[lastState] {
-			if err := r.restoreSandbox(ctx, environmentID, id); err != nil {
+			if err := r.restoreSandbox(ctx, sbClient, id); err != nil {
 				return fmt.Errorf("could not restore suspended sandbox %s before deletion: %w", id, err)
 			}
 			if _, err := waitForSandboxState(ctx, sbClient, id, sandboxReadyStates, "running"); err != nil {
@@ -483,9 +508,7 @@ func (r *SandboxResource) deleteSandbox(ctx context.Context, environmentID, id s
 		}
 	}
 
-	if err := r.deleteSandboxSnapshots(ctx, environmentID, id); err != nil {
-		return fmt.Errorf("could not delete snapshots for sandbox %s: %w", id, err)
-	}
+	r.deleteSandboxSnapshots(ctx, environmentID, id)
 	if alreadyGone {
 		return nil
 	}
@@ -494,7 +517,7 @@ func (r *SandboxResource) deleteSandbox(ctx context.Context, environmentID, id s
 		Id: id,
 	}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound && lastState == "failed" {
+		if connect.CodeOf(err) == connect.CodeNotFound && sandboxFinishedStates[lastState] {
 			return nil
 		}
 		return fmt.Errorf("could not terminate sandbox %s: %w", id, err)
@@ -502,17 +525,17 @@ func (r *SandboxResource) deleteSandbox(ctx context.Context, environmentID, id s
 	return nil
 }
 
-func (r *SandboxResource) suspendSandbox(ctx context.Context, environmentID, id string) error {
-	_, err := r.client.NewSandboxV2Client(ctx, environmentID).SuspendSandbox(ctx, connect.NewRequest(&sandboxv2.SuspendSandboxRequest{Id: id}))
+func (r *SandboxResource) suspendSandbox(ctx context.Context, sbClient sandboxv2connect.SandboxServiceClient, id string) error {
+	_, err := sbClient.SuspendSandbox(ctx, connect.NewRequest(&sandboxv2.SuspendSandboxRequest{Id: id}))
 	return err
 }
 
-func (r *SandboxResource) restoreSandbox(ctx context.Context, environmentID, id string) error {
-	_, err := r.client.NewSandboxV2Client(ctx, environmentID).ResumeSandbox(ctx, connect.NewRequest(&sandboxv2.ResumeSandboxRequest{Id: id}))
+func (r *SandboxResource) restoreSandbox(ctx context.Context, sbClient sandboxv2connect.SandboxServiceClient, id string) error {
+	_, err := sbClient.ResumeSandbox(ctx, connect.NewRequest(&sandboxv2.ResumeSandboxRequest{Id: id}))
 	return err
 }
 
-func (r *SandboxResource) deleteSandboxSnapshots(ctx context.Context, environmentID, sandboxID string) error {
+func (r *SandboxResource) deleteSandboxSnapshots(ctx context.Context, environmentID, sandboxID string) {
 	snapshotClient := r.client.NewSandboxSnapshotClient(ctx, environmentID)
 	var cursor *string
 	for {
@@ -523,7 +546,10 @@ func (r *SandboxResource) deleteSandboxSnapshots(ctx context.Context, environmen
 			},
 		}))
 		if err != nil {
-			return fmt.Errorf("list snapshots: %w", err)
+			tflog.Warn(ctx, fmt.Sprintf("Could not list snapshots for sandbox %s during deletion; continuing", sandboxID), map[string]any{
+				"error": err.Error(),
+			})
+			return
 		}
 		for _, snapshot := range listResp.Msg.GetSnapshots() {
 			if snapshot.GetSandboxId() != sandboxID {
@@ -532,12 +558,14 @@ func (r *SandboxResource) deleteSandboxSnapshots(ctx context.Context, environmen
 			if _, err := snapshotClient.DeleteSandboxSnapshot(ctx, connect.NewRequest(&sandboxv2.DeleteSandboxSnapshotRequest{
 				SnapshotId: snapshot.GetId(),
 			})); err != nil {
-				return fmt.Errorf("delete snapshot %s: %w", snapshot.GetId(), err)
+				tflog.Warn(ctx, fmt.Sprintf("Could not delete snapshot %s while deleting sandbox %s; continuing", snapshot.GetId(), sandboxID), map[string]any{
+					"error": err.Error(),
+				})
 			}
 		}
 		nextCursor := listResp.Msg.GetNextCursor()
 		if nextCursor == "" {
-			return nil
+			return
 		}
 		cursor = &nextCursor
 	}
@@ -554,18 +582,25 @@ func (r *SandboxResource) ImportState(ctx context.Context, req resource.ImportSt
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("environment_id"), parts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), parts[1])...)
-}
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-// waitForSandboxReady polls GetSandbox until the sandbox reports a ready state,
-// reports a state it can never leave, or the timeout expires.
-func waitForSandboxReady(
-	ctx context.Context,
-	sbClient interface {
-		GetSandbox(context.Context, *connect.Request[sandboxv2.GetSandboxRequest]) (*connect.Response[sandboxv2.GetSandboxResponse], error)
-	},
-	id string,
-) (*sandboxv2.SandboxInfo, error) {
-	return waitForSandboxState(ctx, sbClient, id, sandboxReadyStates, "ready")
+	getResp, err := r.client.NewSandboxV2Client(ctx, parts[0]).GetSandbox(ctx, connect.NewRequest(&sandboxv2.GetSandboxRequest{Id: parts[1]}))
+	if err != nil {
+		resp.Diagnostics.AddError("Error importing sandbox", fmt.Sprintf("Could not read sandbox %s: %s", parts[1], err))
+		return
+	}
+	info := getResp.Msg.GetSandbox()
+	if info == nil {
+		resp.Diagnostics.AddError("Error importing sandbox", fmt.Sprintf("Could not read sandbox %s: the server returned no sandbox info", parts[1]))
+		return
+	}
+	desiredState := "running"
+	if sandboxSuspendedStates[sandboxStatusString(info.GetStatus())] {
+		desiredState = "suspended"
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("desired_state"), desiredState)...)
 }
 
 func waitForSandboxState(
@@ -753,7 +788,7 @@ func updateSandboxState(data *SandboxResourceModel, info *sandboxv2.SandboxInfo)
 		data.CreatedAt = types.StringValue(info.GetCreatedAt().AsTime().Format(time.RFC3339Nano))
 	}
 	data.StatusMessage = optionalStringValue(info.GetStatusMessage())
-	data.BuildId = optionalStringValue(info.GetSpec().GetTags()["chalk.ai/tag-sandbox-build-id"])
+	data.BuildId = types.StringNull()
 }
 
 func sandboxStatusString(status sandboxv2.SandboxStatus) string {

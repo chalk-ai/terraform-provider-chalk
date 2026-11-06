@@ -1,8 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* Move `chalk_sandbox` to the v2 sandbox API, add in-place suspend and restore with `desired_state`, and make snapshot cleanup on destroy best-effort. Update `chalk-go` to v1.3.30. This requires a Chalk API server that supports the v2 sandbox and sandbox snapshot services.
+
 ## 1.2.0
 
-* Add in-place suspend and restore to `chalk_sandbox` with `desired_state`, and clean up sandbox snapshots on destroy.
 * Add optional `victoria_metrics` sizing to `chalk_telemetry`: `storage_size`, `storage_replicas`, `insert_replicas`, and `auth_replicas`. Updates preserve unconfigured VictoriaMetrics settings; removing configuration leaves live sizing unchanged.
 * Preserve computed telemetry state when an update only relinquishes ownership of optional settings.
 
