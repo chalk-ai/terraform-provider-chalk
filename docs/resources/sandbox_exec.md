@@ -16,6 +16,10 @@ Runs a command once in an existing Chalk sandbox. The sandbox must be running, f
 # Refresh a Coder agent's token whenever Coder rotates it. This script is part
 # of the sandbox image; it reads the token from stdin and restarts the agent.
 resource "chalk_sandbox_exec" "refresh_coder_token" {
+  # Coder rotates the token on stop builds too; only replace the exec while the
+  # workspace is starting, before the sandbox can suspend.
+  count = data.coder_workspace.me.start_count
+
   environment_id = chalk_sandbox.dev.environment_id
   sandbox_id     = chalk_sandbox.dev.id
   command        = ["/usr/local/bin/refresh-coder-agent-token"]
@@ -40,9 +44,9 @@ resource "chalk_sandbox_exec" "refresh_coder_token" {
 
 > **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
-- `env` (Map of String) Environment variables for the command.
-- `stdin` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Standard input for the command. Use this instead of command arguments for secrets. Changing stdin alone does not re-run the command; use `triggers` to force a re-run.
-- `timeout` (String) Maximum command runtime as a Go duration.
+- `env` (Map of String, Sensitive) Environment variables for the command.
+- `stdin` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only standard input for the command. Requires Terraform 1.11 or later. Use this instead of command arguments for secrets. Changing stdin alone does not re-run the command; use `triggers` to force a re-run.
+- `timeout` (String) Maximum command runtime as a Go duration. Defaults to `5m`.
 - `triggers` (Map of String) Arbitrary values that force the command to run again when changed.
 
 ### Read-Only

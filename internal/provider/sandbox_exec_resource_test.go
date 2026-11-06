@@ -228,6 +228,38 @@ func TestSandboxExecResourceInvalidTimeoutFailsAtPlan(t *testing.T) {
 	assert.Zero(t, state.calls)
 }
 
+func TestSandboxExecResourceNonPositiveTimeoutFailsAtPlan(t *testing.T) {
+	t.Parallel()
+	server, state := setupMockSandboxExecServer(t, &sandboxv2.ExecCommandResponse{})
+	config := strings.Replace(sandboxExecConfig(server.URL, "first"), `timeout = "2m"`, `timeout = "0s"`, 1)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{{
+			Config:      config,
+			ExpectError: regexp.MustCompile(`timeout must be greater than zero`),
+		}},
+	})
+
+	assert.Zero(t, state.calls)
+}
+
+func TestSandboxExecResourceEmptyCommandElementFailsAtPlan(t *testing.T) {
+	t.Parallel()
+	server, state := setupMockSandboxExecServer(t, &sandboxv2.ExecCommandResponse{})
+	config := strings.Replace(sandboxExecConfig(server.URL, "first"), `command        = ["sh", "-c", "read token; printf output"]`, `command        = [""]`, 1)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{{
+			Config:      config,
+			ExpectError: regexp.MustCompile(`must be at least 1`),
+		}},
+	})
+
+	assert.Zero(t, state.calls)
+}
+
 func TestTruncateSandboxExecOutputKeepsTail(t *testing.T) {
 	t.Parallel()
 	stdout := []byte(strings.Repeat("x", sandboxExecOutputLimit))
