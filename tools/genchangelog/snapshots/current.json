@@ -1,5 +1,5 @@
 {
-  "version": "v1.2.1",
+  "version": "v1.3.0",
   "resources": {
     "chalk_aws_cloud_credentials": {
       "attributes": {
@@ -1707,6 +1707,40 @@
         },
         "wait_for_ready": {
           "type": "bool"
+        }
+      }
+    },
+    "chalk_sandbox_exec": {
+      "attributes": {
+        "command": {
+          "type": "list(string)",
+          "required": true
+        },
+        "env": {
+          "type": "map(string)"
+        },
+        "environment_id": {
+          "type": "string",
+          "required": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "sandbox_id": {
+          "type": "string",
+          "required": true
+        },
+        "stdin": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "string"
+        },
+        "triggers": {
+          "type": "map(string)"
         }
       }
     },
