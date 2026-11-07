@@ -211,6 +211,20 @@ func (cm *Manager) NewSandboxSnapshotClient(ctx context.Context, envId string) s
 	})
 }
 
+// NewSandboxProcessClient creates a SandboxProcessServiceClient with standard headers and auth.
+func (cm *Manager) NewSandboxProcessClient(ctx context.Context, envId string) sandboxv2connect.SandboxProcessServiceClient {
+	interceptors := []connect.Interceptor{
+		MakeApiServerHeaderInterceptor("x-chalk-env-id", envId),
+		MakeApiServerHeaderInterceptor("x-chalk-server", "go-api"),
+		cm.makeAuthInterceptor(ctx),
+	}
+	return NewSandboxProcessClient(ctx, &GrpcClientOptions{
+		HTTPClient:   cm.httpClient,
+		Host:         cm.config.ApiServer,
+		Interceptors: interceptors,
+	})
+}
+
 // NewOfflineStoreConnectionClient creates an OfflineStoreConnectionServiceClient with standard headers and auth.
 // The envId parameter sets the x-chalk-env-id header to scope to a specific environment.
 func (cm *Manager) NewOfflineStoreConnectionClient(ctx context.Context, envId string) serverv1connect.OfflineStoreConnectionServiceClient {
