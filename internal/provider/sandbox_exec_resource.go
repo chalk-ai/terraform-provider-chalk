@@ -113,7 +113,7 @@ func (r *SandboxExecResource) Schema(_ context.Context, _ resource.SchemaRequest
 				PlanModifiers:       requiresReplaceString,
 			},
 			"output": schema.StringAttribute{
-				MarkdownDescription: "The last 16 KiB of combined stdout and stderr.",
+				MarkdownDescription: "The last 16 KiB of combined stdout and stderr. Output is stored in Terraform state in plain text and is included in error messages and build logs when the command fails, so commands should not print secrets (for example, do not echo values passed via `stdin`).",
 				Computed:            true,
 			},
 		},

@@ -52,4 +52,4 @@ resource "chalk_sandbox_exec" "refresh_coder_token" {
 ### Read-Only
 
 - `id` (String) The ID of the sandbox where the command ran.
-- `output` (String) The last 16 KiB of combined stdout and stderr.
+- `output` (String) The last 16 KiB of combined stdout and stderr. Output is stored in Terraform state in plain text and is included in error messages and build logs when the command fails, so commands should not print secrets (for example, do not echo values passed via `stdin`).
