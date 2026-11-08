@@ -314,7 +314,7 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 					},
 					"oidc_token_files": schema.ListNestedAttribute{
 						MarkdownDescription: "OIDC token files the platform materializes and keeps fresh, at most 8. " +
-							"Requires `mode = \"workload_principal\"`.",
+							"Requires `mode = \"workload_principal\"` and host compute (the server rejects them with `runtime = \"kube\"`).",
 						Optional:   true,
 						Validators: []validator.List{listvalidator.SizeAtMost(8)},
 						NestedObject: schema.NestedAttributeObject{
@@ -917,7 +917,8 @@ func updateSandboxWorkloadIdentity(ctx context.Context, data *SandboxResourceMod
 	if !data.WorkloadIdentity.IsNull() && !data.WorkloadIdentity.IsUnknown() {
 		var prior SandboxWorkloadIdentityModel
 		diags.Append(data.WorkloadIdentity.As(ctx, &prior, basetypes.ObjectAsOptions{})...)
-		// Keep a configured empty list rather than flipping it to null.
+		// The server returned no token files: keep the prior list so a
+		// configured empty list does not flip to null.
 		if len(identity.GetOidcTokenFiles()) == 0 && !prior.OIDCTokenFiles.IsUnknown() {
 			files = prior.OIDCTokenFiles
 		}

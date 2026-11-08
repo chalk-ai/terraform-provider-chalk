@@ -870,8 +870,34 @@ func TestSandboxResourceCreateWorkloadIdentity(t *testing.T) {
 }
 
 func TestSandboxResourceWorkloadIdentityKeepsStateWhenServerOmitsIt(t *testing.T) {
+	ctx := context.Background()
+	files, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}, []SandboxOIDCTokenFileModel{{
+		Audience: types.StringValue(testGCPAudience),
+		EnvVar:   types.StringValue("GCP_OIDC_TOKEN_FILE"),
+	}})
+	require.False(t, diags.HasError())
+	prior, diags := types.ObjectValueFrom(ctx, sandboxWorkloadIdentityAttrTypes, SandboxWorkloadIdentityModel{
+		Mode:           types.StringValue("workload_principal"),
+		OIDCTokenFiles: files,
+	})
+	require.False(t, diags.HasError())
+
+	for name, info := range map[string]*sandboxv2.SandboxInfo{
+		"no spec": {},
+		"identity without token files": {Spec: &containerv1.ChalkContainerSpec{
+			ChalkWorkloadIdentity: &containerv1.ChalkWorkloadIdentity{Mode: containerv1.IdentityMode_IDENTITY_MODE_WORKLOAD_PRINCIPAL},
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			data := SandboxResourceModel{WorkloadIdentity: prior}
+			diags := updateSandboxWorkloadIdentity(ctx, &data, info)
+			require.False(t, diags.HasError())
+			assert.True(t, data.WorkloadIdentity.Equal(prior))
+		})
+	}
+
 	data := SandboxResourceModel{WorkloadIdentity: types.ObjectNull(sandboxWorkloadIdentityAttrTypes)}
-	diags := updateSandboxWorkloadIdentity(context.Background(), &data, &sandboxv2.SandboxInfo{})
+	diags = updateSandboxWorkloadIdentity(ctx, &data, &sandboxv2.SandboxInfo{})
 	require.False(t, diags.HasError())
 	assert.True(t, data.WorkloadIdentity.IsNull())
 }
