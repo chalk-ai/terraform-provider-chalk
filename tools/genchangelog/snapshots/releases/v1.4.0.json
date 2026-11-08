@@ -1,0 +1,40 @@
+{
+  "version": "v1.4.0",
+  "changes": [
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_sandbox",
+      "attribute": "chalk_workload_identity",
+      "kind": "attribute_added",
+      "after": "object"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_sandbox",
+      "attribute": "chalk_workload_identity.mode",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_sandbox",
+      "attribute": "chalk_workload_identity.oidc_token_files",
+      "kind": "attribute_added",
+      "after": "set(object)"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_sandbox",
+      "attribute": "chalk_workload_identity.oidc_token_files.audience",
+      "kind": "attribute_added",
+      "after": "string"
+    },
+    {
+      "entity_kind": "resource",
+      "entity": "chalk_sandbox",
+      "attribute": "chalk_workload_identity.oidc_token_files.env_var",
+      "kind": "attribute_added",
+      "after": "string"
+    }
+  ]
+}
