@@ -128,7 +128,7 @@ Required:
 
 Optional:
 
-- `oidc_token_files` (Attributes List) OIDC token files the platform materializes and keeps fresh, at most 8. Requires `mode = "workload_principal"` and host compute (the server rejects them with `runtime = "kube"`). (see [below for nested schema](#nestedatt--chalk_workload_identity--oidc_token_files))
+- `oidc_token_files` (Attributes Set) OIDC token files the platform materializes and keeps fresh, at most 8. Requires `mode = "workload_principal"` and host compute (rejected at plan time with `runtime = "kube"`); order does not matter. (see [below for nested schema](#nestedatt--chalk_workload_identity--oidc_token_files))
 
 <a id="nestedatt--chalk_workload_identity--oidc_token_files"></a>
 ### Nested Schema for `chalk_workload_identity.oidc_token_files`

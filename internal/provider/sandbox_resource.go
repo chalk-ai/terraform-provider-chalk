@@ -11,7 +11,7 @@ import (
 	sandboxv2 "github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2"
 	"github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2/sandboxv2connect"
 	"github.com/chalk-ai/terraform-provider-chalk/client"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -125,7 +125,7 @@ type SandboxAllowedRouteModel struct {
 
 type SandboxWorkloadIdentityModel struct {
 	Mode           types.String `tfsdk:"mode"`
-	OIDCTokenFiles types.List   `tfsdk:"oidc_token_files"`
+	OIDCTokenFiles types.Set    `tfsdk:"oidc_token_files"`
 }
 
 type SandboxOIDCTokenFileModel struct {
@@ -140,7 +140,7 @@ var sandboxOIDCTokenFileAttrTypes = map[string]attr.Type{
 
 var sandboxWorkloadIdentityAttrTypes = map[string]attr.Type{
 	"mode":             types.StringType,
-	"oidc_token_files": types.ListType{ElemType: types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}},
+	"oidc_token_files": types.SetType{ElemType: types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}},
 }
 
 var sandboxIdentityModes = map[string]containerv1.IdentityMode{
@@ -312,11 +312,11 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 						Required:   true,
 						Validators: []validator.String{stringvalidator.OneOf("workload_principal", "creator_identity")},
 					},
-					"oidc_token_files": schema.ListNestedAttribute{
+					"oidc_token_files": schema.SetNestedAttribute{
 						MarkdownDescription: "OIDC token files the platform materializes and keeps fresh, at most 8. " +
-							"Requires `mode = \"workload_principal\"` and host compute (the server rejects them with `runtime = \"kube\"`).",
+							"Requires `mode = \"workload_principal\"` and host compute (rejected at plan time with `runtime = \"kube\"`); order does not matter.",
 						Optional:   true,
-						Validators: []validator.List{listvalidator.SizeAtMost(8)},
+						Validators: []validator.Set{setvalidator.SizeAtMost(8)},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"audience": schema.StringAttribute{
@@ -392,6 +392,13 @@ func (r *SandboxResource) ValidateConfig(ctx context.Context, req resource.Valid
 	resp.Diagnostics.Append(data.WorkloadIdentity.As(ctx, &identity, basetypes.ObjectAsOptions{})...)
 	if resp.Diagnostics.HasError() || identity.Mode.IsUnknown() || identity.OIDCTokenFiles.IsUnknown() {
 		return
+	}
+	if len(identity.OIDCTokenFiles.Elements()) > 0 && data.Runtime.ValueString() == "kube" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("chalk_workload_identity").AtName("oidc_token_files"),
+			"oidc_token_files requires host compute",
+			"`oidc_token_files` cannot be set when `runtime` is `kube` because token files are supported only for host-compute sandboxes.",
+		)
 	}
 	if len(identity.OIDCTokenFiles.Elements()) > 0 && identity.Mode.ValueString() != "workload_principal" {
 		resp.Diagnostics.AddAttributeError(
@@ -913,13 +920,14 @@ func updateSandboxWorkloadIdentity(ctx context.Context, data *SandboxResourceMod
 	}
 
 	var diags diag.Diagnostics
-	files := types.ListNull(types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes})
+	files := types.SetNull(types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes})
 	if !data.WorkloadIdentity.IsNull() && !data.WorkloadIdentity.IsUnknown() {
 		var prior SandboxWorkloadIdentityModel
 		diags.Append(data.WorkloadIdentity.As(ctx, &prior, basetypes.ObjectAsOptions{})...)
-		// The server returned no token files: keep the prior list so a
-		// configured empty list does not flip to null.
-		if len(identity.GetOidcTokenFiles()) == 0 && !prior.OIDCTokenFiles.IsUnknown() {
+		// The server returns no token files for a configured empty set: keep
+		// it so it does not flip to null. A non-empty prior set the server
+		// no longer reports is drift and is taken from the server.
+		if len(identity.GetOidcTokenFiles()) == 0 && !prior.OIDCTokenFiles.IsUnknown() && len(prior.OIDCTokenFiles.Elements()) == 0 {
 			files = prior.OIDCTokenFiles
 		}
 	}
@@ -932,7 +940,7 @@ func updateSandboxWorkloadIdentity(ctx context.Context, data *SandboxResourceMod
 			})
 		}
 		var d diag.Diagnostics
-		files, d = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}, models)
+		files, d = types.SetValueFrom(ctx, types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}, models)
 		diags.Append(d...)
 	}
 	obj, d := types.ObjectValueFrom(ctx, sandboxWorkloadIdentityAttrTypes, SandboxWorkloadIdentityModel{

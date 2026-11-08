@@ -15,7 +15,7 @@ For migration guidance and non-schema changes, see the [project changelog](https
 
 - Added attribute `chalk_sandbox.chalk_workload_identity` (`object`).
 - Added attribute `chalk_sandbox.chalk_workload_identity.mode` (`string`).
-- Added attribute `chalk_sandbox.chalk_workload_identity.oidc_token_files` (`list(object)`).
+- Added attribute `chalk_sandbox.chalk_workload_identity.oidc_token_files` (`set(object)`).
 - Added attribute `chalk_sandbox.chalk_workload_identity.oidc_token_files.audience` (`string`).
 - Added attribute `chalk_sandbox.chalk_workload_identity.oidc_token_files.env_var` (`string`).
 
