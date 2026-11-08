@@ -16,7 +16,9 @@ import (
 	chalkclient "github.com/chalk-ai/terraform-provider-chalk/client"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -317,6 +319,7 @@ func TestSandboxResourceCreate(t *testing.T) {
 	assert.Nil(t, st.created.GetSpec().Resources)
 	assert.Nil(t, st.created.GetSpec().ComputeClass)
 	assert.Empty(t, st.created.GetSpec().Entrypoint)
+	assert.Nil(t, st.created.GetSpec().ChalkWorkloadIdentity)
 }
 
 func TestSandboxResourceRejectsDesiredStateWithKubeRuntime(t *testing.T) {
@@ -811,4 +814,205 @@ resource "chalk_sandbox" "test" {
 			},
 		},
 	})
+}
+
+const testGCPAudience = "//iam.googleapis.com/projects/123/locations/global/workloadIdentityPools/pool/providers/chalk"
+
+func sandboxWorkloadIdentityConfig(serverURL, identity string) string {
+	return providerConfig(serverURL) + fmt.Sprintf(`
+resource "chalk_sandbox" "test" {
+  environment_id          = "test-env-id"
+  image                   = "debian:bookworm"
+  chalk_workload_identity = %s
+}
+`, identity)
+}
+
+func gcpWorkloadIdentity(mode, envVar string) string {
+	return fmt.Sprintf(`{
+    mode = %q
+    oidc_token_files = [{ audience = %q, env_var = %q }]
+  }`, mode, testGCPAudience, envVar)
+}
+
+func TestSandboxResourceCreateWorkloadIdentity(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: sandboxWorkloadIdentityConfig(server.URL, gcpWorkloadIdentity("workload_principal", "GCP_OIDC_TOKEN_FILE")),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "chalk_workload_identity.mode", "workload_principal"),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "chalk_workload_identity.oidc_token_files.0.audience", testGCPAudience),
+					resource.TestCheckResourceAttr("chalk_sandbox.test", "chalk_workload_identity.oidc_token_files.0.env_var", "GCP_OIDC_TOKEN_FILE"),
+				),
+			},
+			{
+				ResourceName:      "chalk_sandbox.test",
+				ImportState:       true,
+				ImportStateId:     "test-env-id/sandbox-test-id",
+				ImportStateVerify: true,
+				// Create-only arguments and defaults cannot be recovered on import.
+				ImportStateVerifyIgnore: []string{"image", "wait_for_ready"},
+			},
+		},
+	})
+
+	identity := st.created.GetSpec().GetChalkWorkloadIdentity()
+	require.NotNil(t, identity)
+	assert.Equal(t, containerv1.IdentityMode_IDENTITY_MODE_WORKLOAD_PRINCIPAL, identity.GetMode())
+	assert.Nil(t, identity.GetWorkloadPrincipal())
+	require.Len(t, identity.GetOidcTokenFiles(), 1)
+	assert.Equal(t, testGCPAudience, identity.GetOidcTokenFiles()[0].GetAudience())
+	assert.Equal(t, "GCP_OIDC_TOKEN_FILE", identity.GetOidcTokenFiles()[0].GetEnvVar())
+}
+
+func TestSandboxResourceWorkloadIdentityKeepsStateWhenServerOmitsIt(t *testing.T) {
+	ctx := context.Background()
+	files, diags := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}, []SandboxOIDCTokenFileModel{{
+		Audience: types.StringValue(testGCPAudience),
+		EnvVar:   types.StringValue("GCP_OIDC_TOKEN_FILE"),
+	}})
+	require.False(t, diags.HasError())
+	prior, diags := types.ObjectValueFrom(ctx, sandboxWorkloadIdentityAttrTypes, SandboxWorkloadIdentityModel{
+		Mode:           types.StringValue("workload_principal"),
+		OIDCTokenFiles: files,
+	})
+	require.False(t, diags.HasError())
+
+	data := SandboxResourceModel{WorkloadIdentity: prior}
+	diags = updateSandboxWorkloadIdentity(ctx, &data, &sandboxv2.SandboxInfo{})
+	require.False(t, diags.HasError())
+	assert.True(t, data.WorkloadIdentity.Equal(prior))
+
+	identityWithoutFiles := &sandboxv2.SandboxInfo{Spec: &containerv1.ChalkContainerSpec{
+		ChalkWorkloadIdentity: &containerv1.ChalkWorkloadIdentity{Mode: containerv1.IdentityMode_IDENTITY_MODE_WORKLOAD_PRINCIPAL},
+	}}
+	fileType := types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}
+
+	// Token files removed out of band are drift: state takes the server's (empty) value.
+	data = SandboxResourceModel{WorkloadIdentity: prior}
+	diags = updateSandboxWorkloadIdentity(ctx, &data, identityWithoutFiles)
+	require.False(t, diags.HasError())
+	var got SandboxWorkloadIdentityModel
+	require.False(t, data.WorkloadIdentity.As(ctx, &got, basetypes.ObjectAsOptions{}).HasError())
+	assert.Equal(t, "workload_principal", got.Mode.ValueString())
+	assert.True(t, got.OIDCTokenFiles.IsNull())
+
+	// A configured empty set stays empty rather than flipping to null.
+	emptyPrior, diags := types.ObjectValueFrom(ctx, sandboxWorkloadIdentityAttrTypes, SandboxWorkloadIdentityModel{
+		Mode:           types.StringValue("workload_principal"),
+		OIDCTokenFiles: types.SetValueMust(fileType, nil),
+	})
+	require.False(t, diags.HasError())
+	data = SandboxResourceModel{WorkloadIdentity: emptyPrior}
+	diags = updateSandboxWorkloadIdentity(ctx, &data, identityWithoutFiles)
+	require.False(t, diags.HasError())
+	assert.True(t, data.WorkloadIdentity.Equal(emptyPrior))
+
+	data = SandboxResourceModel{WorkloadIdentity: types.ObjectNull(sandboxWorkloadIdentityAttrTypes)}
+	diags = updateSandboxWorkloadIdentity(ctx, &data, &sandboxv2.SandboxInfo{})
+	require.False(t, diags.HasError())
+	assert.True(t, data.WorkloadIdentity.IsNull())
+}
+
+func TestSandboxResourceRejectsTokenFilesWithoutWorkloadPrincipal(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{{
+			Config:      sandboxWorkloadIdentityConfig(server.URL, gcpWorkloadIdentity("creator_identity", "GCP_OIDC_TOKEN_FILE")),
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile(`(?s)oidc_token_files.*workload_principal`),
+		}},
+	})
+
+	assert.Zero(t, st.createCalls)
+}
+
+func TestSandboxResourceWorkloadIdentityChangeReplaces(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: sandboxWorkloadIdentityConfig(server.URL, gcpWorkloadIdentity("workload_principal", "GCP_OIDC_TOKEN_FILE"))},
+			{
+				Config: sandboxWorkloadIdentityConfig(server.URL, gcpWorkloadIdentity("workload_principal", "OTHER_TOKEN_FILE")),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("chalk_sandbox.test", plancheck.ResourceActionReplace),
+					},
+				},
+			},
+		},
+	})
+
+	assert.Equal(t, 2, st.createCalls)
+	assert.Equal(t, "OTHER_TOKEN_FILE", st.created.GetSpec().GetChalkWorkloadIdentity().GetOidcTokenFiles()[0].GetEnvVar())
+}
+
+func TestSandboxResourceWorkloadIdentityReorderIsNoOp(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+
+	twoFiles := func(first, second string) string {
+		return fmt.Sprintf(`{
+    mode = "workload_principal"
+    oidc_token_files = [
+      { audience = %q, env_var = %q },
+      { audience = %q, env_var = %q },
+    ]
+  }`, testGCPAudience, first, "other-audience", second)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: sandboxWorkloadIdentityConfig(server.URL, twoFiles("GCP_OIDC_TOKEN_FILE", "OTHER_TOKEN_FILE"))},
+			{
+				Config: sandboxWorkloadIdentityConfig(server.URL, fmt.Sprintf(`{
+    mode = "workload_principal"
+    oidc_token_files = [
+      { audience = %q, env_var = "OTHER_TOKEN_FILE" },
+      { audience = %q, env_var = "GCP_OIDC_TOKEN_FILE" },
+    ]
+  }`, "other-audience", testGCPAudience)),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+
+	assert.Equal(t, 1, st.createCalls)
+}
+
+func TestSandboxResourceRejectsTokenFilesWithKubeRuntime(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{{
+			Config: providerConfig(server.URL) + fmt.Sprintf(`
+resource "chalk_sandbox" "test" {
+  environment_id          = "test-env-id"
+  image                   = "debian:bookworm"
+  runtime                 = "kube"
+  chalk_workload_identity = %s
+}
+`, gcpWorkloadIdentity("workload_principal", "GCP_OIDC_TOKEN_FILE")),
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile(`(?s)oidc_token_files.*host compute`),
+		}},
+	})
+
+	assert.Zero(t, st.createCalls)
 }

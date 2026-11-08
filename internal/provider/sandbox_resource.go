@@ -11,7 +11,9 @@ import (
 	sandboxv2 "github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2"
 	"github.com/chalk-ai/chalk-go/gen/chalk/sandbox/v2/sandboxv2connect"
 	"github.com/chalk-ai/terraform-provider-chalk/client"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -77,19 +79,20 @@ type SandboxResource struct {
 }
 
 type SandboxResourceModel struct {
-	Id             types.String `tfsdk:"id"`
-	EnvironmentId  types.String `tfsdk:"environment_id"`
-	Name           types.String `tfsdk:"name"`
-	Image          types.String `tfsdk:"image"`
-	Entrypoint     types.List   `tfsdk:"entrypoint"`
-	Env            types.Map    `tfsdk:"env"`
-	Runtime        types.String `tfsdk:"runtime"`
-	RestartPolicy  types.String `tfsdk:"restart_policy"`
-	ResourceLimits types.Object `tfsdk:"resource_limits"`
-	Volumes        types.List   `tfsdk:"volumes"`
-	NetworkPolicy  types.Object `tfsdk:"network_policy"`
-	WaitForReady   types.Bool   `tfsdk:"wait_for_ready"`
-	DesiredState   types.String `tfsdk:"desired_state"`
+	Id               types.String `tfsdk:"id"`
+	EnvironmentId    types.String `tfsdk:"environment_id"`
+	Name             types.String `tfsdk:"name"`
+	Image            types.String `tfsdk:"image"`
+	Entrypoint       types.List   `tfsdk:"entrypoint"`
+	Env              types.Map    `tfsdk:"env"`
+	Runtime          types.String `tfsdk:"runtime"`
+	RestartPolicy    types.String `tfsdk:"restart_policy"`
+	ResourceLimits   types.Object `tfsdk:"resource_limits"`
+	Volumes          types.List   `tfsdk:"volumes"`
+	NetworkPolicy    types.Object `tfsdk:"network_policy"`
+	WorkloadIdentity types.Object `tfsdk:"chalk_workload_identity"`
+	WaitForReady     types.Bool   `tfsdk:"wait_for_ready"`
+	DesiredState     types.String `tfsdk:"desired_state"`
 
 	State         types.String `tfsdk:"state"`
 	StatusMessage types.String `tfsdk:"status_message"`
@@ -118,6 +121,31 @@ type SandboxNetworkPolicyModel struct {
 type SandboxAllowedRouteModel struct {
 	Route      types.String `tfsdk:"route"`
 	PortRanges types.List   `tfsdk:"port_ranges"`
+}
+
+type SandboxWorkloadIdentityModel struct {
+	Mode           types.String `tfsdk:"mode"`
+	OIDCTokenFiles types.Set    `tfsdk:"oidc_token_files"`
+}
+
+type SandboxOIDCTokenFileModel struct {
+	Audience types.String `tfsdk:"audience"`
+	EnvVar   types.String `tfsdk:"env_var"`
+}
+
+var sandboxOIDCTokenFileAttrTypes = map[string]attr.Type{
+	"audience": types.StringType,
+	"env_var":  types.StringType,
+}
+
+var sandboxWorkloadIdentityAttrTypes = map[string]attr.Type{
+	"mode":             types.StringType,
+	"oidc_token_files": types.SetType{ElemType: types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}},
+}
+
+var sandboxIdentityModes = map[string]containerv1.IdentityMode{
+	"creator_identity":   containerv1.IdentityMode_IDENTITY_MODE_CREATOR_IDENTITY,
+	"workload_principal": containerv1.IdentityMode_IDENTITY_MODE_WORKLOAD_PRINCIPAL,
 }
 
 type SandboxPortRangeModel struct {
@@ -270,6 +298,43 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 					},
 				},
 			},
+			"chalk_workload_identity": schema.SingleNestedAttribute{
+				MarkdownDescription: "Chalk-managed identity for the sandbox, fixed at create. With `mode = \"workload_principal\"` " +
+					"the sandbox runs as its own workload principal and can declare `oidc_token_files`: the platform mints an " +
+					"OIDC token per audience, writes it to a file, sets `env_var` to that file's path, and rotates it before " +
+					"expiry. Use this for cloud workload identity federation (e.g. GCP) without long-lived keys in the sandbox.",
+				Optional:      true,
+				PlanModifiers: []planmodifier.Object{objectplanmodifier.RequiresReplace()},
+				Attributes: map[string]schema.Attribute{
+					"mode": schema.StringAttribute{
+						MarkdownDescription: "Identity mode: `workload_principal` (the sandbox is its own principal) or " +
+							"`creator_identity` (the sandbox acts as its creator).",
+						Required:   true,
+						Validators: []validator.String{stringvalidator.OneOf("workload_principal", "creator_identity")},
+					},
+					"oidc_token_files": schema.SetNestedAttribute{
+						MarkdownDescription: "OIDC token files the platform materializes and keeps fresh, at most 8. " +
+							"Requires `mode = \"workload_principal\"` and host compute (rejected at plan time with `runtime = \"kube\"`); order does not matter.",
+						Optional:   true,
+						Validators: []validator.Set{setvalidator.SizeAtMost(8)},
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"audience": schema.StringAttribute{
+									MarkdownDescription: "Audience claim of the token, e.g. a GCP workload identity provider " +
+										"`//iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL/providers/PROVIDER`.",
+									Required:   true,
+									Validators: []validator.String{stringvalidator.LengthAtLeast(1)},
+								},
+								"env_var": schema.StringAttribute{
+									MarkdownDescription: "Environment variable that receives the absolute path of the token file.",
+									Required:            true,
+									Validators:          []validator.String{stringvalidator.LengthAtLeast(1)},
+								},
+							},
+						},
+					},
+				},
+			},
 			"wait_for_ready": schema.BoolAttribute{
 				MarkdownDescription: "Whether to block until the sandbox reports a ready state before completing the " +
 					"apply. Defaults to `true`; set to `false` to return as soon as the create call is accepted.",
@@ -312,15 +377,34 @@ func (r *SandboxResource) ValidateConfig(ctx context.Context, req resource.Valid
 		return
 	}
 
-	if data.Runtime.IsNull() || data.Runtime.IsUnknown() || data.DesiredState.IsNull() || data.DesiredState.IsUnknown() {
-		return
-	}
-
-	if data.Runtime.ValueString() == "kube" {
+	if !data.DesiredState.IsNull() && !data.DesiredState.IsUnknown() && data.Runtime.ValueString() == "kube" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("desired_state"),
 			"Invalid desired_state for kube runtime",
 			"`desired_state` cannot be set when `runtime` is `kube` because suspend and resume are supported only for host-compute sandboxes.",
+		)
+	}
+
+	if data.WorkloadIdentity.IsNull() || data.WorkloadIdentity.IsUnknown() {
+		return
+	}
+	var identity SandboxWorkloadIdentityModel
+	resp.Diagnostics.Append(data.WorkloadIdentity.As(ctx, &identity, basetypes.ObjectAsOptions{})...)
+	if resp.Diagnostics.HasError() || identity.Mode.IsUnknown() || identity.OIDCTokenFiles.IsUnknown() {
+		return
+	}
+	if len(identity.OIDCTokenFiles.Elements()) > 0 && data.Runtime.ValueString() == "kube" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("chalk_workload_identity").AtName("oidc_token_files"),
+			"oidc_token_files requires host compute",
+			"`oidc_token_files` cannot be set when `runtime` is `kube` because token files are supported only for host-compute sandboxes.",
+		)
+	}
+	if len(identity.OIDCTokenFiles.Elements()) > 0 && identity.Mode.ValueString() != "workload_principal" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("chalk_workload_identity").AtName("oidc_token_files"),
+			"oidc_token_files requires workload_principal mode",
+			"`oidc_token_files` can only be set when `chalk_workload_identity.mode` is `workload_principal`.",
 		)
 	}
 }
@@ -430,6 +514,7 @@ func (r *SandboxResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	updateSandboxState(&data, info)
 	updateSandboxDesiredState(&data, info)
+	resp.Diagnostics.Append(updateSandboxWorkloadIdentity(ctx, &data, info)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -734,6 +819,22 @@ func buildCreateSandboxRequest(ctx context.Context, data *SandboxResourceModel) 
 		spec.NetworkPolicy = policy
 	}
 
+	if !data.WorkloadIdentity.IsNull() && !data.WorkloadIdentity.IsUnknown() {
+		var identity SandboxWorkloadIdentityModel
+		diags.Append(data.WorkloadIdentity.As(ctx, &identity, basetypes.ObjectAsOptions{})...)
+		var files []SandboxOIDCTokenFileModel
+		if !identity.OIDCTokenFiles.IsNull() && !identity.OIDCTokenFiles.IsUnknown() {
+			diags.Append(identity.OIDCTokenFiles.ElementsAs(ctx, &files, false)...)
+		}
+		spec.ChalkWorkloadIdentity = &containerv1.ChalkWorkloadIdentity{Mode: sandboxIdentityModes[identity.Mode.ValueString()]}
+		for _, f := range files {
+			spec.ChalkWorkloadIdentity.OidcTokenFiles = append(spec.ChalkWorkloadIdentity.OidcTokenFiles, &containerv1.OIDCTokenFile{
+				Audience: f.Audience.ValueString(),
+				EnvVar:   f.EnvVar.ValueString(),
+			})
+		}
+	}
+
 	return req, diags
 }
 
@@ -801,6 +902,56 @@ func updateSandboxDesiredState(data *SandboxResourceModel, info *sandboxv2.Sandb
 		(sandboxReadyStates[status] || sandboxSuspendedStates[status]) {
 		data.DesiredState = types.StringValue(status)
 	}
+}
+
+// updateSandboxWorkloadIdentity is refresh-only. It reads the identity back
+// when the server returns one (which also covers import) and otherwise keeps
+// the prior state, so a server that omits it causes no drift.
+func updateSandboxWorkloadIdentity(ctx context.Context, data *SandboxResourceModel, info *sandboxv2.SandboxInfo) diag.Diagnostics {
+	identity := info.GetSpec().GetChalkWorkloadIdentity()
+	var mode string
+	for name, m := range sandboxIdentityModes {
+		if m == identity.GetMode() {
+			mode = name
+		}
+	}
+	if mode == "" {
+		return nil
+	}
+
+	var diags diag.Diagnostics
+	files := types.SetNull(types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes})
+	if !data.WorkloadIdentity.IsNull() && !data.WorkloadIdentity.IsUnknown() {
+		var prior SandboxWorkloadIdentityModel
+		diags.Append(data.WorkloadIdentity.As(ctx, &prior, basetypes.ObjectAsOptions{})...)
+		// The server returns no token files for a configured empty set: keep
+		// it so it does not flip to null. A non-empty prior set the server
+		// no longer reports is drift and is taken from the server.
+		if len(identity.GetOidcTokenFiles()) == 0 && !prior.OIDCTokenFiles.IsUnknown() && len(prior.OIDCTokenFiles.Elements()) == 0 {
+			files = prior.OIDCTokenFiles
+		}
+	}
+	if len(identity.GetOidcTokenFiles()) > 0 {
+		models := make([]SandboxOIDCTokenFileModel, 0, len(identity.GetOidcTokenFiles()))
+		for _, f := range identity.GetOidcTokenFiles() {
+			models = append(models, SandboxOIDCTokenFileModel{
+				Audience: types.StringValue(f.GetAudience()),
+				EnvVar:   types.StringValue(f.GetEnvVar()),
+			})
+		}
+		var d diag.Diagnostics
+		files, d = types.SetValueFrom(ctx, types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}, models)
+		diags.Append(d...)
+	}
+	obj, d := types.ObjectValueFrom(ctx, sandboxWorkloadIdentityAttrTypes, SandboxWorkloadIdentityModel{
+		Mode:           types.StringValue(mode),
+		OIDCTokenFiles: files,
+	})
+	diags.Append(d...)
+	if !diags.HasError() {
+		data.WorkloadIdentity = obj
+	}
+	return diags
 }
 
 func sandboxStatusString(status sandboxv2.SandboxStatus) string {
