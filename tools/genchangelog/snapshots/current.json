@@ -1,5 +1,5 @@
 {
-  "version": "v1.3.0",
+  "version": "v1.4.0",
   "resources": {
     "chalk_aws_cloud_credentials": {
       "attributes": {
@@ -1612,6 +1612,24 @@
       "attributes": {
         "build_id": {
           "type": "string"
+        },
+        "chalk_workload_identity": {
+          "type": "object"
+        },
+        "chalk_workload_identity.mode": {
+          "type": "string",
+          "required": true
+        },
+        "chalk_workload_identity.oidc_token_files": {
+          "type": "set(object)"
+        },
+        "chalk_workload_identity.oidc_token_files.audience": {
+          "type": "string",
+          "required": true
+        },
+        "chalk_workload_identity.oidc_token_files.env_var": {
+          "type": "string",
+          "required": true
         },
         "created_at": {
           "type": "string"
