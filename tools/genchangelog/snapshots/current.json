@@ -1,5 +1,5 @@
 {
-  "version": "v1.4.0",
+  "version": "v1.5.0",
   "resources": {
     "chalk_aws_cloud_credentials": {
       "attributes": {
@@ -1680,6 +1680,9 @@
         },
         "network_policy.denied_routes": {
           "type": "list(string)"
+        },
+        "prune_snapshots_on_suspend": {
+          "type": "bool"
         },
         "resource_limits": {
           "type": "object"
