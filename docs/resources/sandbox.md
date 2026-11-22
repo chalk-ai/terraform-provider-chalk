@@ -4,7 +4,7 @@ page_title: "chalk_sandbox Resource - chalk"
 subcategory: ""
 description: |-
   Manages a Chalk sandbox — an ephemeral container running in the environment's cluster, addressable for command execution via chalk sandbox exec.
-  Only desired_state can be updated in place; every other argument forces replacement.
+  Only desired_state and prune_snapshots_on_suspend can be updated in place; every other argument forces replacement.
   A sandbox has no outbound network access by default: without a network_policy even DNS resolution fails. Grant egress explicitly via network_policy.allowed_routes.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 Manages a Chalk sandbox — an ephemeral container running in the environment's cluster, addressable for command execution via `chalk sandbox exec`.
 
-Only `desired_state` can be updated in place; every other argument forces replacement.
+Only `desired_state` and `prune_snapshots_on_suspend` can be updated in place; every other argument forces replacement.
 
 A sandbox has **no outbound network access by default**: without a `network_policy` even DNS resolution fails. Grant egress explicitly via `network_policy.allowed_routes`.
 
@@ -105,6 +105,7 @@ resource "chalk_sandbox" "gcp_wif" {
 - `env` (Map of String, Sensitive) Environment variables to inject into the sandbox.
 - `name` (String) Optional human-readable name for the sandbox. The server generates one when omitted.
 - `network_policy` (Attributes) Outbound network policy. **Without this, the sandbox cannot reach anything — not even DNS.** Grant full egress with a single `allowed_routes` entry for `0.0.0.0/0`. The server rejects network policies when `runtime` is `kube`. (see [below for nested schema](#nestedatt--network_policy))
+- `prune_snapshots_on_suspend` (Boolean) Whether to delete all but the newest snapshot after this resource successfully suspends the sandbox. This also deletes manual snapshots of the sandbox, so do not enable it if you keep manual snapshots or fork from them. This is a stopgap until the server prunes old suspension snapshots itself (DEVX-286, sandbox snapshots owner), after which it will be deprecated.
 - `resource_limits` (Attributes) CPU and memory limits for the sandbox container. (see [below for nested schema](#nestedatt--resource_limits))
 - `restart_policy` (String) Whether to recreate the sandbox after its backing instance terminates: `RESTART_POLICY_NEVER` (default) or `RESTART_POLICY_ALWAYS`.
 - `runtime` (String) Runtime backend for the sandbox container. When unset, the provider sends no runtime and the server default (host compute) is used. `chalk_node` or `local` select host compute; `kube` selects Kubernetes. The server rejects `kube` when `network_policy` is set.

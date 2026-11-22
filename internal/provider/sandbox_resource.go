@@ -79,20 +79,21 @@ type SandboxResource struct {
 }
 
 type SandboxResourceModel struct {
-	Id               types.String `tfsdk:"id"`
-	EnvironmentId    types.String `tfsdk:"environment_id"`
-	Name             types.String `tfsdk:"name"`
-	Image            types.String `tfsdk:"image"`
-	Entrypoint       types.List   `tfsdk:"entrypoint"`
-	Env              types.Map    `tfsdk:"env"`
-	Runtime          types.String `tfsdk:"runtime"`
-	RestartPolicy    types.String `tfsdk:"restart_policy"`
-	ResourceLimits   types.Object `tfsdk:"resource_limits"`
-	Volumes          types.List   `tfsdk:"volumes"`
-	NetworkPolicy    types.Object `tfsdk:"network_policy"`
-	WorkloadIdentity types.Object `tfsdk:"chalk_workload_identity"`
-	WaitForReady     types.Bool   `tfsdk:"wait_for_ready"`
-	DesiredState     types.String `tfsdk:"desired_state"`
+	Id                      types.String `tfsdk:"id"`
+	EnvironmentId           types.String `tfsdk:"environment_id"`
+	Name                    types.String `tfsdk:"name"`
+	Image                   types.String `tfsdk:"image"`
+	Entrypoint              types.List   `tfsdk:"entrypoint"`
+	Env                     types.Map    `tfsdk:"env"`
+	Runtime                 types.String `tfsdk:"runtime"`
+	RestartPolicy           types.String `tfsdk:"restart_policy"`
+	ResourceLimits          types.Object `tfsdk:"resource_limits"`
+	Volumes                 types.List   `tfsdk:"volumes"`
+	NetworkPolicy           types.Object `tfsdk:"network_policy"`
+	WorkloadIdentity        types.Object `tfsdk:"chalk_workload_identity"`
+	WaitForReady            types.Bool   `tfsdk:"wait_for_ready"`
+	DesiredState            types.String `tfsdk:"desired_state"`
+	PruneSnapshotsOnSuspend types.Bool   `tfsdk:"prune_snapshots_on_suspend"`
 
 	State         types.String `tfsdk:"state"`
 	StatusMessage types.String `tfsdk:"status_message"`
@@ -163,7 +164,7 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a Chalk sandbox — an ephemeral container running in the " +
 			"environment's cluster, addressable for command execution via `chalk sandbox exec`.\n\n" +
-			"Only `desired_state` can be updated in place; every other argument forces replacement.\n\n" +
+			"Only `desired_state` and `prune_snapshots_on_suspend` can be updated in place; every other argument forces replacement.\n\n" +
 			"A sandbox has **no outbound network access by default**: without a `network_policy` " +
 			"even DNS resolution fails. Grant egress explicitly via `network_policy.allowed_routes`.",
 		Attributes: map[string]schema.Attribute{
@@ -348,6 +349,10 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Optional:            true,
 				Validators:          []validator.String{stringvalidator.OneOf("running", "suspended")},
 			},
+			"prune_snapshots_on_suspend": schema.BoolAttribute{
+				MarkdownDescription: "Whether to delete all but the newest snapshot after this resource successfully suspends the sandbox. This also deletes manual snapshots of the sandbox, so do not enable it if you keep manual snapshots or fork from them. This is a stopgap until the server prunes old suspension snapshots itself (DEVX-286, sandbox snapshots owner), after which it will be deprecated.",
+				Optional:            true,
+			},
 			"state": schema.StringAttribute{
 				MarkdownDescription: "Current sandbox state, e.g. `running`, `pending`, or `suspended`.",
 				Computed:            true,
@@ -527,6 +532,7 @@ func (r *SandboxResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	if data.DesiredState.IsNull() {
 		state.DesiredState = types.StringNull()
+		state.PruneSnapshotsOnSuspend = data.PruneSnapshotsOnSuspend
 		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 		return
 	}
@@ -571,6 +577,9 @@ func (r *SandboxResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	updateSandboxState(&data, info)
+	if desired == "suspended" && data.PruneSnapshotsOnSuspend.ValueBool() {
+		r.pruneSandboxSnapshots(ctx, state.EnvironmentId.ValueString(), id)
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -642,6 +651,67 @@ func (r *SandboxResource) restoreSandbox(ctx context.Context, sbClient sandboxv2
 
 func (r *SandboxResource) deleteSandboxSnapshots(ctx context.Context, environmentID, sandboxID string) {
 	snapshotClient := r.client.NewSandboxSnapshotClient(ctx, environmentID)
+	snapshots, err := listSandboxSnapshots(ctx, snapshotClient, sandboxID)
+	if err != nil {
+		tflog.Warn(ctx, fmt.Sprintf("Could not list snapshots for sandbox %s during deletion; continuing", sandboxID), map[string]any{
+			"error": err.Error(),
+		})
+	}
+	for _, snapshot := range snapshots {
+		if _, err := snapshotClient.DeleteSandboxSnapshot(ctx, connect.NewRequest(&sandboxv2.DeleteSandboxSnapshotRequest{
+			SnapshotId: snapshot.GetId(),
+		})); err != nil {
+			tflog.Warn(ctx, fmt.Sprintf("Could not delete snapshot %s while deleting sandbox %s; continuing", snapshot.GetId(), sandboxID), map[string]any{
+				"error": err.Error(),
+			})
+		}
+	}
+}
+
+func (r *SandboxResource) pruneSandboxSnapshots(ctx context.Context, environmentID, sandboxID string) {
+	snapshotClient := r.client.NewSandboxSnapshotClient(ctx, environmentID)
+	snapshots, err := listSandboxSnapshots(ctx, snapshotClient, sandboxID)
+	if err != nil {
+		tflog.Warn(ctx, fmt.Sprintf("Could not list snapshots for sandbox %s after suspension; skipping pruning", sandboxID), map[string]any{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	var newestCompleted *sandboxv2.SandboxSnapshot
+	for _, snapshot := range snapshots {
+		if snapshot.GetStatus() != sandboxv2.SandboxSnapshotStatus_SANDBOX_SNAPSHOT_STATUS_COMPLETED {
+			continue
+		}
+		if newestCompleted == nil || sandboxSnapshotTime(snapshot).After(sandboxSnapshotTime(newestCompleted)) {
+			newestCompleted = snapshot
+		}
+	}
+
+	for _, snapshot := range snapshots {
+		if snapshot == newestCompleted {
+			continue
+		}
+		if _, err := snapshotClient.DeleteSandboxSnapshot(ctx, connect.NewRequest(&sandboxv2.DeleteSandboxSnapshotRequest{
+			SnapshotId: snapshot.GetId(),
+		})); err != nil {
+			if connect.CodeOf(err) == connect.CodeFailedPrecondition {
+				tflog.Info(ctx, fmt.Sprintf("Snapshot %s is still held while pruning sandbox %s; continuing", snapshot.GetId(), sandboxID))
+			} else {
+				tflog.Warn(ctx, fmt.Sprintf("Could not delete snapshot %s while pruning sandbox %s; continuing", snapshot.GetId(), sandboxID), map[string]any{
+					"error": err.Error(),
+				})
+			}
+		}
+	}
+}
+
+func listSandboxSnapshots(
+	ctx context.Context,
+	snapshotClient sandboxv2connect.SandboxSnapshotServiceClient,
+	sandboxID string,
+) ([]*sandboxv2.SandboxSnapshot, error) {
+	var snapshots []*sandboxv2.SandboxSnapshot
 	var cursor *string
 	for {
 		listResp, err := snapshotClient.ListSandboxSnapshots(ctx, connect.NewRequest(&sandboxv2.ListSandboxSnapshotsRequest{
@@ -651,29 +721,30 @@ func (r *SandboxResource) deleteSandboxSnapshots(ctx context.Context, environmen
 			},
 		}))
 		if err != nil {
-			tflog.Warn(ctx, fmt.Sprintf("Could not list snapshots for sandbox %s during deletion; continuing", sandboxID), map[string]any{
-				"error": err.Error(),
-			})
-			return
+			return snapshots, err
 		}
 		for _, snapshot := range listResp.Msg.GetSnapshots() {
 			if snapshot.GetSandboxId() != sandboxID {
 				continue
 			}
-			if _, err := snapshotClient.DeleteSandboxSnapshot(ctx, connect.NewRequest(&sandboxv2.DeleteSandboxSnapshotRequest{
-				SnapshotId: snapshot.GetId(),
-			})); err != nil {
-				tflog.Warn(ctx, fmt.Sprintf("Could not delete snapshot %s while deleting sandbox %s; continuing", snapshot.GetId(), sandboxID), map[string]any{
-					"error": err.Error(),
-				})
-			}
+			snapshots = append(snapshots, snapshot)
 		}
 		nextCursor := listResp.Msg.GetNextCursor()
 		if nextCursor == "" {
-			return
+			return snapshots, nil
 		}
 		cursor = &nextCursor
 	}
+}
+
+func sandboxSnapshotTime(snapshot *sandboxv2.SandboxSnapshot) time.Time {
+	if snapshot.GetCompletedAt() != nil {
+		return snapshot.GetCompletedAt().AsTime()
+	}
+	if snapshot.GetCreatedAt() != nil {
+		return snapshot.GetCreatedAt().AsTime()
+	}
+	return time.Time{}
 }
 
 func (r *SandboxResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
