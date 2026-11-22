@@ -350,7 +350,7 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Validators:          []validator.String{stringvalidator.OneOf("running", "suspended")},
 			},
 			"prune_snapshots_on_suspend": schema.BoolAttribute{
-				MarkdownDescription: "Whether to delete all but the newest snapshot after this resource successfully suspends the sandbox. This also deletes manual snapshots of the sandbox, so do not enable it if you keep manual snapshots or fork from them. This is a stopgap until the Chalk server prunes old suspension snapshots itself, after which it will be deprecated.",
+				MarkdownDescription: "Whether to delete older completed snapshots after this resource successfully suspends the sandbox. This also deletes manual snapshots of the sandbox, so do not enable it if you keep manual snapshots or fork from them. This is a stopgap until the Chalk server prunes old suspension snapshots itself, after which it will be deprecated.",
 				Optional:            true,
 			},
 			"state": schema.StringAttribute{
@@ -651,21 +651,37 @@ func (r *SandboxResource) restoreSandbox(ctx context.Context, sbClient sandboxv2
 
 func (r *SandboxResource) deleteSandboxSnapshots(ctx context.Context, environmentID, sandboxID string) {
 	snapshotClient := r.client.NewSandboxSnapshotClient(ctx, environmentID)
-	snapshots, err := listSandboxSnapshots(ctx, snapshotClient, sandboxID)
-	if err != nil {
-		tflog.Warn(ctx, fmt.Sprintf("Could not list snapshots for sandbox %s during deletion; continuing", sandboxID), map[string]any{
-			"error": err.Error(),
-		})
-		return
-	}
-	for _, snapshot := range snapshots {
-		if _, err := snapshotClient.DeleteSandboxSnapshot(ctx, connect.NewRequest(&sandboxv2.DeleteSandboxSnapshotRequest{
-			SnapshotId: snapshot.GetId(),
-		})); err != nil {
-			tflog.Warn(ctx, fmt.Sprintf("Could not delete snapshot %s while deleting sandbox %s; continuing", snapshot.GetId(), sandboxID), map[string]any{
+	var cursor *string
+	for {
+		listResp, err := snapshotClient.ListSandboxSnapshots(ctx, connect.NewRequest(&sandboxv2.ListSandboxSnapshotsRequest{
+			Cursor: cursor,
+			Filters: &sandboxv2.ListSandboxSnapshotsFilters{
+				SandboxIds: []string{sandboxID},
+			},
+		}))
+		if err != nil {
+			tflog.Warn(ctx, fmt.Sprintf("Could not list snapshots for sandbox %s during deletion; continuing", sandboxID), map[string]any{
 				"error": err.Error(),
 			})
+			return
 		}
+		for _, snapshot := range listResp.Msg.GetSnapshots() {
+			if snapshot.GetSandboxId() != sandboxID {
+				continue
+			}
+			if _, err := snapshotClient.DeleteSandboxSnapshot(ctx, connect.NewRequest(&sandboxv2.DeleteSandboxSnapshotRequest{
+				SnapshotId: snapshot.GetId(),
+			})); err != nil {
+				tflog.Warn(ctx, fmt.Sprintf("Could not delete snapshot %s while deleting sandbox %s; continuing", snapshot.GetId(), sandboxID), map[string]any{
+					"error": err.Error(),
+				})
+			}
+		}
+		nextCursor := listResp.Msg.GetNextCursor()
+		if nextCursor == "" {
+			return
+		}
+		cursor = &nextCursor
 	}
 }
 
@@ -674,9 +690,6 @@ func (r *SandboxResource) pruneSandboxSnapshots(ctx context.Context, environment
 	snapshotClient := r.client.NewSandboxSnapshotClient(ctx, environmentID)
 	snapshots, err := listSandboxSnapshots(ctx, snapshotClient, sandboxID)
 	if err != nil {
-		tflog.Warn(ctx, fmt.Sprintf("Could not list snapshots for sandbox %s after suspension; skipping pruning", sandboxID), map[string]any{
-			"error": err.Error(),
-		})
 		diags.AddWarning(
 			"Could not prune sandbox snapshots",
 			fmt.Sprintf("Could not list snapshots for sandbox %s after suspension: %s", sandboxID, err),
@@ -707,9 +720,6 @@ func (r *SandboxResource) pruneSandboxSnapshots(ctx context.Context, environment
 			if connect.CodeOf(err) == connect.CodeFailedPrecondition {
 				tflog.Info(ctx, fmt.Sprintf("Snapshot %s is still held while pruning sandbox %s; continuing", snapshot.GetId(), sandboxID))
 			} else {
-				tflog.Warn(ctx, fmt.Sprintf("Could not delete snapshot %s while pruning sandbox %s; continuing", snapshot.GetId(), sandboxID), map[string]any{
-					"error": err.Error(),
-				})
 				diags.AddWarning(
 					"Could not prune sandbox snapshot",
 					fmt.Sprintf("Could not delete snapshot %s while pruning sandbox %s: %s", snapshot.GetId(), sandboxID, err),
@@ -752,13 +762,7 @@ func listSandboxSnapshots(
 }
 
 func sandboxSnapshotTime(snapshot *sandboxv2.SandboxSnapshot) time.Time {
-	if snapshot.GetCompletedAt() != nil {
-		return snapshot.GetCompletedAt().AsTime()
-	}
-	if snapshot.GetCreatedAt() != nil {
-		return snapshot.GetCreatedAt().AsTime()
-	}
-	return time.Time{}
+	return snapshot.GetCompletedAt().AsTime()
 }
 
 func (r *SandboxResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

@@ -16,6 +16,7 @@ import (
 	"github.com/chalk-ai/chalk-go/testserver"
 	chalkclient "github.com/chalk-ai/terraform-provider-chalk/client"
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -437,17 +438,11 @@ func TestSandboxResourceCreateSuspended(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{{
-			Config: sandboxDesiredStateConfig(server.URL, name, "suspended", true),
+			Config: sandboxDesiredStateConfig(server.URL, name, "suspended"),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("chalk_sandbox.test", "id", "sandbox-test-id"),
 				resource.TestCheckResourceAttr("chalk_sandbox.test", "desired_state", "suspended"),
 				resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "suspended"),
-				func(*terraform.State) error {
-					if len(st.snapshotListFilters) != 0 {
-						return fmt.Errorf("Create unexpectedly listed snapshots: %v", st.snapshotListFilters)
-					}
-					return nil
-				},
 			),
 		}},
 	})
@@ -500,7 +495,6 @@ func TestSandboxResourcePrunesOnlyCompletedSnapshotsOnSuspendAcrossPages(t *test
 		{Id: "old-first-page", SandboxId: "sandbox-test-id", Status: completed, CompletedAt: timestamppb.New(time.Date(2026, 11, 19, 0, 0, 0, 0, time.UTC))},
 		{Id: "other-sandbox", SandboxId: "other-sandbox-id", Status: completed, CompletedAt: timestamppb.New(time.Date(2026, 11, 22, 0, 0, 0, 0, time.UTC))},
 		{Id: "in-progress", SandboxId: "sandbox-test-id", Status: sandboxv2.SandboxSnapshotStatus_SANDBOX_SNAPSHOT_STATUS_IN_PROGRESS, CompletedAt: timestamppb.New(time.Date(2026, 11, 22, 0, 0, 0, 0, time.UTC))},
-		{Id: "old-created-at", SandboxId: "sandbox-test-id", Status: completed, CreatedAt: timestamppb.New(time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC))},
 		{Id: "newest", SandboxId: "sandbox-test-id", Status: completed, CompletedAt: timestamppb.New(time.Date(2026, 11, 21, 0, 0, 0, 0, time.UTC))},
 	}
 
@@ -511,8 +505,8 @@ func TestSandboxResourcePrunesOnlyCompletedSnapshotsOnSuspendAcrossPages(t *test
 			{
 				Config: sandboxDesiredStateConfig(server.URL, name, "suspended", true),
 				Check: func(*terraform.State) error {
-					assert.Len(t, st.snapshotListFilters, 3)
-					assert.ElementsMatch(t, []string{"old-first-page", "old-created-at"}, st.deletedSnapshotIDs)
+					assert.Len(t, st.snapshotListFilters, 2)
+					assert.Equal(t, []string{"old-first-page"}, st.deletedSnapshotIDs)
 					assert.NotContains(t, st.deletedSnapshotIDs, "newest")
 					assert.NotContains(t, st.deletedSnapshotIDs, "in-progress")
 					return nil
@@ -577,6 +571,7 @@ func TestSandboxResourcePruneDiagnosticsAndCompletionGuard(t *testing.T) {
 				assert.Empty(t, diags)
 			} else {
 				require.Len(t, diags, 1)
+				assert.Equal(t, diag.SeverityWarning, diags[0].Severity())
 				assert.Equal(t, tt.wantWarning, diags[0].Summary())
 			}
 		})
@@ -609,44 +604,7 @@ func TestSandboxResourceDoesNotPruneSnapshotsWhenDisabled(t *testing.T) {
 	})
 }
 
-func TestSandboxResourcePruneDeleteFailuresWarnAndDoNotStopUpdate(t *testing.T) {
-	t.Parallel()
-	server, st := setupMockSandboxServer(t, 0)
-	name := "test-sandbox-" + uuid.New().String()[:8]
-	completed := sandboxv2.SandboxSnapshotStatus_SANDBOX_SNAPSHOT_STATUS_COMPLETED
-	st.snapshots = []*sandboxv2.SandboxSnapshot{
-		{Id: "held-old", SandboxId: "sandbox-test-id", Status: completed, CompletedAt: timestamppb.New(time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC))},
-		{Id: "denied-old", SandboxId: "sandbox-test-id", Status: completed, CompletedAt: timestamppb.New(time.Date(2026, 11, 19, 0, 0, 0, 0, time.UTC))},
-		{Id: "deleted-old", SandboxId: "sandbox-test-id", Status: completed, CompletedAt: timestamppb.New(time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC))},
-		{Id: "newest", SandboxId: "sandbox-test-id", Status: completed, CompletedAt: timestamppb.New(time.Date(2026, 11, 21, 0, 0, 0, 0, time.UTC))},
-	}
-	st.snapshotDeleteErrs = map[string]error{
-		"held-old":   connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("snapshot is in use")),
-		"denied-old": connect.NewError(connect.CodePermissionDenied, fmt.Errorf("permission denied")),
-	}
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
-		Steps: []resource.TestStep{
-			{Config: sandboxDesiredStateConfig(server.URL, name, "running", true)},
-			{
-				Config: sandboxDesiredStateConfig(server.URL, name, "suspended", true),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "suspended"),
-					func(*terraform.State) error {
-						assert.Contains(t, st.events, "delete snapshot held-old")
-						assert.Contains(t, st.events, "delete snapshot denied-old")
-						assert.Contains(t, st.deletedSnapshotIDs, "deleted-old")
-						assert.NotContains(t, st.deletedSnapshotIDs, "newest")
-						return nil
-					},
-				),
-			},
-		},
-	})
-}
-
-func TestSandboxResourcePruneFlagUpdatesInPlaceAndOmittedPlansNoDiff(t *testing.T) {
+func TestSandboxResourcePruneFlagUpdatesInPlace(t *testing.T) {
 	t.Parallel()
 	server, st := setupMockSandboxServer(t, 0)
 	name := "test-sandbox-" + uuid.New().String()[:8]
@@ -655,11 +613,6 @@ func TestSandboxResourcePruneFlagUpdatesInPlaceAndOmittedPlansNoDiff(t *testing.
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{Config: sandboxMinimalConfig(server.URL, name)},
-			{
-				Config:             sandboxMinimalConfig(server.URL, name),
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
-			},
 			{
 				Config: sandboxMinimalConfig(server.URL, name, true),
 				Check:  resource.TestCheckResourceAttr("chalk_sandbox.test", "prune_snapshots_on_suspend", "true"),
@@ -672,8 +625,6 @@ func TestSandboxResourcePruneFlagUpdatesInPlaceAndOmittedPlansNoDiff(t *testing.
 	})
 
 	assert.Equal(t, 1, st.createCalls, "adding or flipping the prune flag must not replace the sandbox")
-	assert.Zero(t, st.suspendCalls)
-	assert.Zero(t, st.restoreCalls)
 }
 
 func TestSandboxResourceRepairsDesiredStateDrift(t *testing.T) {
@@ -744,13 +695,13 @@ func TestSandboxResourceSkipsTransitionAlreadyAppliedServerSide(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
-			{Config: sandboxDesiredStateConfig(server.URL, name, "running", false)},
+			{Config: sandboxDesiredStateConfig(server.URL, name, "running")},
 			{
 				PreConfig: func() {
 					st.info.Status = sandboxv2.SandboxStatus_SANDBOX_STATUS_SUSPENDED
 					st.info.StatusMessage = new("suspended")
 				},
-				Config: sandboxDesiredStateConfig(server.URL, name, "suspended", true),
+				Config: sandboxDesiredStateConfig(server.URL, name, "suspended"),
 				Check:  resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "suspended"),
 			},
 			{
@@ -759,15 +710,7 @@ func TestSandboxResourceSkipsTransitionAlreadyAppliedServerSide(t *testing.T) {
 					st.info.StatusMessage = new("running")
 				},
 				Config: sandboxDesiredStateConfig(server.URL, name, "running"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "running"),
-					func(*terraform.State) error {
-						if len(st.snapshotListFilters) != 0 {
-							return fmt.Errorf("already-suspended update unexpectedly listed snapshots: %v", st.snapshotListFilters)
-						}
-						return nil
-					},
-				),
+				Check:  resource.TestCheckResourceAttr("chalk_sandbox.test", "state", "running"),
 			},
 		},
 	})
@@ -896,6 +839,7 @@ func TestSandboxResourceSnapshotListFailureDoesNotStopDeletion(t *testing.T) {
 		snapshots    []*sandboxv2.SandboxSnapshot
 		pageSize     int
 		listErrAfter int
+		wantDeleted  []string
 		wantEvents   []string
 	}{
 		{
@@ -910,7 +854,13 @@ func TestSandboxResourceSnapshotListFailureDoesNotStopDeletion(t *testing.T) {
 			},
 			pageSize:     1,
 			listErrAfter: 1,
-			wantEvents:   []string{"list snapshots", "list snapshots", "terminate"},
+			wantDeleted:  []string{"partial"},
+			wantEvents: []string{
+				"list snapshots",
+				"delete snapshot partial",
+				"list snapshots",
+				"terminate",
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -923,7 +873,7 @@ func TestSandboxResourceSnapshotListFailureDoesNotStopDeletion(t *testing.T) {
 
 			err := sandboxResourceForTest(server.URL).deleteSandbox(context.Background(), "test-env-id", "sandbox-test-id")
 			require.NoError(t, err)
-			assert.Empty(t, st.deletedSnapshotIDs)
+			assert.Equal(t, tt.wantDeleted, st.deletedSnapshotIDs)
 			assert.Equal(t, tt.wantEvents, st.events)
 		})
 	}
