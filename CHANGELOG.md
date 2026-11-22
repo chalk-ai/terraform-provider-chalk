@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* Add opt-in `prune_snapshots_on_suspend` to `chalk_sandbox`, which keeps only the newest snapshot after an in-place suspend. This is a stopgap until the server prunes old suspension snapshots itself (DEVX-286, sandbox snapshots owner), after which it will be deprecated.
+* Add opt-in `prune_snapshots_on_suspend` to `chalk_sandbox`, which keeps only the newest snapshot after an in-place suspend and also deletes the sandbox's manual snapshots. This is a stopgap until the Chalk server prunes old suspension snapshots itself, after which it will be deprecated.
 * Add optional `chalk_workload_identity` to `chalk_sandbox`: run the sandbox as its own workload principal (`mode = "workload_principal"`) and declare platform-managed `oidc_token_files`, e.g. for GCP workload identity federation without a key in the sandbox. `oidc_token_files` is a set (order does not matter) and requires host compute, so it is rejected at plan time with `runtime = "kube"`. Changing it replaces the sandbox. Requires a Chalk API server that supports sandbox workload identity.
 
 ## 1.3.0
