@@ -144,10 +144,6 @@ var sandboxOIDCTokenFileAttrTypes = map[string]attr.Type{
 	"env_var":  types.StringType,
 }
 
-var sandboxHostPlacementAttrTypes = map[string]attr.Type{
-	"host_pool_id": types.StringType,
-}
-
 var sandboxWorkloadIdentityAttrTypes = map[string]attr.Type{
 	"mode":             types.StringType,
 	"oidc_token_files": types.SetType{ElemType: types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}},
@@ -483,7 +479,6 @@ func (r *SandboxResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	updateSandboxState(&data, info)
-	resp.Diagnostics.Append(updateSandboxHostPlacement(ctx, &data, info)...)
 
 	// Persist the id before waiting: if the wait times out, the sandbox still
 	// exists server-side and Terraform must know about it to clean it up.
@@ -548,7 +543,6 @@ func (r *SandboxResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	updateSandboxState(&data, info)
 	updateSandboxDesiredState(&data, info)
-	resp.Diagnostics.Append(updateSandboxHostPlacement(ctx, &data, info)...)
 	resp.Diagnostics.Append(updateSandboxWorkloadIdentity(ctx, &data, info)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -1031,35 +1025,6 @@ func updateSandboxDesiredState(data *SandboxResourceModel, info *sandboxv2.Sandb
 		(sandboxReadyStates[status] || sandboxSuspendedStates[status]) {
 		data.DesiredState = types.StringValue(status)
 	}
-}
-
-// updateSandboxHostPlacement reads placement back when Terraform already owns
-// it, or during import. A required create-only field is null only during import.
-func updateSandboxHostPlacement(ctx context.Context, data *SandboxResourceModel, info *sandboxv2.SandboxInfo) diag.Diagnostics {
-	isImport := data.Image.IsNull()
-	if (data.HostPlacement.IsNull() || data.HostPlacement.IsUnknown()) && !isImport {
-		return nil
-	}
-
-	placement := info.GetSpec().GetHostPlacement()
-	if placement == nil || placement.GetHostPoolId() == "" {
-		var diags diag.Diagnostics
-		if !data.HostPlacement.IsNull() && !data.HostPlacement.IsUnknown() {
-			diags.AddWarning(
-				"Server ignored host placement",
-				"The sandbox server did not return a host pool for the configured host_placement. Terraform kept the configured value in state.",
-			)
-		}
-		return diags
-	}
-
-	value, diags := types.ObjectValueFrom(ctx, sandboxHostPlacementAttrTypes, SandboxHostPlacementModel{
-		HostPoolId: types.StringValue(placement.GetHostPoolId()),
-	})
-	if !diags.HasError() {
-		data.HostPlacement = value
-	}
-	return diags
 }
 
 // updateSandboxWorkloadIdentity is refresh-only. It reads the identity back
