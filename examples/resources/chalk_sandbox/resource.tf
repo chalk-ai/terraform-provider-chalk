@@ -24,6 +24,10 @@ resource "chalk_sandbox" "workstation" {
     memory = "4Gi"
   }
 
+  host_placement = {
+    host_pool_id = "host-pool-id"
+  }
+
   volumes = [{
     name       = "home"
     mount_path = "/home/dev"

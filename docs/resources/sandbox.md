@@ -45,6 +45,10 @@ resource "chalk_sandbox" "workstation" {
     memory = "4Gi"
   }
 
+  host_placement = {
+    host_pool_id = "host-pool-id"
+  }
+
   volumes = [{
     name       = "home"
     mount_path = "/home/dev"
@@ -103,6 +107,7 @@ resource "chalk_sandbox" "gcp_wif" {
 - `desired_state` (String) Desired lifecycle state: `running` or `suspended`. When set, changing this value suspends or restores the sandbox in place and out-of-band state changes are corrected on the next apply. When omitted, Terraform does not manage whether the sandbox is running or suspended.
 - `entrypoint` (List of String) Overrides the image's entrypoint. When unset, the image's own entrypoint is used. `exec` into the sandbox keeps working either way — it does not go through the entrypoint process.
 - `env` (Map of String, Sensitive) Environment variables to inject into the sandbox.
+- `host_placement` (Attributes) Host placement constraints for the sandbox. (see [below for nested schema](#nestedatt--host_placement))
 - `name` (String) Optional human-readable name for the sandbox. The server generates one when omitted.
 - `network_policy` (Attributes) Outbound network policy. **Without this, the sandbox cannot reach anything — not even DNS.** Grant full egress with a single `allowed_routes` entry for `0.0.0.0/0`. The server rejects network policies when `runtime` is `kube`. (see [below for nested schema](#nestedatt--network_policy))
 - `prune_snapshots_on_suspend` (Boolean) Whether to delete older completed snapshots after this resource successfully suspends the sandbox. This also deletes manual snapshots of the sandbox, so do not enable it if you keep manual snapshots or fork from them. This is a stopgap until the Chalk server prunes old suspension snapshots itself, after which it will be deprecated.
@@ -139,6 +144,14 @@ Required:
 - `audience` (String) Audience claim of the token, e.g. a GCP workload identity provider `//iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL/providers/PROVIDER`.
 - `env_var` (String) Environment variable that receives the absolute path of the token file.
 
+
+
+<a id="nestedatt--host_placement"></a>
+### Nested Schema for `host_placement`
+
+Optional:
+
+- `host_pool_id` (String) ID of the host pool on which to place the sandbox.
 
 
 <a id="nestedatt--network_policy"></a>

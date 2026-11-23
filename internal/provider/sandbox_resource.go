@@ -88,6 +88,7 @@ type SandboxResourceModel struct {
 	Runtime                 types.String `tfsdk:"runtime"`
 	RestartPolicy           types.String `tfsdk:"restart_policy"`
 	ResourceLimits          types.Object `tfsdk:"resource_limits"`
+	HostPlacement           types.Object `tfsdk:"host_placement"`
 	Volumes                 types.List   `tfsdk:"volumes"`
 	NetworkPolicy           types.Object `tfsdk:"network_policy"`
 	WorkloadIdentity        types.Object `tfsdk:"chalk_workload_identity"`
@@ -104,6 +105,10 @@ type SandboxResourceModel struct {
 type SandboxResourceLimitsModel struct {
 	CPU    types.String `tfsdk:"cpu"`
 	Memory types.String `tfsdk:"memory"`
+}
+
+type SandboxHostPlacementModel struct {
+	HostPoolId types.String `tfsdk:"host_pool_id"`
 }
 
 type SandboxVolumeMountModel struct {
@@ -224,6 +229,17 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 					},
 					"memory": schema.StringAttribute{
 						MarkdownDescription: "Memory limit, e.g. `4Gi` or `512Mi`.",
+						Optional:            true,
+					},
+				},
+			},
+			"host_placement": schema.SingleNestedAttribute{
+				MarkdownDescription: "Host placement constraints for the sandbox.",
+				Optional:            true,
+				PlanModifiers:       []planmodifier.Object{objectplanmodifier.RequiresReplace()},
+				Attributes: map[string]schema.Attribute{
+					"host_pool_id": schema.StringAttribute{
+						MarkdownDescription: "ID of the host pool on which to place the sandbox.",
 						Optional:            true,
 					},
 				},
@@ -879,6 +895,16 @@ func buildCreateSandboxRequest(ctx context.Context, data *SandboxResourceModel) 
 		spec.Resources = &containerv1.ResourceLimits{
 			Cpu:    rl.CPU.ValueStringPointer(),
 			Memory: rl.Memory.ValueStringPointer(),
+		}
+	}
+
+	if !data.HostPlacement.IsNull() && !data.HostPlacement.IsUnknown() {
+		var placement SandboxHostPlacementModel
+		diags.Append(data.HostPlacement.As(ctx, &placement, basetypes.ObjectAsOptions{})...)
+		spec.Placement = &containerv1.ChalkContainerSpec_HostPlacement{
+			HostPlacement: &containerv1.HostPlacementOptions{
+				HostPoolId: placement.HostPoolId.ValueStringPointer(),
+			},
 		}
 	}
 

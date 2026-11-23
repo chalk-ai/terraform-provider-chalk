@@ -240,6 +240,19 @@ resource "chalk_sandbox" "test" {
 `, name, desiredState, pruneConfig)
 }
 
+func sandboxHostPlacementConfig(serverURL, hostPoolID string) string {
+	return providerConfig(serverURL) + fmt.Sprintf(`
+resource "chalk_sandbox" "test" {
+  environment_id = "test-env-id"
+  image          = "debian:bookworm"
+
+  host_placement = {
+    host_pool_id = %q
+  }
+}
+`, hostPoolID)
+}
+
 func sandboxKubeDesiredStateConfig(serverURL, desiredState string) string {
 	return providerConfig(serverURL) + fmt.Sprintf(`
 resource "chalk_sandbox" "test" {
@@ -354,6 +367,30 @@ func TestSandboxResourceCreate(t *testing.T) {
 	assert.Nil(t, st.created.GetSpec().ComputeClass)
 	assert.Empty(t, st.created.GetSpec().Entrypoint)
 	assert.Nil(t, st.created.GetSpec().ChalkWorkloadIdentity)
+}
+
+func TestSandboxResourceHostPlacementChangeReplaces(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: sandboxHostPlacementConfig(server.URL, "host-pool-1")},
+			{
+				Config: sandboxHostPlacementConfig(server.URL, "host-pool-2"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("chalk_sandbox.test", plancheck.ResourceActionReplace),
+					},
+				},
+			},
+		},
+	})
+
+	assert.Equal(t, 2, st.createCalls)
+	require.NotNil(t, st.created)
+	assert.Equal(t, "host-pool-2", st.created.GetSpec().GetHostPlacement().GetHostPoolId())
 }
 
 func TestSandboxResourceRejectsDesiredStateWithKubeRuntime(t *testing.T) {
