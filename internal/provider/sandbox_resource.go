@@ -144,6 +144,10 @@ var sandboxOIDCTokenFileAttrTypes = map[string]attr.Type{
 	"env_var":  types.StringType,
 }
 
+var sandboxHostPlacementAttrTypes = map[string]attr.Type{
+	"host_pool_id": types.StringType,
+}
+
 var sandboxWorkloadIdentityAttrTypes = map[string]attr.Type{
 	"mode":             types.StringType,
 	"oidc_token_files": types.SetType{ElemType: types.ObjectType{AttrTypes: sandboxOIDCTokenFileAttrTypes}},
@@ -234,13 +238,14 @@ func (r *SandboxResource) Schema(ctx context.Context, req resource.SchemaRequest
 				},
 			},
 			"host_placement": schema.SingleNestedAttribute{
-				MarkdownDescription: "Host placement constraints for the sandbox.",
+				MarkdownDescription: "Host placement constraints for the sandbox. Requires host compute.",
 				Optional:            true,
 				PlanModifiers:       []planmodifier.Object{objectplanmodifier.RequiresReplace()},
 				Attributes: map[string]schema.Attribute{
 					"host_pool_id": schema.StringAttribute{
 						MarkdownDescription: "ID of the host pool on which to place the sandbox.",
-						Optional:            true,
+						Required:            true,
+						Validators:          []validator.String{stringvalidator.LengthAtLeast(1)},
 					},
 				},
 			},
@@ -405,6 +410,13 @@ func (r *SandboxResource) ValidateConfig(ctx context.Context, req resource.Valid
 			"`desired_state` cannot be set when `runtime` is `kube` because suspend and resume are supported only for host-compute sandboxes.",
 		)
 	}
+	if !data.HostPlacement.IsNull() && !data.HostPlacement.IsUnknown() && data.Runtime.ValueString() == "kube" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("host_placement"),
+			"host_placement requires host compute",
+			"`host_placement` cannot be set when `runtime` is `kube` because host placement is supported only for host-compute sandboxes.",
+		)
+	}
 
 	if data.WorkloadIdentity.IsNull() || data.WorkloadIdentity.IsUnknown() {
 		return
@@ -535,6 +547,7 @@ func (r *SandboxResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	updateSandboxState(&data, info)
 	updateSandboxDesiredState(&data, info)
+	resp.Diagnostics.Append(updateSandboxHostPlacement(ctx, &data, info)...)
 	resp.Diagnostics.Append(updateSandboxWorkloadIdentity(ctx, &data, info)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -1017,6 +1030,23 @@ func updateSandboxDesiredState(data *SandboxResourceModel, info *sandboxv2.Sandb
 		(sandboxReadyStates[status] || sandboxSuspendedStates[status]) {
 		data.DesiredState = types.StringValue(status)
 	}
+}
+
+// updateSandboxHostPlacement is refresh-only. It reads placement back when the
+// server returns it (which also covers import) and otherwise keeps prior state.
+func updateSandboxHostPlacement(ctx context.Context, data *SandboxResourceModel, info *sandboxv2.SandboxInfo) diag.Diagnostics {
+	placement := info.GetSpec().GetHostPlacement()
+	if placement == nil {
+		return nil
+	}
+
+	value, diags := types.ObjectValueFrom(ctx, sandboxHostPlacementAttrTypes, SandboxHostPlacementModel{
+		HostPoolId: types.StringValue(placement.GetHostPoolId()),
+	})
+	if !diags.HasError() {
+		data.HostPlacement = value
+	}
+	return diags
 }
 
 // updateSandboxWorkloadIdentity is refresh-only. It reads the identity back

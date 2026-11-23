@@ -24,10 +24,6 @@ resource "chalk_sandbox" "workstation" {
     memory = "4Gi"
   }
 
-  host_placement = {
-    host_pool_id = "host-pool-id"
-  }
-
   volumes = [{
     name       = "home"
     mount_path = "/home/dev"
@@ -43,6 +39,17 @@ resource "chalk_sandbox" "workstation" {
 
     # The cloud metadata endpoint is never something a sandbox should reach.
     denied_routes = ["169.254.169.254/32"]
+  }
+}
+
+# Pin a host-compute sandbox to a specific host pool. Changing the pool replaces
+# the sandbox.
+resource "chalk_sandbox" "host_pool" {
+  environment_id = "tmnmc9beyujew"
+  image          = "debian:bookworm"
+
+  host_placement = {
+    host_pool_id = "host-pool-id"
   }
 }
 

@@ -253,6 +253,20 @@ resource "chalk_sandbox" "test" {
 `, hostPoolID)
 }
 
+func sandboxKubeHostPlacementConfig(serverURL string) string {
+	return providerConfig(serverURL) + `
+resource "chalk_sandbox" "test" {
+  environment_id = "test-env-id"
+  image          = "debian:bookworm"
+  runtime        = "kube"
+
+  host_placement = {
+    host_pool_id = "host-pool-1"
+  }
+}
+`
+}
+
 func sandboxKubeDesiredStateConfig(serverURL, desiredState string) string {
 	return providerConfig(serverURL) + fmt.Sprintf(`
 resource "chalk_sandbox" "test" {
@@ -367,6 +381,7 @@ func TestSandboxResourceCreate(t *testing.T) {
 	assert.Nil(t, st.created.GetSpec().ComputeClass)
 	assert.Empty(t, st.created.GetSpec().Entrypoint)
 	assert.Nil(t, st.created.GetSpec().ChalkWorkloadIdentity)
+	assert.Nil(t, st.created.GetSpec().GetHostPlacement())
 }
 
 func TestSandboxResourceHostPlacementChangeReplaces(t *testing.T) {
@@ -391,6 +406,81 @@ func TestSandboxResourceHostPlacementChangeReplaces(t *testing.T) {
 	assert.Equal(t, 2, st.createCalls)
 	require.NotNil(t, st.created)
 	assert.Equal(t, "host-pool-2", st.created.GetSpec().GetHostPlacement().GetHostPoolId())
+}
+
+func TestSandboxResourceHostPlacementImport(t *testing.T) {
+	t.Parallel()
+	server, _ := setupMockSandboxServer(t, 0)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{Config: sandboxHostPlacementConfig(server.URL, "host-pool-1")},
+			{
+				ResourceName:      "chalk_sandbox.test",
+				ImportState:       true,
+				ImportStateId:     "test-env-id/sandbox-test-id",
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"image",
+					"wait_for_ready",
+				},
+				Check: resource.TestCheckResourceAttr(
+					"chalk_sandbox.test",
+					"host_placement.host_pool_id",
+					"host-pool-1",
+				),
+			},
+		},
+	})
+}
+
+func TestSandboxResourceRejectsInvalidHostPlacement(t *testing.T) {
+	t.Parallel()
+
+	for name, placement := range map[string]string{
+		"missing host_pool_id": `{}`,
+		"empty host_pool_id":   `{ host_pool_id = "" }`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			server, st := setupMockSandboxServer(t, 0)
+			config := providerConfig(server.URL) + fmt.Sprintf(`
+resource "chalk_sandbox" "test" {
+  environment_id = "test-env-id"
+  image          = "debian:bookworm"
+  host_placement = %s
+}
+`, placement)
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+				Steps: []resource.TestStep{{
+					Config:      config,
+					PlanOnly:    true,
+					ExpectError: regexp.MustCompile(`(?s)host_pool_id.*(required|at least 1)`),
+				}},
+			})
+
+			assert.Zero(t, st.createCalls)
+		})
+	}
+}
+
+func TestSandboxResourceRejectsHostPlacementWithKubeRuntime(t *testing.T) {
+	t.Parallel()
+	server, st := setupMockSandboxServer(t, 0)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{{
+			Config:      sandboxKubeHostPlacementConfig(server.URL),
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile(`(?s)host_placement.*cannot be set.*runtime.*kube.*host-compute`),
+		}},
+	})
+
+	assert.Zero(t, st.createCalls)
 }
 
 func TestSandboxResourceRejectsDesiredStateWithKubeRuntime(t *testing.T) {

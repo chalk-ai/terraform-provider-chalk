@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Add optional `host_placement { host_pool_id }` to `chalk_sandbox` to pin a sandbox to a host pool. It requires host compute, and changing it replaces the sandbox. Requires a Chalk API server that supports `host_placement`; an older server ignores it.
+
 ## 1.5.0
 
 * Add opt-in `prune_snapshots_on_suspend` to `chalk_sandbox`, which deletes older completed snapshots after an in-place suspend, including completed manual snapshots. This is a stopgap until the Chalk server prunes old suspension snapshots itself, after which it will be deprecated.
